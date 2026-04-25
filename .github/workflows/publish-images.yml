@@ -126,7 +126,7 @@ jobs:
         id: registry
         run: |
           owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
-          image="ghcr.io/${owner}/luciole-${{ matrix.image }}"
+          image="ghcr.io/${owner}/${{ matrix.image }}"
           echo "image=${image}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
