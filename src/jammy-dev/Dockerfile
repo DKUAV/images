@@ -78,11 +78,22 @@ RUN apt -y install software-properties-common \
 # ─── User ─────────────────────────────────────────────────────────────────────
 
 ARG USERNAME=luciole
-ARG USER_UID=1001
+ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 
 # Create the user
-RUN groupadd --gid $USER_GID $USERNAME \
+# If the specified UID/GID is already occupied by an existing user/group, remove it first
+RUN existing_user=$(getent passwd $USER_UID | cut -d: -f1); \
+    if [ -n "$existing_user" ]; then \
+        home_dir=$(getent passwd $USER_UID | cut -d: -f6); \
+        userdel "$existing_user"; \
+        rm -rf "$home_dir"; \
+    fi \
+    && existing_group=$(getent group $USER_GID | cut -d: -f1); \
+    if [ -n "$existing_group" ]; then \
+        groupdel "$existing_group"; \
+    fi \
+    && groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
     && apt install -y sudo \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
