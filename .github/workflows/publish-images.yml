@@ -1,0 +1,143 @@
+name: Publish Images
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - src/**
+      - .github/workflows/publish-images.yml
+  workflow_dispatch:
+
+jobs:
+  detect-images:
+    name: Detect Changed Images
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.detect.outputs.matrix }}
+      has-images: ${{ steps.detect.outputs.has-images }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Collect changed image directories
+        id: detect
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+        run: |
+          python3 <<'PY'
+          import json
+          import os
+          import pathlib
+          import subprocess
+
+          src_root = pathlib.Path("src")
+          event_name = os.environ["GITHUB_EVENT_NAME"]
+          before = os.environ.get("GITHUB_EVENT_BEFORE", "")
+          sha = os.environ["GITHUB_SHA"]
+
+          def all_image_dirs():
+              return sorted({dockerfile.parent.as_posix() for dockerfile in src_root.rglob("Dockerfile")})
+
+          def nearest_image_dir(path_text: str):
+              current = pathlib.Path(path_text).parent
+              for candidate in (current, *current.parents):
+                  try:
+                      candidate.relative_to(src_root)
+                  except ValueError:
+                      continue
+                  if (candidate / "Dockerfile").is_file():
+                      return candidate.as_posix()
+              return None
+
+          if event_name == "workflow_dispatch":
+              image_dirs = all_image_dirs()
+          else:
+              if before and before != "0000000000000000000000000000000000000000":
+                  command = ["git", "diff", "--name-only", f"{before}..{sha}", "--", "src"]
+              else:
+                  command = ["git", "ls-files", "src"]
+
+              changed_paths = subprocess.check_output(command, text=True).splitlines()
+              discovered = []
+              seen = set()
+              for changed_path in changed_paths:
+                  image_dir = nearest_image_dir(changed_path)
+                  if image_dir and image_dir not in seen:
+                      seen.add(image_dir)
+                      discovered.append(image_dir)
+              image_dirs = sorted(discovered)
+
+          matrix = [
+              {
+                  "image": pathlib.PurePosixPath(image_dir).relative_to("src").as_posix().replace("/", "-"),
+                  "context": image_dir,
+                  "dockerfile": f"{image_dir}/Dockerfile",
+              }
+              for image_dir in image_dirs
+          ]
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              print(f"matrix={json.dumps(matrix)}", file=output)
+              print(f"has-images={'true' if matrix else 'false'}", file=output)
+          PY
+
+  build-and-push:
+    name: Build And Push
+    runs-on: ubuntu-latest
+    needs: detect-images
+    if: needs.detect-images.outputs.has-images == 'true'
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.detect-images.outputs.matrix) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Derive registry coordinates
+        id: registry
+        run: |
+          owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
+          image="ghcr.io/${owner}/luciole-${{ matrix.image }}"
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.registry.outputs.image }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.title=${{ matrix.image }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
