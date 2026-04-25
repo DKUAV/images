@@ -4,7 +4,7 @@ FROM mcr.microsoft.com/devcontainers/base:ubuntu22.04
 RUN sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
 
 RUN chmod 777 /tmp
-RUN apt update
+RUN apt update && apt -y upgrade
 
 # Avoid select timezone
 ENV DEBIAN_FRONTEND=noninteractive
@@ -48,8 +48,32 @@ RUN apt install -y python3.10 python3-setuptools \
     && pip3 install "pybind11[global]" \
     && curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Zsh
-RUN apt -y install zsh && chsh -s /bin/zsh
+# Supports GUI
+RUN apt-get update && apt-get install -y \
+    dbus-x11 \
+    locales \
+    tzdata \
+    fonts-wqy-zenhei \
+    fonts-noto-cjk \
+    mesa-utils \
+    libgl1-mesa-glx \
+    pulseaudio \
+    && rm -rf /var/lib/apt/lists/*
+ENV QT_X11_NO_MITSHM=1
+
+# ROS2
+ARG ROS_DISTRO=humble
+ARG ROS_TARGET=desktop
+RUN apt -y install software-properties-common \
+    && add-apt-repository universe \
+    && apt update && apt install curl -y \
+    && export ROS_APT_SOURCE_VERSION=$(curl -s https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest | grep -F "tag_name" | awk -F'"' '{print $4}') \
+    && curl -L -o /tmp/ros2-apt-source.deb "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release && echo ${UBUNTU_CODENAME:-${VERSION_CODENAME}})_all.deb" \
+    && sudo dpkg -i /tmp/ros2-apt-source.deb \
+    && apt update \
+    && apt -y install ros-${ROS_DISTRO}-${ROS_TARGET} \
+    && apt -y install ros-dev-tools
+
 
 # ─── User ─────────────────────────────────────────────────────────────────────
 
@@ -67,6 +91,9 @@ RUN groupadd --gid $USER_GID $USERNAME \
 USER $USERNAME
 WORKDIR /home/$USERNAME
 
+# Zsh
+RUN sudo apt -y install zsh && sudo chsh -s /bin/zsh $USERNAME
+
 # ohmyzsh and vimrc
 RUN sh -c "$(wget https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh -O -)" "" --unattended \
     && git clone https://github.com/zsh-users/zsh-completions ${ZSH_CUSTOM:-${ZSH:-~/.oh-my-zsh}/custom}/plugins/zsh-completions \
@@ -82,7 +109,15 @@ RUN sh -c "$(wget https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh
     && echo '' >> ~/.zshrc\
     && sed -i 's/#force_color_prompt=yes/force_color_prompt=yes/g' ~/.bashrc \
     && mkdir -p ~/.vscode-server/data/Machine \
-    && echo 'set -g history-limit 1000000' >> ~/.tmux.conf
+    && echo 'set -g history-limit 1000000' >> ~/.tmux.conf \
+    && echo '' >> ~/.tmux.conf
+
+# ROS2 environment
+RUN echo 'alias load_ros="source /opt/ros/humble/setup.zsh"' >> ~/.zshrc \
+    && echo '' >> ~/.zshrc \
+    && echo 'alias load_ros="source /opt/ros/humble/setup.bash"' >> ~/.bashrc \
+    && echo '' >> ~/.bashrc
+
 # unzip document
 # RUN yes "y" | unminimize
 
