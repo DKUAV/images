@@ -5,6 +5,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: luciole-humble-dev
+    user: luciole
 
     # WSLg socket
     volumes:
