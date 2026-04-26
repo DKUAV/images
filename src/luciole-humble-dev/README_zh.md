@@ -49,10 +49,21 @@ ghcr.io/dkuav/luciole-humble-dev:latest
 
 ### 从 Registry 拉取
 
+直接使用 `docker` 命令：
+
 ```bash
 docker pull ghcr.io/dkuav/luciole-humble-dev:latest
 docker run -it --rm ghcr.io/dkuav/luciole-humble-dev:latest
 ```
+
+或使用 `docker compose`（推荐，WSLg 挂载已预配置）：
+
+```bash
+cd src/luciole-humble-dev
+docker compose run --rm app
+```
+
+`docker-compose.yml` 已指向 `ghcr.io/dkuav/luciole-humble-dev:latest`，本地不存在镜像时 Docker 会自动拉取。
 
 ### 本地构建
 

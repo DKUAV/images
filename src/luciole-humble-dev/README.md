@@ -49,10 +49,21 @@ ghcr.io/dkuav/luciole-humble-dev:latest
 
 ### Pull from Registry
 
+Using `docker` directly:
+
 ```bash
 docker pull ghcr.io/dkuav/luciole-humble-dev:latest
 docker run -it --rm ghcr.io/dkuav/luciole-humble-dev:latest
 ```
+
+Or using `docker compose` (recommended — WSLg mounts are pre-configured):
+
+```bash
+cd src/luciole-humble-dev
+docker compose run --rm app
+```
+
+`docker-compose.yml` already points to `ghcr.io/dkuav/luciole-humble-dev:latest`, so Docker will pull the image automatically if it is not present locally.
 
 ### Local Build
 

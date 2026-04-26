@@ -5,8 +5,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: luciole-humble-dev
+    image: ghcr.io/dkuav/luciole-humble-dev:latest
     user: luciole
+
+    stdin_open: true
+    tty: true
 
     # WSLg socket
     volumes:
