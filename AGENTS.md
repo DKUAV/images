@@ -59,3 +59,16 @@ docker build -t <image-name> .
 - `luciole-humble-dev` installs neovim from `nvim-linux-x86_64.tar.gz`. **When adding an arm64 image**, select the correct binary based on architecture (e.g., use `uname -m` or a build ARG).
 - Default timezone is `Asia/Shanghai`; override via `ARG TZ`.
 - Each image directory should include both `README.md` (English) and `README_zh.md` (Chinese). The two files must cross-link to each other: `README.md` links to `README_zh.md` and vice versa.
+
+## Documentation Sync
+
+**After modifying any file in an image directory, always check and update the corresponding documentation.**
+
+| Changed file | Documentation to update |
+|---|---|
+| `Dockerfile` | `README.md` and `README_zh.md` — update affected sections (tools list, build args, notes, etc.) |
+| `docker-compose.yml` | `README.md` and `README_zh.md` — update Quick Start / 快速开始 examples |
+| `README.md` | Keep `README_zh.md` in sync (same structure and content, Chinese translation) |
+| `README_zh.md` | Keep `README.md` in sync (same structure and content, English) |
+
+Both `README.md` and `README_zh.md` must always reflect the current state of `Dockerfile` and `docker-compose.yml`.
