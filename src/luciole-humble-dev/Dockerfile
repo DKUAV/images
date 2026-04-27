@@ -8,9 +8,8 @@ RUN apt update && apt -y upgrade
 
 # Avoid select timezone
 ENV DEBIAN_FRONTEND=noninteractive
-ENV LANGUAGE="en_US.UTF-8"
-ENV LANG=en_US:zh_CN.UTF-8
-ENV LC_ALL=C
+ENV LANG="en_US.UTF-8"
+ENV LANGUAGE="en_US:en"
 ARG TZ=Asia/Shanghai
 RUN apt -y install tzdata && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && apt -y install locales && locale-gen en_US.UTF-8 \
@@ -156,6 +155,12 @@ RUN sudo apt install -y bat \
 # fzf
 RUN git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf \
     && ~/.fzf/install --all
+
+# eza
+RUN wget -c https://github.com/eza-community/eza/releases/latest/download/eza_x86_64-unknown-linux-gnu.tar.gz -O - | tar xz \
+    && sudo chmod +x eza \
+    && sudo chown root:root eza \
+    && sudo mv eza /usr/local/bin/eza
 
 # change back to user home
 WORKDIR /home/$USERNAME
