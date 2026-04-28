@@ -40,8 +40,8 @@ RUN apt-get update && apt-get install -y python3.10 python3-setuptools \
     && curl -LsSf https://bootstrap.pypa.io/pip/get-pip.py | python3.10 \
     && pip3 config set global.index-url https://mirrors.aliyun.com/pypi/simple/ \
     && pip3 install setuptools pandas numpy ipython \
-    && pip3 install pytest pytest-cov pytest-xdist pytest-html pytest-mock \
-    && pip3 install pytest-randomly pytest-timeout filelock \
+    && pip3 install pytest pytest-xdist pytest-html pytest-mock \
+    && pip3 install pytest-randomly pytest-timeout coverage pytest-cov filelock \
     && pip3 install pre-commit rich BeautifulSoup4 allure-pytest \
     && pip3 install plottable matplotlib opencv_python openpyxl jira python-gitlab \
     && pip3 install flake8 black ruff mypy delegator.py build \
@@ -55,8 +55,6 @@ RUN apt-get update && apt-get install -y python3.10 python3-setuptools \
 # Supports GUI
 RUN apt-get update && apt-get install -y \
     dbus-x11 \
-    locales \
-    tzdata \
     fonts-wqy-zenhei \
     fonts-noto-cjk \
     mesa-utils \
