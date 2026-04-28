@@ -80,7 +80,6 @@ RUN apt-get update && apt-get -y install software-properties-common \
     && apt-get -y install ros-dev-tools \
     && rm -rf /var/lib/apt/lists/*
 
-
 # ─── User ─────────────────────────────────────────────────────────────────────
 
 ARG USERNAME=luciole
@@ -105,6 +104,14 @@ RUN existing_user=$(getent passwd $USER_UID | cut -d: -f1); \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
     && chmod 0440 /etc/sudoers.d/$USERNAME \
     && rm -rf /var/lib/apt/lists/*
+
+# XDG runtime dir — normally created by systemd-logind on login; must be created
+# manually in Docker containers so VS Code IPC sockets can be written here.
+RUN mkdir -p /run/user/$USER_UID \
+    && chown $USERNAME:$USERNAME /run/user/$USER_UID \
+    && chmod 0700 /run/user/$USER_UID
+
+ENV XDG_RUNTIME_DIR=/run/user/$USER_UID
 
 USER $USERNAME
 WORKDIR /home/$USERNAME
