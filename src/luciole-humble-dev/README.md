@@ -101,5 +101,5 @@ load_ros    # sources /opt/ros/humble/setup.bash
 
 ## Notes
 
-- neovim is currently installed from `nvim-linux-x86_64.tar.gz` — **not compatible with arm64**. A separate arm64 image should use the `nvim-linux-aarch64.tar.gz` binary or a build ARG to select the correct archive.
+- neovim is installed by detecting the build host architecture (`uname -m`): `nvim-linux-x86_64.tar.gz` for `x86_64` and `nvim-linux-arm64.tar.gz` for `aarch64`. Both amd64 and arm64 are supported.
 - If the requested UID/GID (`1000`) is already occupied in the base image, the old user is removed automatically before creating `luciole`.

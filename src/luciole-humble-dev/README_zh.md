@@ -101,5 +101,5 @@ load_ros    # 执行 source /opt/ros/humble/setup.bash
 
 ## 注意事项
 
-- neovim 当前安装的是 `nvim-linux-x86_64.tar.gz`，**不兼容 arm64**。arm64 镜像应使用 `nvim-linux-aarch64.tar.gz`，或通过构建参数动态选择正确的二进制包。
+- neovim 通过检测构建宿主架构（`uname -m`）自动选择安装包：`x86_64` 使用 `nvim-linux-x86_64.tar.gz`，`aarch64` 使用 `nvim-linux-arm64.tar.gz`，已同时支持 amd64 与 arm64。
 - 若基础镜像中 UID/GID `1000` 已被占用，构建时会自动删除原有用户后再创建 `luciole`。
