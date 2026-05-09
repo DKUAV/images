@@ -33,7 +33,13 @@ RUN apt-get update && apt-get -y install tree tmux screen cloc acl man htop land
 RUN wget https://apt.llvm.org/llvm.sh \
     && chmod +x llvm.sh \
     && ./llvm.sh 21 \
-    && rm llvm.sh
+    && rm llvm.sh \
+    && apt-get -y install clang-format-21 clang-tidy-21 \
+    && ln -s /usr/bin/clang-21 /usr/local/bin/clang \
+    && ln -s /usr/bin/lldb-21 /usr/local/bin/lldb \
+    && ln -s /usr/bin/clang-format-21 /usr/local/bin/clang-format \
+    && ln -s /usr/bin/clang-tidy-21 /usr/local/bin/clang-tidy \
+    && rm -rf /var/lib/apt/lists/*
 
 # python
 RUN apt-get update && apt-get install -y python3.10 python3-setuptools \
@@ -141,6 +147,14 @@ RUN echo 'alias load_ros="source /opt/ros/humble/setup.zsh"' >> ~/.zshrc \
     && echo '' >> ~/.zshrc \
     && echo 'alias load_ros="source /opt/ros/humble/setup.bash"' >> ~/.bashrc \
     && echo '' >> ~/.bashrc
+
+# nvm
+RUN PROFILE=~/.zshrc curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash \
+    && export NVM_DIR="$HOME/.nvm" \
+    && [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" \
+    && nvm install --lts \
+    && nvm use --lts \
+    && npm install -g pnpm
 
 # neovim
 WORKDIR /tmp
