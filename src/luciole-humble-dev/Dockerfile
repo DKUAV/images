@@ -22,7 +22,7 @@ ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/lib"
 # ─── System ───────────────────────────────────────────────────────────────────
 
 RUN apt-get update && apt-get -y install wget vim git curl zip unzip trash-cli parallel libssl-dev iputils-ping \
-    && apt-get -y install build-essential ninja-build gdb systemd-coredump nfs-common cmake \
+    && apt-get -y install build-essential ninja-build gdb systemd-coredump nfs-common cmake libopencv-dev \
     && apt-get -y install libgflags-dev libgoogle-glog-dev libgtest-dev libgmock-dev rsync git-lfs \
     && rm -rf /var/lib/apt/lists/*
 
@@ -40,6 +40,12 @@ RUN wget https://apt.llvm.org/llvm.sh \
     && ln -s /usr/bin/clang-format-21 /usr/local/bin/clang-format \
     && ln -s /usr/bin/clang-tidy-21 /usr/local/bin/clang-tidy \
     && rm -rf /var/lib/apt/lists/*
+
+# install new version of cmake
+ARG CMAKE_VERSION=4.3.2
+RUN wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz \
+    && tar -xf cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz --strip-components=1 -C /usr/local \
+    && rm cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz
 
 # python
 RUN apt-get update && apt-get install -y python3.10 python3-setuptools \
