@@ -90,6 +90,14 @@ RUN apt-get update && apt-get -y install software-properties-common \
     && apt-get -y install ros-dev-tools \
     && rm -rf /var/lib/apt/lists/*
 
+
+# Install dotnet
+RUN curl -L https://dot.net/v1/dotnet-install.sh -o dotnet-install.sh \
+    && chmod +x dotnet-install.sh \
+    && ./dotnet-install.sh --channel 8.0 --install-dir /opt/dotnet \
+    && ln -s /opt/dotnet/dotnet /usr/local/bin/dotnet \
+    && rm dotnet-install.sh
+
 # ─── User ─────────────────────────────────────────────────────────────────────
 
 ARG USERNAME=luciole
