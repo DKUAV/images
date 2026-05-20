@@ -1,7 +1,9 @@
+# syntax=docker/dockerfile:1.4
+
 FROM mcr.microsoft.com/devcontainers/base:ubuntu22.04
 
 # Ali mirror
-RUN sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
+# RUN sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
 
 RUN chmod 777 /tmp
 RUN apt-get update && apt-get -y upgrade && rm -rf /var/lib/apt/lists/*
@@ -186,7 +188,10 @@ RUN ARCH=$(uname -m) && case $ARCH in \
     && echo '' >> ~/.config/nvim/init.lua \
     && echo '-- disable mouse' >> ~/.config/nvim/init.lua \
     && echo 'vim.opt.mouse = ""' >> ~/.config/nvim/init.lua \
-    && echo '' >> ~/.config/nvim/init.lua
+    && echo '' >> ~/.config/nvim/init.lua \
+    && nvim --headless "+Lazy! sync" +qa \
+    && nvim --headless "+TSInstallSync! lua vim vimdoc c cpp python javascript" +qa \
+    && nvim --headless "+MasonInstall lua-language-server stylua pyright clangd" +qa && sleep 15 \
 
 # vim plug
 RUN sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs \
@@ -198,8 +203,16 @@ RUN sudo apt-get update && sudo apt-get install -y bat \
     && sudo rm -rf /var/lib/apt/lists/*
 
 # fzf
-RUN git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf \
-    && ~/.fzf/install --all
+RUN <<EOF
+    git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
+    ~/.fzf/install --all
+    cat <<'FZF_EOF' >> ~/.zshrc
+export FZF_CTRL_T_OPTS="
+  --walker-skip .git,node_modules,target
+  --preview 'bat -n --color=always {}'
+  --bind 'ctrl-/:change-preview-window(down|hidden|)'"
+FZF_EOF
+EOF
 
 # eza
 RUN ARCH=$(uname -m) && case $ARCH in \
@@ -211,6 +224,28 @@ RUN ARCH=$(uname -m) && case $ARCH in \
     && sudo chmod +x eza \
     && sudo chown root:root eza \
     && sudo mv eza /usr/local/bin/eza
+
+# install starship, sheldon and zoxide
+RUN curl -sS https://starship.rs/install.sh | sh -s -- -y \
+    && starship preset catppuccin-powerline -o ~/.config/starship.toml \
+    && curl --proto '=https' -fLsS https://rossmacarthur.github.io/install/crate.sh \
+    | bash -s -- --repo rossmacarthur/sheldon --to ~/.local/bin \
+    && sheldon init --shell zsh \
+    && sheldon add omz-lib \
+    &&   --github ohmyzsh/ohmyzsh \
+    &&   --dir lib \
+    &&   --use history.zsh key-bindings.zsh clipboard.zsh completion.zsh directories.zsh \
+    && sheldon add omz-git \
+    &&   --github ohmyzsh/ohmyzsh \
+    &&   --dir plugins/git \
+    &&   --use git.plugin.zsh \
+    && sheldon add zsh-autosuggestions \
+    &&   --github zsh-users/zsh-autosuggestions \
+    && sheldon add zsh-completions \
+    &&   --github zsh-users/zsh-completions \
+    && sheldon add zsh-syntax-highlighting \
+    &&   --github zsh-users/zsh-syntax-highlighting \
+    && curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
 
 # change back to user home
 WORKDIR /home/$USERNAME
