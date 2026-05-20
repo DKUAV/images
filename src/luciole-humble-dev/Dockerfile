@@ -258,7 +258,7 @@ RUN curl -sS https://starship.rs/install.sh | sh -s -- -y \
     && starship preset catppuccin-powerline -o ~/.config/starship.toml \
     && curl --proto '=https' -fLsS https://rossmacarthur.github.io/install/crate.sh \
     | bash -s -- --repo rossmacarthur/sheldon --to ~/.local/bin \
-    && ~/.local/bin/sheldon init --shell zsh \
+    && yes | ~/.local/bin/sheldon init --shell zsh \
     && ~/.local/bin/sheldon add omz-lib \
         --github ohmyzsh/ohmyzsh \
         --dir lib \
