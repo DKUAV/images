@@ -45,9 +45,14 @@ RUN wget https://apt.llvm.org/llvm.sh \
 
 # install new version of cmake
 ARG CMAKE_VERSION=4.3.2
-RUN wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz \
-    && tar -xf cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz --strip-components=1 -C /usr/local \
-    && rm cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz
+RUN ARCH=$(uname -m) && case $ARCH in \
+      x86_64)  CMAKE_ARCH="linux-x86_64" ;; \
+      aarch64) CMAKE_ARCH="linux-aarch64" ;; \
+      *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
+    esac \
+    && wget "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-${CMAKE_ARCH}.tar.gz" \
+    && tar -xf "cmake-${CMAKE_VERSION}-${CMAKE_ARCH}.tar.gz" --strip-components=1 -C /usr/local \
+    && rm "cmake-${CMAKE_VERSION}-${CMAKE_ARCH}.tar.gz"
 
 # python
 RUN apt-get update && apt-get install -y python3.10 python3-setuptools \
@@ -165,7 +170,7 @@ RUN echo 'alias load_ros="source /opt/ros/humble/setup.zsh"' >> ~/.zshrc \
     && echo '' >> ~/.bashrc
 
 # nvm
-RUN PROFILE=~/.zshrc curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash \
+RUN export PROFILE=~/.zshrc && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash \
     && export NVM_DIR="$HOME/.nvm" \
     && [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" \
     && nvm install --lts \
@@ -190,8 +195,31 @@ RUN ARCH=$(uname -m) && case $ARCH in \
     && echo 'vim.opt.mouse = ""' >> ~/.config/nvim/init.lua \
     && echo '' >> ~/.config/nvim/init.lua \
     && nvim --headless "+Lazy! sync" +qa \
-    && nvim --headless "+TSInstallSync! lua vim vimdoc c cpp python javascript" +qa \
-    && nvim --headless "+MasonInstall lua-language-server stylua pyright clangd" +qa && sleep 15 \
+    && nvim --headless "+Lazy load nvim-treesitter" "+TSInstallSync! lua vim vimdoc c cpp python javascript" +qa
+
+# Mason LSP servers — MasonInstall is async, so use a Lua script that polls until all packages are installed
+RUN <<'EOF'
+cat > /tmp/mason_install.lua << 'LUA'
+local packages = {"lua-language-server", "stylua", "pyright", "clangd"}
+vim.defer_fn(function()
+    local registry = require("mason-registry")
+    for _, name in ipairs(packages) do
+        local ok, p = pcall(registry.get_package, name)
+        if ok and not p:is_installed() then p:install() end
+    end
+    vim.wait(120000, function()
+        for _, name in ipairs(packages) do
+            local ok, p = pcall(registry.get_package, name)
+            if not ok or not p:is_installed() then return false end
+        end
+        return true
+    end, 2000)
+    vim.cmd("qa!")
+end, 5000)
+LUA
+nvim --headless -c "luafile /tmp/mason_install.lua"
+rm /tmp/mason_install.lua
+EOF
 
 # vim plug
 RUN sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs \
@@ -232,19 +260,19 @@ RUN curl -sS https://starship.rs/install.sh | sh -s -- -y \
     | bash -s -- --repo rossmacarthur/sheldon --to ~/.local/bin \
     && sheldon init --shell zsh \
     && sheldon add omz-lib \
-    &&   --github ohmyzsh/ohmyzsh \
-    &&   --dir lib \
-    &&   --use history.zsh key-bindings.zsh clipboard.zsh completion.zsh directories.zsh \
+        --github ohmyzsh/ohmyzsh \
+        --dir lib \
+        --use history.zsh key-bindings.zsh clipboard.zsh completion.zsh directories.zsh \
     && sheldon add omz-git \
-    &&   --github ohmyzsh/ohmyzsh \
-    &&   --dir plugins/git \
-    &&   --use git.plugin.zsh \
+        --github ohmyzsh/ohmyzsh \
+        --dir plugins/git \
+        --use git.plugin.zsh \
     && sheldon add zsh-autosuggestions \
-    &&   --github zsh-users/zsh-autosuggestions \
+        --github zsh-users/zsh-autosuggestions \
     && sheldon add zsh-completions \
-    &&   --github zsh-users/zsh-completions \
+        --github zsh-users/zsh-completions \
     && sheldon add zsh-syntax-highlighting \
-    &&   --github zsh-users/zsh-syntax-highlighting \
+        --github zsh-users/zsh-syntax-highlighting \
     && curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
 
 # change back to user home
