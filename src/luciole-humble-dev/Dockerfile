@@ -258,20 +258,20 @@ RUN curl -sS https://starship.rs/install.sh | sh -s -- -y \
     && starship preset catppuccin-powerline -o ~/.config/starship.toml \
     && curl --proto '=https' -fLsS https://rossmacarthur.github.io/install/crate.sh \
     | bash -s -- --repo rossmacarthur/sheldon --to ~/.local/bin \
-    && sheldon init --shell zsh \
-    && sheldon add omz-lib \
+    && ~/.local/bin/sheldon init --shell zsh \
+    && ~/.local/bin/sheldon add omz-lib \
         --github ohmyzsh/ohmyzsh \
         --dir lib \
         --use history.zsh key-bindings.zsh clipboard.zsh completion.zsh directories.zsh \
-    && sheldon add omz-git \
+    && ~/.local/bin/sheldon add omz-git \
         --github ohmyzsh/ohmyzsh \
         --dir plugins/git \
         --use git.plugin.zsh \
-    && sheldon add zsh-autosuggestions \
+    && ~/.local/bin/sheldon add zsh-autosuggestions \
         --github zsh-users/zsh-autosuggestions \
-    && sheldon add zsh-completions \
+    && ~/.local/bin/sheldon add zsh-completions \
         --github zsh-users/zsh-completions \
-    && sheldon add zsh-syntax-highlighting \
+    && ~/.local/bin/sheldon add zsh-syntax-highlighting \
         --github zsh-users/zsh-syntax-highlighting \
     && curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
 
