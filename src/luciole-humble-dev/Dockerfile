@@ -1,7 +1,9 @@
+# syntax=docker/dockerfile:1.4
+
 FROM mcr.microsoft.com/devcontainers/base:ubuntu22.04
 
 # Ali mirror
-RUN sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
+# RUN sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
 
 RUN chmod 777 /tmp
 RUN apt-get update && apt-get -y upgrade && rm -rf /var/lib/apt/lists/*
@@ -43,9 +45,14 @@ RUN wget https://apt.llvm.org/llvm.sh \
 
 # install new version of cmake
 ARG CMAKE_VERSION=4.3.2
-RUN wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz \
-    && tar -xf cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz --strip-components=1 -C /usr/local \
-    && rm cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz
+RUN ARCH=$(uname -m) && case $ARCH in \
+      x86_64)  CMAKE_ARCH="linux-x86_64" ;; \
+      aarch64) CMAKE_ARCH="linux-aarch64" ;; \
+      *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
+    esac \
+    && wget "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-${CMAKE_ARCH}.tar.gz" \
+    && tar -xf "cmake-${CMAKE_VERSION}-${CMAKE_ARCH}.tar.gz" --strip-components=1 -C /usr/local \
+    && rm "cmake-${CMAKE_VERSION}-${CMAKE_ARCH}.tar.gz"
 
 # python
 RUN apt-get update && apt-get install -y python3.10 python3-setuptools \
@@ -163,7 +170,7 @@ RUN echo 'alias load_ros="source /opt/ros/humble/setup.zsh"' >> ~/.zshrc \
     && echo '' >> ~/.bashrc
 
 # nvm
-RUN PROFILE=~/.zshrc curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash \
+RUN export PROFILE=~/.zshrc && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash \
     && export NVM_DIR="$HOME/.nvm" \
     && [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" \
     && nvm install --lts \
@@ -186,7 +193,33 @@ RUN ARCH=$(uname -m) && case $ARCH in \
     && echo '' >> ~/.config/nvim/init.lua \
     && echo '-- disable mouse' >> ~/.config/nvim/init.lua \
     && echo 'vim.opt.mouse = ""' >> ~/.config/nvim/init.lua \
-    && echo '' >> ~/.config/nvim/init.lua
+    && echo '' >> ~/.config/nvim/init.lua \
+    && nvim --headless "+Lazy! sync" +qa \
+    && nvim --headless "+Lazy load nvim-treesitter" "+TSInstallSync! lua vim vimdoc c cpp python javascript" +qa
+
+# Mason LSP servers — MasonInstall is async, so use a Lua script that polls until all packages are installed
+RUN <<'EOF'
+cat > /tmp/mason_install.lua << 'LUA'
+local packages = {"lua-language-server", "stylua", "pyright", "clangd"}
+vim.defer_fn(function()
+    local registry = require("mason-registry")
+    for _, name in ipairs(packages) do
+        local ok, p = pcall(registry.get_package, name)
+        if ok and not p:is_installed() then p:install() end
+    end
+    vim.wait(120000, function()
+        for _, name in ipairs(packages) do
+            local ok, p = pcall(registry.get_package, name)
+            if not ok or not p:is_installed() then return false end
+        end
+        return true
+    end, 2000)
+    vim.cmd("qa!")
+end, 5000)
+LUA
+nvim --headless -c "luafile /tmp/mason_install.lua"
+rm /tmp/mason_install.lua
+EOF
 
 # vim plug
 RUN sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs \
@@ -198,8 +231,16 @@ RUN sudo apt-get update && sudo apt-get install -y bat \
     && sudo rm -rf /var/lib/apt/lists/*
 
 # fzf
-RUN git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf \
-    && ~/.fzf/install --all
+RUN <<EOF
+    git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
+    ~/.fzf/install --all
+    cat <<'FZF_EOF' >> ~/.zshrc
+export FZF_CTRL_T_OPTS="
+  --walker-skip .git,node_modules,target
+  --preview 'bat -n --color=always {}'
+  --bind 'ctrl-/:change-preview-window(down|hidden|)'"
+FZF_EOF
+EOF
 
 # eza
 RUN ARCH=$(uname -m) && case $ARCH in \
@@ -211,6 +252,28 @@ RUN ARCH=$(uname -m) && case $ARCH in \
     && sudo chmod +x eza \
     && sudo chown root:root eza \
     && sudo mv eza /usr/local/bin/eza
+
+# install starship, sheldon and zoxide
+RUN curl -sS https://starship.rs/install.sh | sh -s -- -y \
+    && starship preset catppuccin-powerline -o ~/.config/starship.toml \
+    && curl --proto '=https' -fLsS https://rossmacarthur.github.io/install/crate.sh \
+    | bash -s -- --repo rossmacarthur/sheldon --to ~/.local/bin \
+    && yes | ~/.local/bin/sheldon init --shell zsh \
+    && ~/.local/bin/sheldon add omz-lib \
+        --github ohmyzsh/ohmyzsh \
+        --dir lib \
+        --use history.zsh key-bindings.zsh clipboard.zsh completion.zsh directories.zsh \
+    && ~/.local/bin/sheldon add omz-git \
+        --github ohmyzsh/ohmyzsh \
+        --dir plugins/git \
+        --use git.plugin.zsh \
+    && ~/.local/bin/sheldon add zsh-autosuggestions \
+        --github zsh-users/zsh-autosuggestions \
+    && ~/.local/bin/sheldon add zsh-completions \
+        --github zsh-users/zsh-completions \
+    && ~/.local/bin/sheldon add zsh-syntax-highlighting \
+        --github zsh-users/zsh-syntax-highlighting \
+    && curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
 
 # change back to user home
 WORKDIR /home/$USERNAME
