@@ -137,7 +137,7 @@ sudo chown root:root eza
 sudo mv eza /usr/local/bin/eza
 
 # ── starship + sheldon ───────────────────────────────────────────────────────
-curl -sS https://starship.rs/install.sh | sh -s -- -y
+curl -sS https://starship.rs/install.sh | POSIXLY_CORRECT=1 bash -s -- -y
 starship preset catppuccin-powerline -o ~/.config/starship.toml
 
 curl --proto '=https' -fLsS https://rossmacarthur.github.io/install/crate.sh \
