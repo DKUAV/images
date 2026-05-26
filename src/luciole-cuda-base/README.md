@@ -12,7 +12,7 @@ ghcr.io/dkuav/luciole-cuda-base:latest
 
 ## Architecture
 
-`amd64` + `arm64`
+`amd64` only
 
 ## What's Inside
 

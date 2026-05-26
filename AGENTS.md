@@ -52,8 +52,8 @@ Each Dockerfile does `COPY src/_scripts/ /tmp/scripts/ && chmod +x /tmp/scripts/
 
 | Directory | Base FROM | Description |
 |-----------|-----------|-------------|
-| `src/luciole-base` | `mcr.microsoft.com/devcontainers/base:ubuntu22.04` | Ubuntu 22.04 + Python + pip packages + user |
-| `src/luciole-cuda-base` | `nvcr.io/nvidia/pytorch:24.10-py3` | PyTorch/CUDA + pip packages + user |
+| `src/luciole-base` | `mcr.microsoft.com/devcontainers/base:ubuntu22.04` | Ubuntu 22.04 + Python + pip packages + user (amd64 only) |
+| `src/luciole-cuda-base` | `nvcr.io/nvidia/pytorch:24.10-py3` | PyTorch/CUDA + pip packages + user (amd64 only) |
 | `src/luciole-l4t-base` | `nvcr.io/nvidia/l4t-tensorrt:r10.3.0-devel` | L4T TensorRT + pip packages + user (arm64 only) |
 
 ### Tier 2 — Final Images (depend on Tier 1 base images)
@@ -81,6 +81,8 @@ Drives CI change detection and dependency propagation:
     "luciole-humble-l4t-runtime":   ["luciole-l4t-base"]
   },
   "arch_overrides": {
+    "luciole-base":                  ["amd64"],
+    "luciole-cuda-base":             ["amd64"],
     "luciole-humble-dev":            ["amd64"],
     "luciole-humble-cuda-dev":       ["amd64"],
     "luciole-humble-cuda-runtime":   ["amd64"],
@@ -121,7 +123,7 @@ docker build -f src/<image-name>/Dockerfile -t <image-name> .
 1. Decide tier: Tier 1 (new base) or Tier 2 (new final that builds on an existing base).
 2. Create a new directory under `src/` following the pattern `<project>-<purpose>` (lowercase, hyphen-separated).
 3. Add `Dockerfile` (required), `docker-compose.yml` (recommended), `README.md` and `README_zh.md` (both recommended).
-4. Update `src/image-deps.json`: add the image to `base_images` (Tier 1) or `dependencies` (Tier 2), and `arch_overrides` if arm64-only.
+4. Update `src/image-deps.json`: add the image to `base_images` (Tier 1) or `dependencies` (Tier 2), and `arch_overrides` if not building all architectures.
 5. CI will automatically detect and build the directory on the next push.
 
 ## Notes

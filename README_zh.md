@@ -10,8 +10,8 @@ DKUAV 项目的 Docker 镜像管理仓库。镜像通过 GitHub Actions 自动�
 
 ```mermaid
 graph TD
-  U["mcr.microsoft.com/devcontainers/base:ubuntu22.04"] --> LB["ghcr.io/dkuav/luciole-base\n(system + Python + pip + user)"]
-  C["nvcr.io/nvidia/pytorch:24.10-py3\n(已含 Python + PyTorch + CUDA)"] --> CB["ghcr.io/dkuav/luciole-cuda-base\n(system + pip + user)"]
+  U["mcr.microsoft.com/devcontainers/base:ubuntu22.04"] --> LB["ghcr.io/dkuav/luciole-base\n(system + Python + pip + user)\namd64 only"]
+  C["nvcr.io/nvidia/pytorch:24.10-py3\n(已含 Python + PyTorch + CUDA)"] --> CB["ghcr.io/dkuav/luciole-cuda-base\n(system + pip + user)\namd64 only"]
   L["nvcr.io/nvidia/l4t-tensorrt:r10.3.0-devel\n(已含 Python + TensorRT, arm64)"] --> LTB["ghcr.io/dkuav/luciole-l4t-base\n(system + pip + user)\narm64 only"]
 
   LB --> HD["luciole-humble-dev\n(ROS 2 + cmake + clang + .NET + devshell)\namd64 only"]
@@ -27,8 +27,8 @@ graph TD
 
 | 镜像 | 基础 FROM | 架构 | 描述 |
 |------|-----------|------|------|
-| [`luciole-base`](src/luciole-base/) | `mcr.microsoft.com/devcontainers/base:ubuntu22.04` | amd64 + arm64 | Ubuntu 22.04 + Python 3.10 + pip 包 + 用户 |
-| [`luciole-cuda-base`](src/luciole-cuda-base/) | `nvcr.io/nvidia/pytorch:24.10-py3` | amd64 + arm64 | PyTorch/CUDA + pip 包 + 用户 |
+| [`luciole-base`](src/luciole-base/) | `mcr.microsoft.com/devcontainers/base:ubuntu22.04` | 仅 amd64 | Ubuntu 22.04 + Python 3.10 + pip 包 + 用户 |
+| [`luciole-cuda-base`](src/luciole-cuda-base/) | `nvcr.io/nvidia/pytorch:24.10-py3` | 仅 amd64 | PyTorch/CUDA + pip 包 + 用户 |
 | [`luciole-l4t-base`](src/luciole-l4t-base/) | `nvcr.io/nvidia/l4t-tensorrt:r10.3.0-devel` | 仅 arm64 | L4T TensorRT + pip 包 + 用户 |
 
 ### 第二层 — 最终镜像
