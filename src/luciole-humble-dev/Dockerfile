@@ -2,7 +2,8 @@
 # Tier 2 final: Ubuntu dev environment with ROS2, devtools and full devshell
 # FROM: ghcr.io/dkuav/luciole-base (system + Python + pip + user)
 
-FROM ghcr.io/dkuav/luciole-base:latest
+ARG BASE_TAG=latest
+FROM ghcr.io/dkuav/luciole-base:${BASE_TAG}
 
 # Build context is the repo root
 COPY src/_scripts/ /tmp/scripts/
