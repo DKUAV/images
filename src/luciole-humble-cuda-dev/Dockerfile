@@ -1,10 +1,9 @@
 # syntax=docker/dockerfile:1.4
-# Tier 2 final: Ubuntu dev environment with ROS2, devtools and full devshell
-# FROM: ghcr.io/dkuav/luciole-base (system + Python + pip + user)
+# Tier 2 final: CUDA/PyTorch dev environment with ROS2, devtools and full devshell
+# FROM: ghcr.io/dkuav/luciole-cuda-base (pytorch:24.10-py3 + system + pip + user)
 
-FROM ghcr.io/dkuav/luciole-base:latest
+FROM ghcr.io/dkuav/luciole-cuda-base:latest
 
-# Build context is the repo root
 COPY src/_scripts/ /tmp/scripts/
 RUN chmod +x /tmp/scripts/*.sh
 
@@ -29,6 +28,3 @@ RUN rm -rf /tmp/scripts
 
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
-
-# change back to user home
-WORKDIR /home/$USERNAME

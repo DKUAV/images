@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: src/luciole-humble-l4t-runtime/Dockerfile
+    image: ghcr.io/dkuav/luciole-humble-l4t-runtime:latest
+    platform: linux/arm64
+    user: luciole
+
+    stdin_open: true
+    tty: true

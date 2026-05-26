@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: src/luciole-humble-cuda-runtime/Dockerfile
+    image: ghcr.io/dkuav/luciole-humble-cuda-runtime:latest
+    user: luciole
+
+    stdin_open: true
+    tty: true

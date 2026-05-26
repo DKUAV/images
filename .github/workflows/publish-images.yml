@@ -13,20 +13,23 @@ on:
   workflow_dispatch:
 
 jobs:
-  detect-images:
+  detect-changes:
     name: Detect Changed Images
     runs-on: ubuntu-latest
     outputs:
-      build_matrix: ${{ steps.detect.outputs.build_matrix }}
-      image_matrix: ${{ steps.detect.outputs.image_matrix }}
-      has_images: ${{ steps.detect.outputs.has_images }}
+      tier1_build_matrix:  ${{ steps.detect.outputs.tier1_build_matrix }}
+      tier2_build_matrix:  ${{ steps.detect.outputs.tier2_build_matrix }}
+      tier1_image_matrix:  ${{ steps.detect.outputs.tier1_image_matrix }}
+      tier2_image_matrix:  ${{ steps.detect.outputs.tier2_image_matrix }}
+      has_tier1: ${{ steps.detect.outputs.has_tier1 }}
+      has_tier2: ${{ steps.detect.outputs.has_tier2 }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Collect changed image directories
+      - name: Compute build matrices
         id: detect
         env:
           GITHUB_EVENT_BEFORE: ${{ github.event.before }}
@@ -42,82 +45,102 @@ jobs:
           before = os.environ.get("GITHUB_EVENT_BEFORE", "")
           sha = os.environ["GITHUB_SHA"]
 
-          def all_image_dirs():
-              return sorted({dockerfile.parent.as_posix() for dockerfile in src_root.rglob("Dockerfile")})
+          with open(src_root / "image-deps.json") as f:
+              deps = json.load(f)
 
-          def nearest_image_dir(path_text: str):
-              current = pathlib.Path(path_text).parent
-              for candidate in (current, *current.parents):
-                  try:
-                      candidate.relative_to(src_root)
-                  except ValueError:
-                      continue
-                  if (candidate / "Dockerfile").is_file():
-                      return candidate.as_posix()
-              return None
+          base_images   = set(deps["base_images"])
+          dependencies  = deps["dependencies"]   # final -> [base, ...]
+          arch_overrides = deps.get("arch_overrides", {})
+
+          # Reverse map: base -> finals that depend on it
+          dependents: dict[str, list[str]] = {}
+          for final, bases in dependencies.items():
+              for base in bases:
+                  dependents.setdefault(base, []).append(final)
+
+          DEFAULT_RUNNERS = [
+              {"platform": "linux/amd64",  "platform_id": "amd64", "runner": "ubuntu-24.04"},
+              {"platform": "linux/arm64",  "platform_id": "arm64", "runner": "ubuntu-24.04-arm"},
+          ]
+
+          def build_entries(image_name: str) -> list[dict]:
+              overrides = arch_overrides.get(image_name)
+              runners = DEFAULT_RUNNERS if not overrides else [
+                  r for r in DEFAULT_RUNNERS if r["platform_id"] in overrides
+              ]
+              base = {
+                  "image":      image_name,
+                  "context":    ".",
+                  "dockerfile": f"src/{image_name}/Dockerfile",
+              }
+              return [{**base, **r} for r in runners]
+
+          def image_entries(names: list[str]) -> list[dict]:
+              return [
+                  {"image": n, "context": ".", "dockerfile": f"src/{n}/Dockerfile"}
+                  for n in names
+              ]
+
+          def get_changed_paths() -> list[str]:
+              if before and before != "0000000000000000000000000000000000000000":
+                  cmd = ["git", "diff", "--name-only", f"{before}..{sha}", "--", "src"]
+              else:
+                  cmd = ["git", "ls-files", "src"]
+              return subprocess.check_output(cmd, text=True).splitlines()
 
           if event_name == "workflow_dispatch":
-              image_dirs = all_image_dirs()
+              tier1 = sorted(base_images)
+              tier2 = sorted(dependencies.keys())
           else:
-              if before and before != "0000000000000000000000000000000000000000":
-                  command = ["git", "diff", "--name-only", f"{before}..{sha}", "--", "src"]
-              else:
-                  command = ["git", "ls-files", "src"]
-
-              changed_paths = subprocess.check_output(command, text=True).splitlines()
-              discovered = []
-              seen = set()
-              for changed_path in changed_paths:
-                  image_dir = nearest_image_dir(changed_path)
-                  if image_dir and image_dir not in seen:
-                      seen.add(image_dir)
-                      discovered.append(image_dir)
-              image_dirs = sorted(discovered)
-
-          image_matrix = []
-          build_matrix = []
-          for image_dir in image_dirs:
-              image_entry = {
-                  "image": pathlib.PurePosixPath(image_dir).relative_to("src").as_posix().replace("/", "-"),
-                  "context": image_dir,
-                  "dockerfile": f"{image_dir}/Dockerfile",
-              }
-              image_matrix.append(image_entry)
-              build_matrix.extend(
-                  [
-                      {
-                          **image_entry,
-                          "platform": "linux/amd64",
-                          "platform_id": "amd64",
-                          "runner": "ubuntu-24.04",
-                      },
-                      {
-                          **image_entry,
-                          "platform": "linux/arm64",
-                          "platform_id": "arm64",
-                          "runner": "ubuntu-24.04-arm",
-                      },
-                  ]
+              changed = get_changed_paths()
+              scripts_changed = any(
+                  pathlib.PurePosixPath(p).parts[1] == "_scripts"
+                  for p in changed if len(pathlib.PurePosixPath(p).parts) >= 2
               )
 
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
-              print(f"build_matrix={json.dumps(build_matrix)}", file=output)
-              print(f"image_matrix={json.dumps(image_matrix)}", file=output)
-              print(f"has_images={'true' if image_matrix else 'false'}", file=output)
+              if scripts_changed:
+                  tier1 = sorted(base_images)
+                  tier2 = sorted(dependencies.keys())
+              else:
+                  changed_dirs = {
+                      pathlib.PurePosixPath(p).parts[1]
+                      for p in changed
+                      if len(pathlib.PurePosixPath(p).parts) >= 2
+                      and (src_root / pathlib.PurePosixPath(p).parts[1] / "Dockerfile").is_file()
+                  }
+                  tier1 = sorted(d for d in changed_dirs if d in base_images)
+                  tier2_set = {d for d in changed_dirs if d in dependencies}
+                  # Transitive: changed base -> rebuild its dependents
+                  for base in tier1:
+                      tier2_set.update(dependents.get(base, []))
+                  tier2 = sorted(tier2_set)
+
+          tier1_build = [e for img in tier1 for e in build_entries(img)]
+          tier2_build = [e for img in tier2 for e in build_entries(img)]
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              print(f"tier1_build_matrix={json.dumps(tier1_build)}", file=out)
+              print(f"tier2_build_matrix={json.dumps(tier2_build)}", file=out)
+              print(f"tier1_image_matrix={json.dumps(image_entries(tier1))}", file=out)
+              print(f"tier2_image_matrix={json.dumps(image_entries(tier2))}", file=out)
+              print(f"has_tier1={'true' if tier1_build else 'false'}", file=out)
+              print(f"has_tier2={'true' if tier2_build else 'false'}", file=out)
           PY
 
-  build-and-push:
-    name: Build And Push (${{ matrix.image }} ${{ matrix.platform_id }})
+  # ── Tier 1: base images ─────────────────────────────────────────────────────
+
+  build-push-tier1:
+    name: Build Tier1 (${{ matrix.image }} ${{ matrix.platform_id }})
     runs-on: ${{ matrix.runner }}
-    needs: detect-images
-    if: needs.detect-images.outputs.has_images == 'true'
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has_tier1 == 'true'
     permissions:
       contents: read
       packages: write
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJson(needs.detect-images.outputs.build_matrix) }}
+        include: ${{ fromJson(needs.detect-changes.outputs.tier1_build_matrix) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -126,8 +149,7 @@ jobs:
         id: registry
         run: |
           owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
-          image="ghcr.io/${owner}/${{ matrix.image }}"
-          echo "image=${image}" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${owner}/${{ matrix.image }}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -155,7 +177,6 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}-${{ matrix.platform_id }}
 
       - name: Export digest
-        shell: bash
         run: |
           mkdir -p /tmp/digests/${{ matrix.image }}
           digest='${{ steps.build.outputs.digest }}'
@@ -169,20 +190,18 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  merge-manifests:
-    name: Merge Manifests (${{ matrix.image }})
+  merge-tier1:
+    name: Merge Tier1 (${{ matrix.image }})
     runs-on: ubuntu-24.04
-    needs:
-      - detect-images
-      - build-and-push
-    if: needs.detect-images.outputs.has_images == 'true'
+    needs: [detect-changes, build-push-tier1]
+    if: needs.detect-changes.outputs.has_tier1 == 'true'
     permissions:
       contents: read
       packages: write
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJson(needs.detect-images.outputs.image_matrix) }}
+        include: ${{ fromJson(needs.detect-changes.outputs.tier1_image_matrix) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -191,8 +210,14 @@ jobs:
         id: registry
         run: |
           owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
-          image="ghcr.io/${owner}/${{ matrix.image }}"
-          echo "image=${image}" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${owner}/${{ matrix.image }}" >> "$GITHUB_OUTPUT"
+
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests/${{ matrix.image }}
+          pattern: digests-${{ matrix.image }}-*
+          merge-multiple: true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -218,32 +243,149 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.title=${{ matrix.image }}
 
+      - name: Create and push multi-arch manifest
+        working-directory: /tmp/digests/${{ matrix.image }}
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ steps.registry.outputs.image }}@sha256:%s ' *)
+
+      - name: Inspect manifest
+        run: docker buildx imagetools inspect ${{ steps.registry.outputs.image }}:${{ steps.meta.outputs.version }}
+
+  # ── Tier 2: final images ────────────────────────────────────────────────────
+
+  build-push-tier2:
+    name: Build Tier2 (${{ matrix.image }} ${{ matrix.platform_id }})
+    runs-on: ${{ matrix.runner }}
+    needs: [detect-changes, merge-tier1]
+    # Run when tier2 images are needed; allow tier1 to have been skipped (no base changes)
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.detect-changes.result == 'success' &&
+      (needs.merge-tier1.result == 'success' || needs.merge-tier1.result == 'skipped') &&
+      needs.detect-changes.outputs.has_tier2 == 'true'
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.detect-changes.outputs.tier2_build_matrix) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Derive registry coordinates
+        id: registry
+        run: |
+          owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
+          echo "image=ghcr.io/${owner}/${{ matrix.image }}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image by digest
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: ${{ matrix.platform }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.title=${{ matrix.image }}
+          outputs: type=image,name=${{ steps.registry.outputs.image }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.image }}-${{ matrix.platform_id }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}-${{ matrix.platform_id }}
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests/${{ matrix.image }}
+          digest='${{ steps.build.outputs.digest }}'
+          touch "/tmp/digests/${{ matrix.image }}/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.image }}-${{ matrix.platform_id }}
+          path: /tmp/digests/${{ matrix.image }}/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge-tier2:
+    name: Merge Tier2 (${{ matrix.image }})
+    runs-on: ubuntu-24.04
+    needs: [detect-changes, build-push-tier2]
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.detect-changes.result == 'success' &&
+      needs.build-push-tier2.result == 'success' &&
+      needs.detect-changes.outputs.has_tier2 == 'true'
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.detect-changes.outputs.tier2_image_matrix) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Derive registry coordinates
+        id: registry
+        run: |
+          owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
+          echo "image=ghcr.io/${owner}/${{ matrix.image }}" >> "$GITHUB_OUTPUT"
+
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
-          pattern: digests-${{ matrix.image }}-*
           path: /tmp/digests/${{ matrix.image }}
+          pattern: digests-${{ matrix.image }}-*
           merge-multiple: true
 
-      - name: Create manifest list
-        working-directory: /tmp/digests/${{ matrix.image }}
-        env:
-          DOCKER_METADATA_OUTPUT_JSON: ${{ steps.meta.outputs.json }}
-        run: |
-          set -euo pipefail
-          args=()
-          while IFS= read -r tag; do
-            args+=("-t" "$tag")
-          done < <(jq -r '.tags[]' <<< "$DOCKER_METADATA_OUTPUT_JSON")
-          while IFS= read -r digest; do
-            args+=("${{ steps.registry.outputs.image }}@sha256:${digest}")
-          done < <(find . -maxdepth 1 -type f -printf '%f\n' | sort)
-          docker buildx imagetools create "${args[@]}"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Inspect merged image
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.registry.outputs.image }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.title=${{ matrix.image }}
+
+      - name: Create and push multi-arch manifest
         working-directory: /tmp/digests/${{ matrix.image }}
-        env:
-          DOCKER_METADATA_OUTPUT_JSON: ${{ steps.meta.outputs.json }}
         run: |
-          first_tag=$(jq -r '.tags[0]' <<< "$DOCKER_METADATA_OUTPUT_JSON")
-          docker buildx imagetools inspect "$first_tag"
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ steps.registry.outputs.image }}@sha256:%s ' *)
+
+      - name: Inspect manifest
+        run: docker buildx imagetools inspect ${{ steps.registry.outputs.image }}:${{ steps.meta.outputs.version }}
