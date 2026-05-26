@@ -7,6 +7,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
     paths:
       - src/**
       - .github/workflows/publish-images.yml
@@ -236,6 +238,7 @@ jobs:
           images: ${{ steps.registry.outputs.image }}
           tags: |
             type=ref,event=branch
+            type=ref,event=tag
             type=sha,prefix=sha-
             type=raw,value=latest,enable={{is_default_branch}}
           labels: |
@@ -385,6 +388,7 @@ jobs:
           images: ${{ steps.registry.outputs.image }}
           tags: |
             type=ref,event=branch
+            type=ref,event=tag
             type=sha,prefix=sha-
             type=raw,value=latest,enable={{is_default_branch}}
           labels: |
