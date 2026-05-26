@@ -8,6 +8,9 @@
     "luciole-humble-l4t-runtime":   ["luciole-l4t-base"]
   },
   "arch_overrides": {
+    "luciole-humble-dev":            ["amd64"],
+    "luciole-humble-cuda-dev":       ["amd64"],
+    "luciole-humble-cuda-runtime":   ["amd64"],
     "luciole-l4t-base":             ["arm64"],
     "luciole-humble-l4t-dev":       ["arm64"],
     "luciole-humble-l4t-runtime":   ["arm64"]

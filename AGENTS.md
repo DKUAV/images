@@ -60,9 +60,9 @@ Each Dockerfile does `COPY src/_scripts/ /tmp/scripts/ && chmod +x /tmp/scripts/
 
 | Directory | FROM (Tier 1) | Arch | Description |
 |-----------|---------------|------|-------------|
-| `src/luciole-humble-dev` | `luciole-base` | amd64 + arm64 | Ubuntu dev: ROS 2 + devtools + devshell |
-| `src/luciole-humble-cuda-dev` | `luciole-cuda-base` | amd64 + arm64 | CUDA dev: ROS 2 + devtools + devshell |
-| `src/luciole-humble-cuda-runtime` | `luciole-cuda-base` | amd64 + arm64 | CUDA runtime: ROS 2 + cmake only |
+| `src/luciole-humble-dev` | `luciole-base` | amd64 only | Ubuntu dev: ROS 2 + devtools + devshell |
+| `src/luciole-humble-cuda-dev` | `luciole-cuda-base` | amd64 only | CUDA dev: ROS 2 + devtools + devshell |
+| `src/luciole-humble-cuda-runtime` | `luciole-cuda-base` | amd64 only | CUDA runtime: ROS 2 + cmake only |
 | `src/luciole-humble-l4t-dev` | `luciole-l4t-base` | arm64 only | L4T dev: ROS 2 + devtools + devshell |
 | `src/luciole-humble-l4t-runtime` | `luciole-l4t-base` | arm64 only | L4T runtime: ROS 2 + cmake only |
 
@@ -81,6 +81,9 @@ Drives CI change detection and dependency propagation:
     "luciole-humble-l4t-runtime":   ["luciole-l4t-base"]
   },
   "arch_overrides": {
+    "luciole-humble-dev":            ["amd64"],
+    "luciole-humble-cuda-dev":       ["amd64"],
+    "luciole-humble-cuda-runtime":   ["amd64"],
     "luciole-l4t-base":             ["arm64"],
     "luciole-humble-l4t-dev":       ["arm64"],
     "luciole-humble-l4t-runtime":   ["arm64"]
