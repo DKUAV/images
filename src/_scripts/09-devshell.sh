@@ -133,7 +133,7 @@ sudo chmod +x eza
 sudo chown root:root eza
 sudo mv eza /usr/local/bin/eza
 
-# ── starship + sheldon + zoxide ───────────────────────────────────────────────
+# ── starship + sheldon ───────────────────────────────────────────────────────
 curl -sS https://starship.rs/install.sh | sh -s -- -y
 starship preset catppuccin-powerline -o ~/.config/starship.toml
 
@@ -156,4 +156,8 @@ yes | ~/.local/bin/sheldon init --shell zsh
 ~/.local/bin/sheldon add zsh-syntax-highlighting \
     --github zsh-users/zsh-syntax-highlighting
 
+# zoxide
 curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
+
+# witr
+curl -fsSL https://raw.githubusercontent.com/pranshuparmar/witr/main/install.sh | bash
