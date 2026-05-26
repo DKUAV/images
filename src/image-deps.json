@@ -1,0 +1,15 @@
+{
+  "base_images": ["luciole-base", "luciole-cuda-base", "luciole-l4t-base"],
+  "dependencies": {
+    "luciole-humble-dev":           ["luciole-base"],
+    "luciole-humble-cuda-dev":      ["luciole-cuda-base"],
+    "luciole-humble-cuda-runtime":  ["luciole-cuda-base"],
+    "luciole-humble-l4t-dev":       ["luciole-l4t-base"],
+    "luciole-humble-l4t-runtime":   ["luciole-l4t-base"]
+  },
+  "arch_overrides": {
+    "luciole-l4t-base":             ["arm64"],
+    "luciole-humble-l4t-dev":       ["arm64"],
+    "luciole-humble-l4t-runtime":   ["arm64"]
+  }
+}

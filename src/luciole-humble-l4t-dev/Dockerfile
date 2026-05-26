@@ -1,10 +1,10 @@
 # syntax=docker/dockerfile:1.4
-# Tier 2 final: Ubuntu dev environment with ROS2, devtools and full devshell
-# FROM: ghcr.io/dkuav/luciole-base (system + Python + pip + user)
+# Tier 2 final: L4T dev environment with ROS2, devtools and full devshell
+# FROM: ghcr.io/dkuav/luciole-l4t-base (l4t-tensorrt:r10.3.0-devel + system + pip + user)
+# Architecture: arm64 only
 
-FROM ghcr.io/dkuav/luciole-base:latest
+FROM ghcr.io/dkuav/luciole-l4t-base:latest
 
-# Build context is the repo root
 COPY src/_scripts/ /tmp/scripts/
 RUN chmod +x /tmp/scripts/*.sh
 
@@ -29,6 +29,3 @@ RUN rm -rf /tmp/scripts
 
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
-
-# change back to user home
-WORKDIR /home/$USERNAME

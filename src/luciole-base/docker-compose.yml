@@ -1,0 +1,8 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: src/luciole-base/Dockerfile
+    image: ghcr.io/dkuav/luciole-base:latest
