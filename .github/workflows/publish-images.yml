@@ -295,7 +295,14 @@ jobs:
 
       - name: Compute base image tag
         id: base
-        run: echo "tag=sha-${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
+        run: |
+          # If tier1 was rebuilt this run, use the sha tag just pushed.
+          # If tier1 was skipped (no base changes), fall back to :latest.
+          if [ "${{ needs.merge-tier1.result }}" = "success" ]; then
+            echo "tag=sha-${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Build and push image by digest
         id: build
