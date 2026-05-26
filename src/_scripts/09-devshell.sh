@@ -7,7 +7,8 @@ set -euo pipefail
 ROS_DISTRO_VAL=${ROS_DISTRO:-humble}
 
 # ── zsh ───────────────────────────────────────────────────────────────────────
-sudo apt-get update && sudo apt-get -y install zsh
+sudo apt-get update
+sudo apt-get -y install zsh
 sudo chsh -s /bin/zsh "$(whoami)"
 sudo rm -rf /var/lib/apt/lists/*
 
