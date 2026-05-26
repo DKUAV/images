@@ -2,7 +2,8 @@
 # Tier 2 final: CUDA/PyTorch runtime environment with ROS2 and cmake (no devshell)
 # FROM: ghcr.io/dkuav/luciole-cuda-base (pytorch:24.10-py3 + system + pip + user)
 
-FROM ghcr.io/dkuav/luciole-cuda-base:latest
+ARG BASE_TAG=latest
+FROM ghcr.io/dkuav/luciole-cuda-base:${BASE_TAG}
 
 COPY src/_scripts/ /tmp/scripts/
 RUN chmod +x /tmp/scripts/*.sh

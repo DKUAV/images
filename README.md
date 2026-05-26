@@ -10,8 +10,8 @@ The repository uses a **two-tier image hierarchy** to maximise layer reuse acros
 
 ```mermaid
 graph TD
-  U["mcr.microsoft.com/devcontainers/base:ubuntu22.04"] --> LB["ghcr.io/dkuav/luciole-base\n(system + Python + pip + user)"]
-  C["nvcr.io/nvidia/pytorch:24.10-py3\n(PyTorch + CUDA, Python built-in)"] --> CB["ghcr.io/dkuav/luciole-cuda-base\n(system + pip + user)"]
+  U["mcr.microsoft.com/devcontainers/base:ubuntu22.04"] --> LB["ghcr.io/dkuav/luciole-base\n(system + Python + pip + user)\namd64 only"]
+  C["nvcr.io/nvidia/pytorch:24.10-py3\n(PyTorch + CUDA, Python built-in)"] --> CB["ghcr.io/dkuav/luciole-cuda-base\n(system + pip + user)\namd64 only"]
   L["nvcr.io/nvidia/l4t-tensorrt:r10.3.0-devel\n(TensorRT, Python built-in, arm64)"] --> LTB["ghcr.io/dkuav/luciole-l4t-base\n(system + pip + user)\narm64 only"]
 
   LB --> HD["luciole-humble-dev\n(ROS 2 + cmake + clang + .NET + devshell)\namd64 only"]
@@ -27,8 +27,8 @@ Published to GHCR; used as `FROM` in Tier 2 Dockerfiles.
 
 | Image | Base FROM | Arch | Description |
 |-------|-----------|------|-------------|
-| [`luciole-base`](src/luciole-base/) | `mcr.microsoft.com/devcontainers/base:ubuntu22.04` | amd64 + arm64 | Ubuntu 22.04 + Python 3.10 + pip packages + user |
-| [`luciole-cuda-base`](src/luciole-cuda-base/) | `nvcr.io/nvidia/pytorch:24.10-py3` | amd64 + arm64 | PyTorch/CUDA + pip packages + user |
+| [`luciole-base`](src/luciole-base/) | `mcr.microsoft.com/devcontainers/base:ubuntu22.04` | amd64 only | Ubuntu 22.04 + Python 3.10 + pip packages + user |
+| [`luciole-cuda-base`](src/luciole-cuda-base/) | `nvcr.io/nvidia/pytorch:24.10-py3` | amd64 only | PyTorch/CUDA + pip packages + user |
 | [`luciole-l4t-base`](src/luciole-l4t-base/) | `nvcr.io/nvidia/l4t-tensorrt:r10.3.0-devel` | arm64 only | L4T TensorRT + pip packages + user |
 
 ### Tier 2 — Final Images

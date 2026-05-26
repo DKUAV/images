@@ -12,7 +12,7 @@ ghcr.io/dkuav/luciole-base:latest
 
 ## 支持架构
 
-`amd64` + `arm64`
+仅 `amd64`
 
 ## 内置内容
 

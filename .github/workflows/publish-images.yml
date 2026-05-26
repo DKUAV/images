@@ -7,6 +7,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
     paths:
       - src/**
       - .github/workflows/publish-images.yml
@@ -236,6 +238,7 @@ jobs:
           images: ${{ steps.registry.outputs.image }}
           tags: |
             type=ref,event=branch
+            type=ref,event=tag
             type=sha,prefix=sha-
             type=raw,value=latest,enable={{is_default_branch}}
           labels: |
@@ -293,6 +296,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Compute base image tag
+        id: base
+        run: |
+          # If tier1 was rebuilt this run, use the sha tag just pushed.
+          # If tier1 was skipped (no base changes), fall back to :latest.
+          if [ "${{ needs.merge-tier1.result }}" = "success" ]; then
+            echo "tag=sha-${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build and push image by digest
         id: build
         uses: docker/build-push-action@v6
@@ -300,6 +314,7 @@ jobs:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
           platforms: ${{ matrix.platform }}
+          build-args: BASE_TAG=${{ steps.base.outputs.tag }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
@@ -373,6 +388,7 @@ jobs:
           images: ${{ steps.registry.outputs.image }}
           tags: |
             type=ref,event=branch
+            type=ref,event=tag
             type=sha,prefix=sha-
             type=raw,value=latest,enable={{is_default_branch}}
           labels: |

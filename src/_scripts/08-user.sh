@@ -23,7 +23,9 @@ fi
 groupadd --gid "${USER_GID_VAL}" "${USERNAME_VAL}"
 useradd --uid "${USER_UID_VAL}" --gid "${USER_GID_VAL}" -m "${USERNAME_VAL}"
 
-apt-get update && apt-get install -y sudo && rm -rf /var/lib/apt/lists/*
+apt-get update
+apt-get install -y sudo
+rm -rf /var/lib/apt/lists/*
 echo "${USERNAME_VAL} ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/"${USERNAME_VAL}"
 chmod 0440 /etc/sudoers.d/"${USERNAME_VAL}"
 

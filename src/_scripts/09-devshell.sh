@@ -7,7 +7,8 @@ set -euo pipefail
 ROS_DISTRO_VAL=${ROS_DISTRO:-humble}
 
 # ── zsh ───────────────────────────────────────────────────────────────────────
-sudo apt-get update && sudo apt-get -y install zsh
+sudo apt-get update
+sudo apt-get -y install zsh
 sudo chsh -s /bin/zsh "$(whoami)"
 sudo rm -rf /var/lib/apt/lists/*
 
@@ -49,11 +50,14 @@ export PROFILE=~/.zshrc
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
 
 export NVM_DIR="$HOME/.nvm"
+# nvm.sh uses unset variables internally; disable -u for the duration
+set +u
 # shellcheck disable=SC1091
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 nvm install --lts
 nvm use --lts
 npm install -g pnpm
+set -u
 
 # ── neovim (NvChad) ──────────────────────────────────────────────────────────
 cd /tmp
@@ -132,14 +136,15 @@ sudo chmod +x eza
 sudo chown root:root eza
 sudo mv eza /usr/local/bin/eza
 
-# ── starship + sheldon + zoxide ───────────────────────────────────────────────
-curl -sS https://starship.rs/install.sh | sh -s -- -y
+# ── starship + sheldon ───────────────────────────────────────────────────────
+curl -sS https://starship.rs/install.sh | POSIXLY_CORRECT=1 bash -s -- -y
 starship preset catppuccin-powerline -o ~/.config/starship.toml
 
 curl --proto '=https' -fLsS https://rossmacarthur.github.io/install/crate.sh \
     | bash -s -- --repo rossmacarthur/sheldon --to ~/.local/bin
 
-yes | ~/.local/bin/sheldon init --shell zsh
+echo y | ~/.local/bin/sheldon init --shell zsh
+
 ~/.local/bin/sheldon add omz-lib \
     --github ohmyzsh/ohmyzsh \
     --dir lib \
@@ -155,4 +160,8 @@ yes | ~/.local/bin/sheldon init --shell zsh
 ~/.local/bin/sheldon add zsh-syntax-highlighting \
     --github zsh-users/zsh-syntax-highlighting
 
+# zoxide
 curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
+
+# witr
+curl -fsSL https://raw.githubusercontent.com/pranshuparmar/witr/main/install.sh | bash

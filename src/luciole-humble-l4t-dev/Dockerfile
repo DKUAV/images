@@ -3,7 +3,8 @@
 # FROM: ghcr.io/dkuav/luciole-l4t-base (l4t-tensorrt:r10.3.0-devel + system + pip + user)
 # Architecture: arm64 only
 
-FROM ghcr.io/dkuav/luciole-l4t-base:latest
+ARG BASE_TAG=latest
+FROM ghcr.io/dkuav/luciole-l4t-base:${BASE_TAG}
 
 COPY src/_scripts/ /tmp/scripts/
 RUN chmod +x /tmp/scripts/*.sh
