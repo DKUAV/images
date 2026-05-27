@@ -16,6 +16,8 @@ ARG CMAKE_VERSION=4.3.2
 RUN /tmp/scripts/05-cmake.sh
 
 RUN /tmp/scripts/06-clang.sh
+
+ENV DOTNET_ROOT=/opt/dotnet
 RUN /tmp/scripts/07-dotnet.sh
 
 ARG USERNAME=luciole
@@ -23,6 +25,7 @@ USER ${USERNAME}
 WORKDIR /home/${USERNAME}
 
 RUN /tmp/scripts/09-devshell.sh
+ENV PATH="/home/${USERNAME}/.local/bin:${PATH}"
 
 USER root
 RUN rm -rf /tmp/scripts
