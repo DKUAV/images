@@ -35,11 +35,24 @@ echo 'set mouse-=a' >> $HOME/.vim_runtime/my_configs.vim
 
 # ── misc shell config ─────────────────────────────────────────────────────────
 
-echo '' >> $HOME/.zshrc
-echo 'setopt no_nomatch # disable * match' >> $HOME/.zshrc
-echo '' >> $HOME/.zshrc
+# zsh configureation
+cat >> $HOME/.zshrc << 'ZSH_EOF'
+
+setopt no_nomatch # disable * match
+
+# uv shell completions
+eval "$(uv generate-shell-completion zsh)"
+eval "$(uvx --generate-shell-completion zsh)"
+
+ZSH_EOF
+
+# bash color prompt
 sed -i 's/#force_color_prompt=yes/force_color_prompt=yes/g' $HOME/.bashrc
+
+# vscode-server
 mkdir -p $HOME/.vscode-server/data/Machine
+
+# tmux
 echo 'set -g history-limit 1000000' >> $HOME/.tmux.conf
 echo '' >> $HOME/.tmux.conf
 

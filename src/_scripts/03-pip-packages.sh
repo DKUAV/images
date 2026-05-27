@@ -14,4 +14,4 @@ pip3 install --no-cache-dir flake8 black ruff mypy delegator.py build
 pip3 install --no-cache-dir psycopg2-binary peewee python-calamine
 pip3 install --no-cache-dir loguru fastapi aiofiles "uvicorn[standard]" python-multipart "celery[redis]"
 pip3 install --no-cache-dir "pybind11[global]"
-curl -LsSf https://astral.sh/uv/install.sh | sh
+curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin INSTALLER_NO_MODIFY_PATH=1 sh
