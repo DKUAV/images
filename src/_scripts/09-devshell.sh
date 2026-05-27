@@ -84,18 +84,14 @@ rm -rf "nvim-linux-${NVIM_ARCH}"
 git clone https://github.com/NvChad/starter $HOME/.config/nvim --depth 1
 
 # disable mouse support
-echo '' >> $HOME/.config/nvim/init.lua
-echo '-- disable mouse' >> $HOME/.config/nvim/init.lua
-echo 'vim.opt.mouse = ""' >> $HOME/.config/nvim/init.lua
-echo '' >> $HOME/.config/nvim/init.lua
-
-cat > $HOME/.config/nvim/init.lua << 'MOUSE_EOF'
+cat >> $HOME/.config/nvim/init.lua << 'MOUSE_EOF'
 
 -- disable mouse support
 vim.opt.mouse = ""
 
 MOUSE_EOF
 
+# add custom plugins
 cat > $HOME/.config/nvim/lua/plugins/custom.lua << 'LUA'
 return {
   {
@@ -134,13 +130,6 @@ end, 5000)
 LUA
 nvim --headless -c "luafile /tmp/mason_install.lua"
 rm /tmp/mason_install.lua
-
-# ─── Vim-Plug ─────────────────────────────────────────────────────────────────
-
-curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs \
-    https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-
-vim -es -u ~/.vimrc -i NONE -c "PlugInstall" -c "qa"
 
 # ─── Bat ──────────────────────────────────────────────────────────────────────
 
