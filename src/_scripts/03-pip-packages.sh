@@ -5,7 +5,7 @@ set -euo pipefail
 
 # pip3 config set global.index-url https://mirrors.aliyun.com/pypi/simple/
 
-python -m pip install --upgrade pip
+python3 -m pip install --upgrade pip
 pip3 install --no-cache-dir setuptools pandas numpy ipython
 pip3 install --no-cache-dir pytest pytest-xdist pytest-html pytest-mock
 pip3 install --no-cache-dir pytest-randomly pytest-timeout coverage pytest-cov filelock
