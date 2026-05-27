@@ -35,7 +35,7 @@ echo 'set mouse-=a' >> $HOME/.vim_runtime/my_configs.vim
 
 # ── misc shell config ─────────────────────────────────────────────────────────
 
-# zsh configureation
+# zsh configuration
 cat >> $HOME/.zshrc << 'ZSH_EOF'
 
 setopt no_nomatch # disable * match
