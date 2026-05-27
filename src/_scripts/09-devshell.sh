@@ -7,12 +7,14 @@ set -euo pipefail
 ROS_DISTRO_VAL=${ROS_DISTRO:-humble}
 
 # ── zsh ───────────────────────────────────────────────────────────────────────
+
 sudo apt-get update
 sudo apt-get -y install zsh
 sudo chsh -s /bin/zsh "$(whoami)"
 sudo rm -rf /var/lib/apt/lists/*
 
 # ── oh-my-zsh ────────────────────────────────────────────────────────────────
+
 sh -c "$(wget https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh -O -)" "" --unattended
 
 git clone https://github.com/zsh-users/zsh-completions \
@@ -26,11 +28,13 @@ sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="ys"/g' $HOME/.zshrc
 sed -i 's/plugins=(git)/plugins=(git zsh-syntax-highlighting zsh-autosuggestions zsh-completions)/g' $HOME/.zshrc
 
 # ── vimrc ────────────────────────────────────────────────────────────────────
+
 git clone --depth=1 https://github.com/amix/vimrc.git $HOME/.vim_runtime
 sh $HOME/.vim_runtime/install_awesome_vimrc.sh
 echo 'set mouse-=a' >> $HOME/.vim_runtime/my_configs.vim
 
 # ── misc shell config ─────────────────────────────────────────────────────────
+
 echo '' >> $HOME/.zshrc
 echo 'setopt no_nomatch # disable * match' >> $HOME/.zshrc
 echo '' >> $HOME/.zshrc
@@ -40,12 +44,14 @@ echo 'set -g history-limit 1000000' >> $HOME/.tmux.conf
 echo '' >> $HOME/.tmux.conf
 
 # ── ROS2 aliases ─────────────────────────────────────────────────────────────
+
 echo "alias load_ros=\"source /opt/ros/${ROS_DISTRO_VAL}/setup.zsh\"" >> $HOME/.zshrc
 echo '' >> $HOME/.zshrc
 echo "alias load_ros=\"source /opt/ros/${ROS_DISTRO_VAL}/setup.bash\"" >> $HOME/.bashrc
 echo '' >> $HOME/.bashrc
 
 # ── nvm + Node.js LTS ────────────────────────────────────────────────────────
+
 export PROFILE=$HOME/.zshrc
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
 
@@ -60,6 +66,7 @@ npm install -g pnpm
 set -u
 
 # ── neovim (NvChad) ──────────────────────────────────────────────────────────
+
 cd /tmp
 ARCH=$(uname -m)
 case $ARCH in
@@ -75,10 +82,33 @@ sudo rsync -av --ignore-existing "nvim-linux-${NVIM_ARCH}/" /usr/local
 rm -rf "nvim-linux-${NVIM_ARCH}"
 
 git clone https://github.com/NvChad/starter $HOME/.config/nvim --depth 1
+
+# disable mouse support
 echo '' >> $HOME/.config/nvim/init.lua
 echo '-- disable mouse' >> $HOME/.config/nvim/init.lua
 echo 'vim.opt.mouse = ""' >> $HOME/.config/nvim/init.lua
 echo '' >> $HOME/.config/nvim/init.lua
+
+cat > $HOME/.config/nvim/init.lua << 'MOUSE_EOF'
+
+-- disable mouse support
+vim.opt.mouse = ""
+
+MOUSE_EOF
+
+cat > $HOME/.config/nvim/lua/plugins/custom.lua << 'LUA'
+return {
+  {
+    "ibhagwan/fzf-lua",
+    dependencies = { "nvim-tree/nvim-web-devicons" },
+    opts = {},
+  },
+  {
+    "fei6409/log-highlight.nvim",
+    opts = {},
+  },
+}
+LUA
 
 nvim --headless "+Lazy! sync" +qa
 nvim --headless "+Lazy load nvim-treesitter" "+TSInstallSync! lua vim vimdoc c cpp python javascript" +qa
@@ -105,16 +135,21 @@ LUA
 nvim --headless -c "luafile /tmp/mason_install.lua"
 rm /tmp/mason_install.lua
 
-# vim-plug
+# ─── Vim-Plug ─────────────────────────────────────────────────────────────────
+
 curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs \
     https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
 
-# ── bat ───────────────────────────────────────────────────────────────────────
+vim -es -u ~/.vimrc -i NONE -c "PlugInstall" -c "qa"
+
+# ─── Bat ──────────────────────────────────────────────────────────────────────
+
 sudo apt-get update && sudo apt-get install -y bat
 sudo ln -sf /usr/bin/batcat /usr/local/bin/bat
 sudo rm -rf /var/lib/apt/lists/*
 
-# ── fzf ──────────────────────────────────────────────────────────────────────
+# ─── Fzf ──────────────────────────────────────────────────────────────────────
+
 git clone --depth 1 https://github.com/junegunn/fzf.git $HOME/.fzf
 $HOME/.fzf/install --all
 cat >> $HOME/.zshrc << 'FZF_EOF'
@@ -125,7 +160,8 @@ export FZF_CTRL_T_OPTS="
 
 FZF_EOF
 
-# ── eza ──────────────────────────────────────────────────────────────────────
+# ─── Ezh ──────────────────────────────────────────────────────────────────────
+
 ARCH=$(uname -m)
 case $ARCH in
     x86_64)  EZA_ARCH="x86_64-unknown-linux-gnu" ;;
@@ -137,9 +173,12 @@ sudo chmod +x eza
 sudo chown root:root eza
 sudo mv eza /usr/local/bin/eza
 
-# ── starship + sheldon ───────────────────────────────────────────────────────
+# ─── Starship ─────────────────────────────────────────────────────────────────
+
 curl -sS https://starship.rs/install.sh | POSIXLY_CORRECT=1 bash -s -- -y
 starship preset catppuccin-powerline -o $HOME/.config/starship.toml
+
+# ─── Sheldon ──────────────────────────────────────────────────────────────────
 
 curl --proto '=https' -fLsS https://rossmacarthur.github.io/install/crate.sh \
     | bash -s -- --repo rossmacarthur/sheldon --to $HOME/.local/bin
@@ -161,8 +200,12 @@ $HOME/.local/bin/sheldon add zsh-completions \
 $HOME/.local/bin/sheldon add zsh-syntax-highlighting \
     --github zsh-users/zsh-syntax-highlighting
 
-# zoxide
+$HOME/.local/bin/sheldon lock
+
+# ─── Zoxide ───────────────────────────────────────────────────────────────────
+
 curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
 
-# witr
+# ─── Witr ─────────────────────────────────────────────────────────────────────
+
 curl -fsSL https://raw.githubusercontent.com/pranshuparmar/witr/main/install.sh | bash
