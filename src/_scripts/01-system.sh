@@ -17,7 +17,7 @@ locale-gen en_US.UTF-8
 apt-get -y install vim git curl zip unzip trash-cli parallel libssl-dev iputils-ping \
     build-essential ninja-build gdb systemd-coredump nfs-common cmake libopencv-dev \
     libgflags-dev libgoogle-glog-dev libgtest-dev libgmock-dev rsync git-lfs \
-    tree tmux screen cloc acl man htop landscape-common ffmpeg \
+    tree tmux screen cloc acl man htop landscape-common ffmpeg ripgrep \
     dbus-x11 fonts-wqy-zenhei fonts-noto-cjk mesa-utils libgl1-mesa-glx pulseaudio
 
 rm -rf /var/lib/apt/lists/*
