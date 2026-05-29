@@ -6,6 +6,7 @@ ARG BASE_TAG=latest
 FROM ghcr.io/dkuav/luciole-cuda-base:${BASE_TAG}
 
 COPY src/_scripts/ /tmp/scripts/
+COPY src/_assets/ /tmp/assets/
 RUN chmod +x /tmp/scripts/*.sh
 
 ARG ROS_DISTRO=humble
@@ -25,10 +26,11 @@ USER ${USERNAME}
 WORKDIR /home/${USERNAME}
 
 RUN /tmp/scripts/09-devshell.sh
+RUN /tmp/scripts/10-precommit.sh
 ENV PATH="/home/${USERNAME}/.local/bin:${PATH}"
 
 USER root
-RUN rm -rf /tmp/scripts
+RUN rm -rf /tmp/scripts /tmp/assets
 
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
