@@ -6,16 +6,17 @@ set -euo pipefail
 # pip3 config set global.index-url https://mirrors.aliyun.com/pypi/simple/
 
 python3 -m pip install --upgrade pip
-pip3 install --no-cache-dir setuptools pandas numpy ipython
-pip3 install --no-cache-dir pytest pytest-xdist pytest-html pytest-mock
-pip3 install --no-cache-dir pytest-randomly pytest-timeout coverage pytest-cov filelock
-pip3 install --no-cache-dir pre-commit rich BeautifulSoup4 allure-pytest
-pip3 install --no-cache-dir plottable matplotlib opencv_python openpyxl jira python-gitlab
-pip3 install --no-cache-dir flake8 black ruff mypy delegator.py build
-pip3 install --no-cache-dir psycopg2-binary peewee python-calamine
-pip3 install --no-cache-dir loguru fastapi aiofiles "uvicorn[standard]" python-multipart "celery[redis]"
-pip3 install --no-cache-dir "pybind11[global]"
-pip3 install --no-cache-dir scikit-image h5py onnxruntime onnx-simplifier
-pip3 install --no-cache-dir thop lap motmetrics filterpy
+pip3 install --no-cache-dir \
+    setuptools pandas "numpy<2.0.0" ipython \
+    pytest pytest-xdist pytest-html pytest-mock \
+    pytest-randomly pytest-timeout coverage pytest-cov filelock \
+    pre-commit rich BeautifulSoup4 allure-pytest \
+    plottable matplotlib opencv_python opencv-contrib-python openpyxl jira python-gitlab \
+    flake8 black ruff mypy delegator.py build \
+    psycopg2-binary peewee python-calamine \
+    loguru fastapi aiofiles "uvicorn[standard]" python-multipart "celery[redis]" \
+    "pybind11[global]" \
+    scikit-image h5py onnxruntime onnx-simplifier \
+    thop lap motmetrics filterpy
 
 curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin INSTALLER_NO_MODIFY_PATH=1 sh
