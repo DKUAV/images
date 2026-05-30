@@ -41,7 +41,7 @@ graph TD
 | [`luciole-humble-l4t-dev`](src/luciole-humble-l4t-dev/) | `luciole-l4t-base` | 仅 arm64 | ROS 2 Humble · cmake · clang · .NET · devshell |
 | [`luciole-humble-l4t-runtime`](src/luciole-humble-l4t-runtime/) | `luciole-l4t-base` | 仅 arm64 | ROS 2 Humble · cmake |
 
-**devshell** 包含：zsh · oh-my-zsh · neovim（NvChad）· starship · nvm · bat · fzf · eza · zoxide
+**devshell** 包含：zsh · oh-my-zsh · neovim（NvChad）· starship · nvm · bat · fzf · eza · zoxide · pre-commit（预缓存 hooks）
 
 ## 使用镜像
 
@@ -85,7 +85,7 @@ graph LR
 ```
 
 - **变更检测**（读取 `src/image-deps.json`）：
-  - `src/_scripts/**` 有变更 → 重建**全部**镜像
+  - `src/_scripts/**` 或 `src/_assets/**` 有变更 → 重建**全部**镜像
   - 基础镜像有变更 → 重建该基础镜像**及**所有依赖它的最终镜像
   - 最终镜像有变更 → 只重建该最终镜像
   - `workflow_dispatch` → 构建全部镜像

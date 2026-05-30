@@ -24,6 +24,7 @@ ghcr.io/dkuav/luciole-humble-cuda-dev:latest
 | **C++ toolchain** | LLVM 21 — `clang-format`, `clang-tidy`, `lldb` |
 | **Runtime** | .NET SDK 8.0 |
 | **Dev shell** | zsh + oh-my-zsh + neovim + starship + nvm + bat + fzf + eza + zoxide + more |
+| **Pre-commit** | pre-commit with pre-cached hook environments (ruff, trailing-whitespace, etc.) |
 
 ## Default User
 
@@ -69,7 +70,7 @@ docker build -f src/luciole-humble-cuda-dev/Dockerfile -t luciole-humble-cuda-de
 
 ```bash
 cd src/luciole-humble-cuda-dev
-docker compose run --rm luciole-humble-cuda-dev
+docker compose run --rm app
 ```
 
 The `docker-compose.yml` mounts `/tmp/.X11-unix` and `/mnt/wslg`, and forwards `DISPLAY`, `WAYLAND_DISPLAY`, `XDG_RUNTIME_DIR`, and `PULSE_SERVER` so GUI applications work inside the container under WSLg.

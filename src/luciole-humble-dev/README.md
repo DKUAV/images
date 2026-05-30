@@ -21,6 +21,7 @@ ghcr.io/dkuav/luciole-humble-dev:latest
 | **Shell** | zsh (default) + oh-my-zsh (`ys` theme) with zsh-completions, zsh-autosuggestions, zsh-syntax-highlighting |
 | **Editors** | neovim (latest, NvChad starter config) + vim (amix awesome vimrc) |
 | **Tools** | git, git-lfs, tmux, fzf, bat, tree, htop, parallel, rsync, trash-cli |
+| **Pre-commit** | pre-commit with pre-cached hook environments (ruff, trailing-whitespace, etc.) |
 | **GUI** | WSLg support (X11 + Wayland socket mounts, CJK fonts, Mesa, PulseAudio) |
 | **Mirrors** | Aliyun apt mirror + Aliyun PyPI mirror (for mainland China) |
 | **Timezone** | `Asia/Shanghai` (overridable) |

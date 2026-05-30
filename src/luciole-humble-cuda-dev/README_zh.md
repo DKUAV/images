@@ -24,6 +24,7 @@ ghcr.io/dkuav/luciole-humble-cuda-dev:latest
 | **C++ 工具链** | LLVM 21 — `clang-format`、`clang-tidy`、`lldb` |
 | **运行时** | .NET SDK 8.0 |
 | **开发 Shell** | zsh + oh-my-zsh + neovim + starship + nvm + bat + fzf + eza + zoxide 等 |
+| **Pre-commit** | pre-commit 及预缓存 hook 环境（ruff、trailing-whitespace 等）|
 
 ## 默认用户
 
@@ -69,7 +70,7 @@ docker build -f src/luciole-humble-cuda-dev/Dockerfile -t luciole-humble-cuda-de
 
 ```bash
 cd src/luciole-humble-cuda-dev
-docker compose run --rm luciole-humble-cuda-dev
+docker compose run --rm app
 ```
 
 `docker-compose.yml` 会挂载 `/tmp/.X11-unix` 和 `/mnt/wslg`，并转发 `DISPLAY`、`WAYLAND_DISPLAY`、`XDG_RUNTIME_DIR`、`PULSE_SERVER` 等环境变量，使容器内的 GUI 程序可在 WSLg 下正常运行。

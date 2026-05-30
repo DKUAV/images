@@ -25,9 +25,9 @@ ARG USERNAME=luciole
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
 
+ENV PATH="/home/${USERNAME}/.local/bin:${PATH}"
 RUN /tmp/scripts/09-devshell.sh
 RUN /tmp/scripts/10-precommit.sh
-ENV PATH="/home/${USERNAME}/.local/bin:${PATH}"
 
 USER root
 RUN rm -rf /tmp/scripts /tmp/assets

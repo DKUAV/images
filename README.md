@@ -41,7 +41,7 @@ Published to GHCR; used as `FROM` in Tier 2 Dockerfiles.
 | [`luciole-humble-l4t-dev`](src/luciole-humble-l4t-dev/) | `luciole-l4t-base` | arm64 only | ROS 2 Humble · cmake · clang · .NET · devshell |
 | [`luciole-humble-l4t-runtime`](src/luciole-humble-l4t-runtime/) | `luciole-l4t-base` | arm64 only | ROS 2 Humble · cmake |
 
-**devshell** includes: zsh · oh-my-zsh · neovim (NvChad) · starship · nvm · bat · fzf · eza · zoxide
+**devshell** includes: zsh · oh-my-zsh · neovim (NvChad) · starship · nvm · bat · fzf · eza · zoxide · pre-commit (pre-cached hooks)
 
 ## Pull an Image
 
@@ -85,7 +85,7 @@ graph LR
 ```
 
 - **Change detection** (reads `src/image-deps.json`):
-  - `src/_scripts/**` changed → rebuild **all** images
+  - `src/_scripts/**` or `src/_assets/**` changed → rebuild **all** images
   - Base image changed → rebuild that base **+** all dependent final images
   - Final image changed → rebuild that final only
   - `workflow_dispatch` → build everything
