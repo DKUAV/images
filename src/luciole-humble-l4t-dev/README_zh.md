@@ -24,6 +24,7 @@ ghcr.io/dkuav/luciole-humble-l4t-dev:latest
 | **C++ 工具链** | LLVM 21 — `clang-format`、`clang-tidy`、`lldb` |
 | **运行时** | .NET SDK 8.0 |
 | **开发 Shell** | zsh + oh-my-zsh + neovim + starship + nvm + bat + fzf + eza + zoxide 等 |
+| **Pre-commit** | pre-commit 及预缓存 hook 环境（ruff、trailing-whitespace 等）|
 
 ## 默认用户
 
@@ -69,7 +70,7 @@ docker build -f src/luciole-humble-l4t-dev/Dockerfile -t luciole-humble-l4t-dev 
 
 ```bash
 cd src/luciole-humble-l4t-dev
-docker compose run --rm luciole-humble-l4t-dev
+docker compose run --rm app
 ```
 
 `docker-compose.yml` 设置了 `platform: linux/arm64`，挂载 X11 和 wslg socket，并转发 `DISPLAY`、`WAYLAND_DISPLAY`、`XDG_RUNTIME_DIR`、`PULSE_SERVER` 等环境变量，使容器内的 GUI 程序可正常运行。
