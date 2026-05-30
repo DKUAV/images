@@ -95,12 +95,12 @@ jobs:
               tier2 = sorted(dependencies.keys())
           else:
               changed = get_changed_paths()
-              scripts_changed = any(
-                  pathlib.PurePosixPath(p).parts[1] == "_scripts"
+              shared_changed = any(
+                  pathlib.PurePosixPath(p).parts[1] in ("_scripts", "_assets")
                   for p in changed if len(pathlib.PurePosixPath(p).parts) >= 2
               )
 
-              if scripts_changed:
+              if shared_changed:
                   tier1 = sorted(base_images)
                   tier2 = sorted(dependencies.keys())
               else:
