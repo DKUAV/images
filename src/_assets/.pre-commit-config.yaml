@@ -1,4 +1,4 @@
-krepos:
+repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -8,8 +8,8 @@ krepos:
     - id: check-json
       exclude: ^(\.vscode/|\.devcontainer.*\.json|.*\.jsonc)$
     - id: check-toml
-    # - id: pretty-format-json
-    #   args: [--autofix]
+    - id: pretty-format-json
+      args: [--autofix]
     - id: mixed-line-ending
     - id: detect-private-key
     - id: check-merge-conflict
