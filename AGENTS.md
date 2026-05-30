@@ -6,7 +6,8 @@ This repository manages Docker images for the DKUAV project. Images are publishe
 
 ```
 src/
-  _scripts/               # Shared installation scripts (01–09)
+  _scripts/               # Shared installation scripts (01–10)
+  _assets/                # Shared assets (e.g. pre-commit config)
   image-deps.json         # CI dependency + arch-override map
   <image-name>/           # One subdirectory per image
     Dockerfile            # Required (CI uses this to detect image directories)
@@ -43,8 +44,9 @@ Numbered shell scripts that encapsulate all reusable installation logic:
 | `07-dotnet.sh` | .NET SDK 8.0 | Dev final images only |
 | `08-user.sh` | Non-root user + sudo (reads `$USERNAME`, `$USER_UID`) | All base images |
 | `09-devshell.sh` | zsh, oh-my-zsh, neovim, starship, nvm, … | Dev final images only — **must run as target user** |
+| `10-precommit.sh` | Pre-cache pre-commit hook environments from `_assets/.pre-commit-config.yaml` | Dev final images only — **must run as target user** |
 
-Each Dockerfile does `COPY src/_scripts/ /tmp/scripts/ && chmod +x /tmp/scripts/*.sh`, runs the required scripts, then `RUN rm -rf /tmp/scripts`.
+Each Dockerfile does `COPY src/_scripts/ /tmp/scripts/ && chmod +x /tmp/scripts/*.sh`, runs the required scripts, then `RUN rm -rf /tmp/scripts`. Dev images also `COPY src/_assets/ /tmp/assets/` for `10-precommit.sh`.
 
 ## Two-Tier Image Architecture
 
@@ -107,7 +109,7 @@ docker build -f src/<image-name>/Dockerfile -t <image-name> .
 ## CI/CD Behavior
 
 - **Trigger**: push to `main` (changes under `src/**` or `.github/workflows/publish-images.yml`), or manual `workflow_dispatch` (builds all images).
-- **Change detection**: reads `image-deps.json`. If `src/_scripts/**` changed → rebuilds ALL images. If a base image changed → rebuilds that base + all its dependent final images. If a final image changed → rebuilds that final only. `workflow_dispatch` builds everything.
+- **Change detection**: reads `image-deps.json`. If `src/_scripts/**` or `src/_assets/**` changed → rebuilds ALL images. If a base image changed → rebuilds that base + all its dependent final images. If a final image changed → rebuilds that final only. `workflow_dispatch` builds everything.
 - **Multi-arch**: `amd64` (`ubuntu-24.04`) and `arm64` (`ubuntu-24.04-arm` native runner, **no QEMU**) are built separately, pushed by digest, then merged into a single multi-arch manifest. `arch_overrides` limits certain images to arm64 only.
 - **Two-tier CI jobs**:
   1. `detect-changes` — computes tier1 and tier2 build matrices
@@ -131,7 +133,7 @@ docker build -f src/<image-name>/Dockerfile -t <image-name> .
 - Dockerfiles use Aliyun apt mirrors; pip is also configured to use Aliyun PyPI mirrors.
 - Default timezone is `Asia/Shanghai`; override via `ARG TZ`.
 - `09-devshell.sh` installs user-home dotfiles (oh-my-zsh, neovim, nvm). It **must** run as the target user (`USER ${USERNAME}` before the `RUN` step in the Dockerfile), followed by `USER root` for cleanup.
-- neovim is installed from a binary tarball; when adding an arm64-compatible script update, select the correct arch binary (`nvim-linux-x86_64` vs `nvim-linux-aarch64`).
+- neovim is installed from a binary tarball; when adding an arm64-compatible script update, select the correct arch binary (`nvim-linux-x86_64` vs `nvim-linux-arm64`).
 - Each image directory should include both `README.md` (English) and `README_zh.md` (Chinese). The two files must cross-link to each other.
 
 ## Documentation Sync

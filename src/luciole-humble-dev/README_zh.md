@@ -21,6 +21,7 @@ ghcr.io/dkuav/luciole-humble-dev:latest
 | **Shell** | zsh（默认）+ oh-my-zsh（`ys` 主题）+ zsh-completions、zsh-autosuggestions、zsh-syntax-highlighting |
 | **编辑器** | neovim（最新版，NvChad starter 配置）+ vim（amix awesome vimrc）|
 | **工具** | git、git-lfs、tmux、fzf、bat、tree、htop、parallel、rsync、trash-cli |
+| **Pre-commit** | pre-commit 及预缓存 hook 环境（ruff、trailing-whitespace 等）|
 | **GUI** | WSLg 支持（X11 + Wayland socket 挂载、中日韩字体、Mesa、PulseAudio）|
 | **镜像加速** | 阿里云 apt 镜像 + 阿里云 PyPI 镜像（适用于中国大陆网络环境）|
 | **时区** | `Asia/Shanghai`（可通过 ARG 覆盖）|
