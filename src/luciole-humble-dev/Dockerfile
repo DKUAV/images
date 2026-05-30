@@ -35,6 +35,3 @@ RUN rm -rf /tmp/scripts /tmp/assets
 
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
-
-# change back to user home
-WORKDIR /home/$USERNAME
