@@ -20,4 +20,6 @@ apt-get -y install vim git curl zip unzip trash-cli parallel libssl-dev iputils-
     tree tmux screen cloc acl man htop landscape-common ffmpeg ripgrep fd-find \
     dbus-x11 fonts-wqy-zenhei fonts-noto-cjk mesa-utils libgl1-mesa-glx pulseaudio
 
+ln -s $(which fdfind) /usr/local/bin/fd
+
 rm -rf /var/lib/apt/lists/*

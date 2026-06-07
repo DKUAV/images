@@ -6,12 +6,14 @@ set -euo pipefail
 
 ROS_DISTRO_VAL=${ROS_DISTRO:-humble}
 
-# ── zsh ───────────────────────────────────────────────────────────────────────
+# ─── Init Apt ─────────────────────────────────────────────────────────────────
 
 sudo apt-get update
+
+# ── zsh ───────────────────────────────────────────────────────────────────────
+
 sudo apt-get -y install zsh
 sudo chsh -s /bin/zsh "$(whoami)"
-sudo rm -rf /var/lib/apt/lists/*
 
 # ── oh-my-zsh ────────────────────────────────────────────────────────────────
 
@@ -146,9 +148,8 @@ rm /tmp/mason_install.lua
 
 # ─── Bat ──────────────────────────────────────────────────────────────────────
 
-sudo apt-get update && sudo apt-get install -y bat
+sudo apt-get install -y bat
 sudo ln -sf /usr/bin/batcat /usr/local/bin/bat
-sudo rm -rf /var/lib/apt/lists/*
 
 # ─── Fzf ──────────────────────────────────────────────────────────────────────
 
@@ -211,3 +212,11 @@ curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh 
 # ─── Witr ─────────────────────────────────────────────────────────────────────
 
 curl -fsSL https://raw.githubusercontent.com/pranshuparmar/witr/main/install.sh | bash
+
+# ─── Atuin ────────────────────────────────────────────────────────────────────
+
+curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh -s -- --non-interactive
+
+# ─── Apt Cache Clean ──────────────────────────────────────────────────────────
+
+sudo rm -rf /var/lib/apt/lists/*
