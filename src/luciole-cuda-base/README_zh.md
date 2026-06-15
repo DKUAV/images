@@ -19,7 +19,7 @@ ghcr.io/dkuav/luciole-cuda-base:latest
 | 类别 | 详情 |
 |------|------|
 | **基础镜像** | `nvcr.io/nvidia/pytorch:24.10-py3`（已含 Python + PyTorch + CUDA）|
-| **系统工具** | wget、vim、git、git-lfs、curl、zip/unzip、tmux、screen、htop、tree、parallel、rsync、build-essential、ninja-build、GDB、libssl、iputils、libgflags、libgoogle-glog、GTest / GMock、libopencv |
+| **系统工具** | wget、vim、git、git-lfs、curl、zip/unzip、tmux、screen、htop、tree、parallel、rsync、build-essential、ninja-build、GDB、libssl、iputils、libgflags、libgoogle-glog、GTest / GMock |
 | **Python** | 由基础镜像提供；通过阿里云镜像追加 pip 包：uv、pytest 套件、FastAPI、pybind11、OpenCV、pandas、numpy、loguru 等 |
 | **GUI** | WSLg 支持（dbus-x11、中日韩字体、Mesa、PulseAudio）|
 | **镜像加速** | 阿里云 apt 镜像 + 阿里云 PyPI 镜像 |

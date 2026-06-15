@@ -19,7 +19,7 @@ ghcr.io/dkuav/luciole-cuda-base:latest
 | Category | Details |
 |----------|---------|
 | **Base** | `nvcr.io/nvidia/pytorch:24.10-py3` (Python + PyTorch + CUDA pre-installed) |
-| **System tools** | wget, vim, git, git-lfs, curl, zip/unzip, tmux, screen, htop, tree, parallel, rsync, build-essential, ninja-build, GDB, libssl, iputils, libgflags, libgoogle-glog, GTest / GMock, libopencv |
+| **System tools** | wget, vim, git, git-lfs, curl, zip/unzip, tmux, screen, htop, tree, parallel, rsync, build-essential, ninja-build, GDB, libssl, iputils, libgflags, libgoogle-glog, GTest / GMock |
 | **Python** | Provided by base image; additional pip packages added via Aliyun mirror: uv, pytest suite, FastAPI, pybind11, OpenCV, pandas, numpy, loguru, and more |
 | **GUI** | WSLg support (dbus-x11, CJK fonts, Mesa, PulseAudio) |
 | **Mirrors** | Aliyun apt mirror + Aliyun PyPI mirror |

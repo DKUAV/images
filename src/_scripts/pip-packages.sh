@@ -11,7 +11,7 @@ pip3 install --no-cache-dir \
     pytest pytest-xdist pytest-html pytest-mock \
     pytest-randomly pytest-timeout coverage pytest-cov filelock \
     pre-commit rich BeautifulSoup4 allure-pytest \
-    plottable matplotlib opencv_python opencv-contrib-python openpyxl jira python-gitlab \
+    plottable matplotlib openpyxl jira python-gitlab \
     flake8 black ruff mypy delegator.py build \
     psycopg2-binary peewee python-calamine \
     loguru fastapi aiofiles "uvicorn[standard]" python-multipart "celery[redis]" \
