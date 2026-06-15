@@ -17,6 +17,8 @@ COPY src/_scripts/ /tmp/scripts/
 RUN chmod +x /tmp/scripts/*.sh
 
 RUN /tmp/scripts/system.sh
+RUN /tmp/scripts/dev-tools.sh
+RUN /tmp/scripts/wslg.sh
 RUN /tmp/scripts/python-install.sh
 RUN /tmp/scripts/pip-packages.sh
 

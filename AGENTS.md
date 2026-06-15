@@ -35,7 +35,9 @@ Numbered shell scripts that encapsulate all reusable installation logic:
 
 | Script | Purpose | Used by |
 |--------|---------|---------|
-| `system.sh` | Apt packages, timezone, locale, WSLg GUI | All base images |
+| `system.sh` | Apt upgrade, timezone, locale — minimal system bootstrap | All base images |
+| `dev-tools.sh` | Developer CLI toolset (editors, VCS, build, debug, ffmpeg) — run right after `system.sh` | All base images |
+| `wslg.sh` | GUI / WSLg deps (D-Bus, CJK fonts, Mesa, PulseAudio) — run after `dev-tools.sh` | All base images |
 | `python-install.sh` | Python 3.10 from apt + pip bootstrap | `luciole-base` only (pytorch/l4t already have Python) |
 | `pip-packages.sh` | pip packages, uv, aliyun mirror | All base images |
 | `ros2.sh` | ROS 2 (reads `$ROS_DISTRO`, `$ROS_TARGET`) | All final images |
