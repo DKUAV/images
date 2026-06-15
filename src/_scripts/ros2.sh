@@ -1,9 +1,9 @@
 #!/bin/bash
-# Install ROS2. Reads ROS_DISTRO (default: humble) and ROS_TARGET (default: desktop).
+# Install ROS2. Reads ROS_DISTRO (default: humble) and ROS_TARGET (default: base).
 set -euo pipefail
 
 ROS_DISTRO_VAL=${ROS_DISTRO:-humble}
-ROS_TARGET_VAL=${ROS_TARGET:-desktop}
+ROS_TARGET_VAL=${ROS_TARGET:-base}
 
 apt-get update
 apt-get -y install software-properties-common curl
