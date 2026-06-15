@@ -12,7 +12,7 @@ apt-get update
 
 # --- Editor / VCS / web / archive ---
 apt-get -y install vim git curl zip unzip trash-cli git-lfs rsync tree \
-    tmux screen cloc man htop ripgrep
+    tmux screen cloc man htop ripgrep sudo
 
 # --- Build / debug ---
 apt-get -y install build-essential ninja-build gdb systemd-coredump \
