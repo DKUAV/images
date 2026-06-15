@@ -10,10 +10,10 @@ RUN chmod +x /tmp/scripts/*.sh
 
 ARG ROS_DISTRO=humble
 ARG ROS_TARGET=desktop
-RUN /tmp/scripts/04-ros2.sh
+RUN /tmp/scripts/ros2.sh
 
 ARG CMAKE_VERSION=4.3.2
-RUN /tmp/scripts/05-cmake.sh
+RUN /tmp/scripts/cmake.sh
 
 RUN rm -rf /tmp/scripts
 

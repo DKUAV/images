@@ -89,5 +89,5 @@ load_ros          # 执行 source /opt/ros/humble/setup.zsh
 
 - 这是依赖 `luciole-cuda-base` 的**第二层最终镜像**。
 - 仅支持 amd64 — Jetson / arm64 环境请使用 [`luciole-humble-l4t-dev`](../luciole-humble-l4t-dev/README_zh.md)。
-- neovim、nvm 和 oh-my-zsh 由 `09-devshell.sh` 安装到 `luciole` 用户的 home 目录下。
+- neovim、nvm 和 oh-my-zsh 由 `devshell.sh` 安装到 `luciole` 用户的 home 目录下。
 - 容器内默认工作目录为 `/home/luciole`。

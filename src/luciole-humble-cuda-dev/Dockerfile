@@ -11,23 +11,20 @@ RUN chmod +x /tmp/scripts/*.sh
 
 ARG ROS_DISTRO=humble
 ARG ROS_TARGET=desktop
-RUN /tmp/scripts/04-ros2.sh
+RUN /tmp/scripts/ros2.sh
 
 ARG CMAKE_VERSION=4.3.2
-RUN /tmp/scripts/05-cmake.sh
+RUN /tmp/scripts/cmake.sh
 
-RUN /tmp/scripts/06-clang.sh
-
-ENV DOTNET_ROOT=/opt/dotnet
-RUN /tmp/scripts/07-dotnet.sh
+RUN /tmp/scripts/clang.sh
 
 ARG USERNAME=luciole
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
 
 ENV PATH="/home/${USERNAME}/.local/bin:${PATH}"
-RUN /tmp/scripts/09-devshell.sh
-RUN /tmp/scripts/10-precommit.sh
+RUN /tmp/scripts/devshell.sh
+RUN /tmp/scripts/precommit.sh
 
 USER root
 RUN rm -rf /tmp/scripts /tmp/assets

@@ -89,5 +89,5 @@ You can add `load_ros` to your `~/.zshrc` if you want it sourced on every shell 
 
 - This is a **Tier 2 final image** that depends on `luciole-cuda-base`.
 - amd64 only — for Jetson/arm64 use [`luciole-humble-l4t-dev`](../luciole-humble-l4t-dev/README.md).
-- neovim, nvm, and oh-my-zsh are installed into the `luciole` user's home directory by `09-devshell.sh`.
+- neovim, nvm, and oh-my-zsh are installed into the `luciole` user's home directory by `devshell.sh`.
 - The default working directory in the container is `/home/luciole`.

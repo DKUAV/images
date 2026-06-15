@@ -89,6 +89,6 @@ You can add `load_ros` to your `~/.zshrc` if you want it sourced on every shell 
 
 - This is a **Tier 2 final image** that depends on `luciole-l4t-base`.
 - **arm64 only** — for amd64/CUDA use [`luciole-humble-cuda-dev`](../luciole-humble-cuda-dev/README.md).
-- neovim (aarch64 binary), nvm, and oh-my-zsh are installed into the `luciole` user's home directory by `09-devshell.sh`.
+- neovim (aarch64 binary), nvm, and oh-my-zsh are installed into the `luciole` user's home directory by `devshell.sh`.
 - The default working directory in the container is `/home/luciole`.
 - Requires `--runtime nvidia` (or equivalent) on the host for GPU acceleration.

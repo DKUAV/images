@@ -89,6 +89,6 @@ load_ros          # 执行 source /opt/ros/humble/setup.zsh
 
 - 这是依赖 `luciole-l4t-base` 的**第二层最终镜像**。
 - **仅支持 arm64** — amd64 / CUDA 环境请使用 [`luciole-humble-cuda-dev`](../luciole-humble-cuda-dev/README_zh.md)。
-- neovim（aarch64 二进制）、nvm 和 oh-my-zsh 由 `09-devshell.sh` 安装到 `luciole` 用户的 home 目录下。
+- neovim（aarch64 二进制）、nvm 和 oh-my-zsh 由 `devshell.sh` 安装到 `luciole` 用户的 home 目录下。
 - 容器内默认工作目录为 `/home/luciole`。
 - 宿主机需配置 `--runtime nvidia`（或等效设置）以启用 GPU 加速。

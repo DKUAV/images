@@ -65,6 +65,6 @@ docker build -f src/luciole-cuda-base/Dockerfile -t luciole-cuda-base .
 ## Notes
 
 - This is a **Tier 1 base image**. Published to GHCR and used as `FROM ghcr.io/dkuav/luciole-cuda-base:latest` in [`luciole-humble-cuda-dev`](../luciole-humble-cuda-dev/README.md) and [`luciole-humble-cuda-runtime`](../luciole-humble-cuda-runtime/README.md).
-- Python installation is skipped (`02-python-install.sh`) because `pytorch:24.10-py3` already ships Python.
+- Python installation is skipped (`python-install.sh`) because `pytorch:24.10-py3` already ships Python.
 - No ROS 2, cmake, clang, or devshell — those are added in the Tier 2 final images.
 - If the requested UID/GID is already occupied in the base image, the old user is removed automatically.

@@ -34,7 +34,7 @@ Check existing script numbers in `src/_scripts/` (currently 01–10) and pick th
 | 10+   | New additions |
 
 Determine the target scope:
-- **All images** → add to `01-system.sh` or a new script; update every Dockerfile
+- **All images** → add to `system.sh` or a new script; update every Dockerfile
 - **All base images** → update `luciole-base`, `luciole-cuda-base`, `luciole-l4t-base`
 - **All dev images** → update `luciole-humble-dev`, `luciole-humble-cuda-dev`, `luciole-humble-l4t-dev`
 - **Specific image only** → update only that image's Dockerfile
@@ -95,8 +95,8 @@ USER ${USERNAME}
 WORKDIR /home/${USERNAME}
 
 # --- user-level scripts (if any) ---
-RUN /tmp/scripts/09-devshell.sh
-RUN /tmp/scripts/10-precommit.sh
+RUN /tmp/scripts/devshell.sh
+RUN /tmp/scripts/precommit.sh
 
 USER root
 RUN rm -rf /tmp/scripts /tmp/assets   # clean up both in one RUN
