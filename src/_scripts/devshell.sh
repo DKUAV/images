@@ -146,11 +146,6 @@ LUA
 nvim --headless -c "luafile /tmp/mason_install.lua"
 rm /tmp/mason_install.lua
 
-# ─── Bat ──────────────────────────────────────────────────────────────────────
-
-sudo apt-get install -y bat
-sudo ln -sf /usr/bin/batcat /usr/local/bin/bat
-
 # ─── Fzf ──────────────────────────────────────────────────────────────────────
 
 git clone --depth 1 https://github.com/junegunn/fzf.git $HOME/.fzf

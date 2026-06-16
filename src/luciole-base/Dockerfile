@@ -16,14 +16,16 @@ ARG TZ=Asia/Shanghai
 COPY src/_scripts/ /tmp/scripts/
 RUN chmod +x /tmp/scripts/*.sh
 
-RUN /tmp/scripts/01-system.sh
-RUN /tmp/scripts/02-python-install.sh
-RUN /tmp/scripts/03-pip-packages.sh
+RUN /tmp/scripts/system.sh
+RUN /tmp/scripts/dev-tools.sh
+RUN /tmp/scripts/wslg.sh
+RUN /tmp/scripts/python-install.sh
+RUN /tmp/scripts/pip-packages.sh
 
 ARG USERNAME=luciole
 ARG USER_UID=1000
 ARG USER_GID=${USER_UID}
-RUN /tmp/scripts/08-user.sh
+RUN /tmp/scripts/user.sh
 
 RUN rm -rf /tmp/scripts
 

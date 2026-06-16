@@ -19,7 +19,7 @@ ghcr.io/dkuav/luciole-l4t-base:latest
 | Category | Details |
 |----------|---------|
 | **Base** | `nvcr.io/nvidia/l4t-tensorrt:r10.3.0-devel` (Python + TensorRT pre-installed, arm64) |
-| **System tools** | wget, vim, git, git-lfs, curl, zip/unzip, tmux, screen, htop, tree, parallel, rsync, build-essential, ninja-build, GDB, libssl, iputils, libgflags, libgoogle-glog, GTest / GMock, libopencv |
+| **System tools** | wget, vim, git, git-lfs, curl, zip/unzip, tmux, screen, htop, tree, parallel, rsync, build-essential, ninja-build, GDB, libssl, iputils, libgflags, libgoogle-glog, GTest / GMock |
 | **Python** | Provided by base image; additional pip packages added via Aliyun mirror: uv, pytest suite, FastAPI, pybind11, OpenCV, pandas, numpy, loguru, and more |
 | **GUI** | WSLg support (dbus-x11, CJK fonts, Mesa, PulseAudio) |
 | **Mirrors** | Aliyun apt mirror + Aliyun PyPI mirror |
@@ -65,7 +65,7 @@ docker build -f src/luciole-l4t-base/Dockerfile -t luciole-l4t-base .
 ## Notes
 
 - This is a **Tier 1 base image** for the L4T (Jetson) family. Published to GHCR and used as `FROM ghcr.io/dkuav/luciole-l4t-base:latest` in [`luciole-humble-l4t-dev`](../luciole-humble-l4t-dev/README.md) and [`luciole-humble-l4t-runtime`](../luciole-humble-l4t-runtime/README.md).
-- Python installation is skipped (`02-python-install.sh`) because `l4t-tensorrt:r10.3.0-devel` already ships Python.
+- Python installation is skipped (`python-install.sh`) because `l4t-tensorrt:r10.3.0-devel` already ships Python.
 - **arm64 only** — this image is not built for amd64. CI uses native `ubuntu-24.04-arm` runners.
 - No ROS 2, cmake, clang, or devshell — those are added in the Tier 2 final images.
 - If the requested UID/GID is already occupied in the base image, the old user is removed automatically.

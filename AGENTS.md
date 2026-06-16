@@ -35,18 +35,19 @@ Numbered shell scripts that encapsulate all reusable installation logic:
 
 | Script | Purpose | Used by |
 |--------|---------|---------|
-| `01-system.sh` | Apt packages, timezone, locale, WSLg GUI | All base images |
-| `02-python-install.sh` | Python 3.10 from apt + pip bootstrap | `luciole-base` only (pytorch/l4t already have Python) |
-| `03-pip-packages.sh` | pip packages, uv, aliyun mirror | All base images |
-| `04-ros2.sh` | ROS 2 (reads `$ROS_DISTRO`, `$ROS_TARGET`) | All final images |
-| `05-cmake.sh` | Newer CMake binary release (reads `$CMAKE_VERSION`) | All final images |
-| `06-clang.sh` | LLVM 21 (clang-format, clang-tidy, lldb) | Dev final images only |
-| `07-dotnet.sh` | .NET SDK 8.0 | Dev final images only |
-| `08-user.sh` | Non-root user + sudo (reads `$USERNAME`, `$USER_UID`) | All base images |
-| `09-devshell.sh` | zsh, oh-my-zsh, neovim, starship, nvm, … | Dev final images only — **must run as target user** |
-| `10-precommit.sh` | Pre-cache pre-commit hook environments from `_assets/.pre-commit-config.yaml` | Dev final images only — **must run as target user** |
+| `system.sh` | Apt upgrade, timezone, locale — minimal system bootstrap | All base images |
+| `dev-tools.sh` | Developer CLI toolset (editors, VCS, build, debug, ffmpeg) — run right after `system.sh` | All base images |
+| `wslg.sh` | GUI / WSLg deps (D-Bus, CJK fonts, Mesa, PulseAudio) — run after `dev-tools.sh` | All base images |
+| `python-install.sh` | Python 3.10 from apt + pip bootstrap | `luciole-base` only (pytorch/l4t already have Python) |
+| `pip-packages.sh` | pip packages, uv, aliyun mirror | All base images |
+| `ros2.sh` | ROS 2 (reads `$ROS_DISTRO`, `$ROS_TARGET`) | All final images |
+| `cmake.sh` | Newer CMake binary release (reads `$CMAKE_VERSION`) | All final images |
+| `clang.sh` | LLVM 21 (clang-format, clang-tidy, lldb) | Dev final images only |
+| `user.sh` | Non-root user + sudo (reads `$USERNAME`, `$USER_UID`) | All base images |
+| `devshell.sh` | zsh, oh-my-zsh, neovim, starship, nvm, … | Dev final images only — **must run as target user** |
+| `precommit.sh` | Pre-cache pre-commit hook environments from `_assets/.pre-commit-config.yaml` | Dev final images only — **must run as target user** |
 
-Each Dockerfile does `COPY src/_scripts/ /tmp/scripts/ && chmod +x /tmp/scripts/*.sh`, runs the required scripts, then `RUN rm -rf /tmp/scripts`. Dev images also `COPY src/_assets/ /tmp/assets/` for `10-precommit.sh`.
+Each Dockerfile does `COPY src/_scripts/ /tmp/scripts/ && chmod +x /tmp/scripts/*.sh`, runs the required scripts, then `RUN rm -rf /tmp/scripts`. Dev images also `COPY src/_assets/ /tmp/assets/` for `precommit.sh`.
 
 ## Two-Tier Image Architecture
 
@@ -132,7 +133,7 @@ docker build -f src/<image-name>/Dockerfile -t <image-name> .
 
 - Dockerfiles use Aliyun apt mirrors; pip is also configured to use Aliyun PyPI mirrors.
 - Default timezone is `Asia/Shanghai`; override via `ARG TZ`.
-- `09-devshell.sh` installs user-home dotfiles (oh-my-zsh, neovim, nvm). It **must** run as the target user (`USER ${USERNAME}` before the `RUN` step in the Dockerfile), followed by `USER root` for cleanup.
+- `devshell.sh` installs user-home dotfiles (oh-my-zsh, neovim, nvm). It **must** run as the target user (`USER ${USERNAME}` before the `RUN` step in the Dockerfile), followed by `USER root` for cleanup.
 - neovim is installed from a binary tarball; when adding an arm64-compatible script update, select the correct arch binary (`nvim-linux-x86_64` vs `nvim-linux-arm64`).
 - Each image directory should include both `README.md` (English) and `README_zh.md` (Chinese). The two files must cross-link to each other.
 
