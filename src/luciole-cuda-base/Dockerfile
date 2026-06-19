@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.4
 # Tier 1 base: nvcr.io/nvidia/pytorch:24.10-py3 (already ships Python + PyTorch + CUDA)
-#              + system tools + pip packages + user
+#              + system tools + pip packages + cmake + user
 # Published as ghcr.io/dkuav/luciole-cuda-base
 
 FROM nvcr.io/nvidia/pytorch:24.10-py3
@@ -24,6 +24,10 @@ RUN /tmp/scripts/dev-tools.sh
 RUN /tmp/scripts/wslg.sh
 # Skip python-install.sh: Python is already provided by the base image
 RUN /tmp/scripts/pip-packages.sh
+
+# CMake binary release — shared by both Tier 2 dev and runtime images
+ARG CMAKE_VERSION=4.3.2
+RUN /tmp/scripts/cmake.sh
 
 ARG USERNAME=luciole
 ARG USER_UID=1000

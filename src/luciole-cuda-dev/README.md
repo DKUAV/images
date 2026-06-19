@@ -18,9 +18,8 @@ ghcr.io/dkuav/luciole-cuda-dev:latest
 
 | Category | Details |
 |----------|---------|
-| **Base** | [`ghcr.io/dkuav/luciole-cuda-base`](../luciole-cuda-base/README.md) (system tools, PyTorch/CUDA, pip packages, user) |
+| **Base** | [`ghcr.io/dkuav/luciole-cuda-base`](../luciole-cuda-base/README.md) (system tools, PyTorch/CUDA, pip packages, CMake, user) |
 | **ROS 2** | Humble Base (`ros-humble-base`) + `colcon`, `rosdep`, `rosinstall-generator` |
-| **Build tools** | CMake 4.3.2 (binary release) |
 | **C++ toolchain** | LLVM 21 — `clang-format`, `clang-tidy`, `lldb` |
 | **Runtime** | .NET SDK 8.0 |
 | **Dev shell** | zsh + oh-my-zsh + neovim + starship + nvm + bat + fzf + eza + zoxide + more |
@@ -40,8 +39,7 @@ ghcr.io/dkuav/luciole-cuda-dev:latest
 | ARG | Default | Description |
 |-----|---------|-------------|
 | `ROS_DISTRO` | `humble` | ROS 2 distribution |
-| `ROS_TARGET` | `base` | ROS 2 install target (`desktop` / `base`) |
-| `CMAKE_VERSION` | `4.3.2` | CMake version to install |
+| `ROS_TARGET` | `ros-base` | ROS 2 install target (`desktop` / `ros-base`) |
 | `USERNAME` | `luciole` | Non-root user name |
 
 ## Quick Start

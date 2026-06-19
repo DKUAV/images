@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.4
 # Tier 2 final: CUDA/PyTorch dev environment with ROS2, devtools and full devshell
-# FROM: ghcr.io/dkuav/luciole-cuda-base (pytorch:24.10-py3 + system + pip + user)
+# FROM: ghcr.io/dkuav/luciole-cuda-base (pytorch:24.10-py3 + system + pip + cmake + user)
 
 ARG BASE_TAG=latest
 FROM ghcr.io/dkuav/luciole-cuda-base:${BASE_TAG}
@@ -10,11 +10,8 @@ COPY src/_assets/ /tmp/assets/
 RUN chmod +x /tmp/scripts/*.sh
 
 ARG ROS_DISTRO=humble
-ARG ROS_TARGET=base
+ARG ROS_TARGET=ros-base
 RUN /tmp/scripts/ros2.sh
-
-ARG CMAKE_VERSION=4.3.2
-RUN /tmp/scripts/cmake.sh
 
 RUN /tmp/scripts/clang.sh
 

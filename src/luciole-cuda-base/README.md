@@ -22,6 +22,7 @@ ghcr.io/dkuav/luciole-cuda-base:latest
 | **System tools** | wget, vim, git, git-lfs, curl, zip/unzip, tmux, screen, htop, tree, parallel, rsync, build-essential, ninja-build, GDB, libssl, iputils, libgflags, libgoogle-glog, GTest / GMock |
 | **Python** | Provided by base image; additional pip packages added via Aliyun mirror: uv, pytest suite, FastAPI, pybind11, pandas, numpy, loguru, and more |
 | **OpenCV** | C++: apt `libopencv-dev` 4.5.4 (FFMPEG + GStreamer). Python: pip `opencv-contrib-python` (bundles its own static FFMPEG). NVIDIA's incomplete OpenCV 4.7.0 from the base image is quarantined under `/usr/local/lib/nvidia-opencv-4.7.0.disabled/` so C++ `find_package(OpenCV)` resolves to the apt build. See [`docs/opencv-status.md`](../../docs/opencv-status.md) |
+| **Build tools** | CMake 4.3.2 (binary release) |
 | **GUI** | WSLg support (dbus-x11, CJK fonts, Mesa, PulseAudio) |
 | **Mirrors** | Aliyun apt mirror + Aliyun PyPI mirror |
 | **Timezone** | `Asia/Shanghai` (overridable via `TZ`) |
@@ -39,6 +40,7 @@ ghcr.io/dkuav/luciole-cuda-base:latest
 | ARG | Default | Description |
 |-----|---------|-------------|
 | `TZ` | `Asia/Shanghai` | Timezone |
+| `CMAKE_VERSION` | `4.3.2` | CMake version to install |
 | `USERNAME` | `luciole` | Non-root user name |
 | `USER_UID` | `1000` | User UID |
 | `USER_GID` | `1000` | User GID |
@@ -67,6 +69,7 @@ docker build -f src/luciole-cuda-base/Dockerfile -t luciole-cuda-base .
 
 - This is a **Tier 1 base image**. Published to GHCR and used as `FROM ghcr.io/dkuav/luciole-cuda-base:latest` in [`luciole-cuda-dev`](../luciole-cuda-dev/README.md) and [`luciole-cuda-runtime`](../luciole-cuda-runtime/README.md).
 - Python installation is skipped (`python-install.sh`) because `pytorch:24.10-py3` already ships Python.
-- No ROS 2, cmake, clang, or devshell — those are added in the Tier 2 final images.
+- CMake is pre-installed here so both Tier 2 images share one source of truth for the build-tool version.
+- No ROS 2, clang, or devshell — those are added in the Tier 2 final images.
 - **OpenCV replacement**: NVIDIA's `pytorch:24.10-py3` ships a custom-built OpenCV 4.7.0 under `/usr/local/lib` with all video decoders (FFMPEG, GStreamer) disabled. `opencv.sh` quarantines it and installs apt's `libopencv-dev` 4.5.4 with full backends for C++ (`find_package(OpenCV)`). Python `import cv2` keeps using the pip `opencv-contrib-python` wheel, which bundles its own FFMPEG and is independent of the C++ OpenCV. See [`docs/opencv-status.md`](../../docs/opencv-status.md) for the full analysis.
 - If the requested UID/GID is already occupied in the base image, the old user is removed automatically.
