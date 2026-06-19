@@ -278,6 +278,8 @@ and fully reversible.
   mv /usr/local/lib/nvidia-opencv-4.7.0.disabled/lib/cmake/opencv4 /usr/local/lib/cmake/
   mv /usr/local/lib/nvidia-opencv-4.7.0.disabled/lib/pkgconfig/*.pc /usr/local/lib/pkgconfig/
   mv /usr/local/lib/nvidia-opencv-4.7.0.disabled/include/opencv4 /usr/local/include/
+  # Restore Python bindings if they were quarantined
+  cp -r /usr/local/lib/nvidia-opencv-4.7.0.disabled/python/cv2 /usr/local/lib/python3.10/dist-packages/ 2>/dev/null || true
   ldconfig
   ```
 

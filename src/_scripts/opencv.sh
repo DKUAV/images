@@ -15,13 +15,11 @@
 #   2. Moves NVIDIA's 4.7.0 shared libs under a sibling .disabled/ directory
 #      (kept for reversibility, never deleted) and removes the CMake / pkg-config
 #      / header entries that would otherwise cause find_package(OpenCV) to still
-#      resolve to 4.7.0. The quarantined libraries are C++/ld.so only — the
-#      pip cv2 wheel is fully static and is unaffected, so Python cv2 is
-#      untouched here.
-#   3. Refreshes ldconfig and self-verifies the resolution.
+#      resolve to 4.7.0.
+#   3. Refreshes ldconfig and self-verifies the C++ library resolution.
 #
-# This script only touches the C++ OpenCV. Python cv2 is owned solely by
-# pip-packages.sh (where the duplicate-wheel issue is fixed at the source).
+# This script only touches the C++ OpenCV and quarantines NVIDIA's dirty Python bindings. 
+# The actual Python cv2 pip installation is owned solely by pip-packages.sh.
 #
 # Run as root. Currently called only by luciole-cuda-base.
 set -euo pipefail
@@ -35,9 +33,8 @@ rm -rf /var/lib/apt/lists/*
 
 echo "=== Quarantine NVIDIA's OpenCV 4.7.0 from /usr/local/lib ==="
 mkdir -p "${DISABLED_DIR}/lib/cmake" "${DISABLED_DIR}/lib/pkgconfig" "${DISABLED_DIR}/include"
+
 # Move the shared libraries (.so / .so.407 / .so.4.7.0) out of the ld.so path.
-# Keep them on disk so the change is fully reversible: moving the files back
-# plus re-running ldconfig restores the upstream layout.
 find /usr/local/lib -maxdepth 1 -name 'libopencv_*.so*' -print0 \
     | xargs -0 -r mv -t "${DISABLED_DIR}/lib"
 
@@ -46,29 +43,30 @@ mv /usr/local/lib/cmake/opencv4 "${DISABLED_DIR}/lib/cmake/" || true
 # pkg-config entry point: same reasoning.
 mv /usr/local/lib/pkgconfig/opencv4.pc "${DISABLED_DIR}/lib/pkgconfig/" || true
 mv /usr/local/lib/pkgconfig/opencv.pc "${DISABLED_DIR}/lib/pkgconfig/" || true
-# Public headers shipped by NVIDIA's build: move them so the compiler falls
-# back to the apt headers under /usr/include/opencv4.
+# Public headers shipped by NVIDIA's build.
 mv /usr/local/include/opencv4 "${DISABLED_DIR}/include/" || true
+
+# Quarantine the mixed Python cv2 directory.
+# The NVIDIA base image places a custom __init__.py and cv2.cpython-*.so in dist-packages/cv2.
+# We must quarantine the entire dirty directory so that later, when pip-packages.sh installs
+# the pip wheel, it does so in a clean environment without import recursion loops.
+echo "=== Quarantining NGC Python cv2 directory ==="
+mkdir -p "${DISABLED_DIR}/python"
+for py_cv2 in /usr/local/lib/python3.*/dist-packages/cv2; do
+    if [ -d "$py_cv2" ]; then
+        mv "$py_cv2" "${DISABLED_DIR}/python/" || true
+    fi
+done
 
 echo "=== Refresh ld.so cache ==="
 ldconfig
 
-echo "=== Verify ==="
-echo "-- apt OpenCV C++ packages:"
-dpkg -l | grep -E 'libopencv' || true
+echo "=== Verification ==="
+echo "-- apt libopencv-dev (expected: 4.5.4):"
+dpkg -l | grep libopencv-dev || echo "  (not found)"
 echo "-- NVIDIA OpenCV still in /usr/local/lib (expected: none):"
 ls /usr/local/lib/libopencv_*.so* 2>/dev/null || echo "  (none)"
 echo "-- Quarantined 4.7.0 libraries:"
 ls "${DISABLED_DIR}/lib" 2>/dev/null | head -n 5 || echo "  (none)"
-echo "-- Python cv2 (pip opencv-contrib-python wheel, static ffmpeg, unaffected by above):"
-python3 -c "import cv2; print('  cv2', cv2.__version__, cv2.__file__)"
-echo "-- cv2 FFMPEG backend check (FFMPEG should be YES):"
-python3 - <<'PY'
-import cv2
-info = cv2.getBuildInformation()
-for line in info.splitlines():
-    if line.strip().startswith('FFMPEG') or line.strip().startswith('GStreamer'):
-        print('  ' + line.rstrip())
-PY
 
 echo "=== opencv.sh done ==="
