@@ -21,6 +21,9 @@ RUN /tmp/scripts/dev-tools.sh
 RUN /tmp/scripts/wslg.sh
 # Skip python-install.sh: Python is already provided by the base image
 RUN /tmp/scripts/pip-packages.sh
+# Replace NVIDIA's incomplete OpenCV 4.7.0 (no FFMPEG / GStreamer backends)
+# with apt's libopencv-dev 4.5.4 (full video I/O).
+RUN /tmp/scripts/opencv.sh
 
 ARG USERNAME=luciole
 ARG USER_UID=1000

@@ -2,19 +2,17 @@ services:
   app:
     build:
       context: ../..
-      dockerfile: src/luciole-humble-dev/Dockerfile
-    image: ghcr.io/dkuav/luciole-humble-dev:latest
+      dockerfile: src/luciole-cuda-dev/Dockerfile
+    image: ghcr.io/dkuav/luciole-cuda-dev:latest
     user: luciole
 
     stdin_open: true
     tty: true
 
-    # WSLg socket
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
       - /mnt/wslg:/mnt/wslg
 
-    # WSLg env
     environment:
       - DISPLAY=${DISPLAY}
       - WAYLAND_DISPLAY=${WAYLAND_DISPLAY}

@@ -1,0 +1,10 @@
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: src/luciole-cuda-runtime/Dockerfile
+    image: ghcr.io/dkuav/luciole-cuda-runtime:latest
+    user: luciole
+
+    stdin_open: true
+    tty: true
