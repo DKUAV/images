@@ -25,6 +25,8 @@ jobs:
       tier2_image_matrix:  ${{ steps.detect.outputs.tier2_image_matrix }}
       has_tier1: ${{ steps.detect.outputs.has_tier1 }}
       has_tier2: ${{ steps.detect.outputs.has_tier2 }}
+      smoke_matrix:        ${{ steps.detect.outputs.smoke_matrix }}
+      has_smoke:           ${{ steps.detect.outputs.has_smoke }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -120,6 +122,40 @@ jobs:
           tier1_build = [e for img in tier1 for e in build_entries(img)]
           tier2_build = [e for img in tier2 for e in build_entries(img)]
 
+          # Smoke test matrix: one entry per (image, arch) we actually build.
+          # Each Tier 1 / Tier 2 image maps to a script under src/_tests/.
+          # Images start with a known prefix (`luciole-cuda-`); the smoke
+          # script is `smoke-<suffix>.sh` (e.g. `luciole-cuda-base` → smoke-base.sh).
+          SMOKE_SCRIPTS_AVAILABLE = {
+              p.name for p in (src_root / "_tests").glob("smoke-*.sh")
+          } if (src_root / "_tests").is_dir() else set()
+
+          def smoke_script(image_name: str) -> str | None:
+              suffix = image_name.split("-", 2)[-1] if "-" in image_name else image_name
+              script = f"smoke-{suffix}.sh"
+              return script if script in SMOKE_SCRIPTS_AVAILABLE else None
+
+          smoke_entries = []
+          for entry in (tier1_build + tier2_build):
+              script = smoke_script(entry["image"])
+              if script is None:
+                  continue  # no smoke script for this image — skip silently
+              smoke_entries.append({
+                  "image":       entry["image"],
+                  "platform_id": entry["platform_id"],
+                  "runner":      entry["runner"],
+                  "tag":         f"sha-{sha[:7]}",
+                  "script":      script,
+              })
+
+          # Deduplicate (a Tier 2 image may appear once but a Tier 1 base never
+          # duplicates its own build entries, so just guard defensively).
+          seen = set(); smoke_matrix = []
+          for e in smoke_entries:
+              key = (e["image"], e["platform_id"])
+              if key not in seen:
+                  seen.add(key); smoke_matrix.append(e)
+
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
               print(f"tier1_build_matrix={json.dumps(tier1_build)}", file=out)
               print(f"tier2_build_matrix={json.dumps(tier2_build)}", file=out)
@@ -127,6 +163,8 @@ jobs:
               print(f"tier2_image_matrix={json.dumps(image_entries(tier2))}", file=out)
               print(f"has_tier1={'true' if tier1_build else 'false'}", file=out)
               print(f"has_tier2={'true' if tier2_build else 'false'}", file=out)
+              print(f"smoke_matrix={json.dumps(smoke_matrix)}", file=out)
+              print(f"has_smoke={'true' if smoke_matrix else 'false'}", file=out)
           PY
 
   # ── Tier 1: base images ─────────────────────────────────────────────────────
@@ -405,3 +443,66 @@ jobs:
 
       - name: Inspect manifest
         run: docker buildx imagetools inspect ${{ steps.registry.outputs.image }}:${{ steps.meta.outputs.version }}
+
+  # ── Smoke tests ─────────────────────────────────────────────────────────────
+  # Pulls each image that was actually built this run (at its sha-tag),
+  # runs the matching src/_tests/smoke-<image>.sh against it on a native
+  # arch runner (no QEMU), and fails the pipeline on any assertion error.
+  # This guards against regressions like the OpenCV 4.7.0 leak or a wrong
+  # ROS_TARGET apt package name sneaking into a published image.
+  smoke-test:
+    name: Smoke (${{ matrix.image }} ${{ matrix.platform_id }})
+    runs-on: ${{ matrix.runner }}
+    needs: [detect-changes, merge-tier1, merge-tier2]
+    # Always evaluate, but only run when at least one tier was built & merged
+    # AND a smoke script exists for the matrix image.
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.detect-changes.result == 'success' &&
+      needs.detect-changes.outputs.has_smoke == 'true' &&
+      (needs.merge-tier1.result == 'success' || needs.merge-tier2.result == 'success')
+    permissions:
+      contents: read
+      packages: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.detect-changes.outputs.smoke_matrix) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Derive registry coordinates
+        id: registry
+        run: |
+          owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
+          echo "image=ghcr.io/${owner}/${{ matrix.image }}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull built image
+        run: docker pull ${{ steps.registry.outputs.image }}:${{ matrix.tag }}
+
+      - name: Run smoke test
+        run: |
+          # Mount the checked-out `src/_tests/` into /tmp/smoke inside the
+          # container and invoke the matching smoke-*.sh. The base image's
+          # default user (luciole) is preserved via --user, and the home dir
+          # is a fresh tmpfs so devshell dotfiles live in their expected place.
+          script="/tmp/smoke/${{ matrix.script }}"
+          docker run --rm \
+            -v "$PWD/src/_tests:/tmp/smoke:ro" \
+            ${{ steps.registry.outputs.image }}:${{ matrix.tag }} \
+            bash -lc '
+              set -uo pipefail
+              # shellcheck disable=SC1091
+              . /tmp/smoke/_lib.sh
+              # shellcheck disable=SC1090
+              source "'"$script"'"
+            '

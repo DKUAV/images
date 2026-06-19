@@ -71,6 +71,7 @@ graph LR
   B --> C["merge-tier1\n（合并 multi-arch manifest）"]
   C --> D["build-push-tier2\n（最终镜像 matrix）"]
   D --> E[merge-tier2]
+  E --> F["smoke-test\n（按镜像，硬门禁）"]
   A -. "仅 tier2 变更" .-> D
 ```
 
@@ -80,6 +81,7 @@ graph LR
   - 最终镜像有变更 → 只重建该最终镜像
   - `workflow_dispatch` → 构建全部镜像
 - **多架构**：amd64（`ubuntu-24.04`）和 arm64（`ubuntu-24.04-arm` 原生 Runner，无 QEMU）分别构建，按 digest 推送后合并为 multi-arch manifest。`image-deps.json` 中的 `arch_overrides` 可限制镜像仅在特定架构构建。
+- **Smoke 测试（硬门禁）**：本次实际构建的每个镜像都会以其 `sha-<git-sha>` 标签被拉下，在原生架构 runner 上跑 [`src/_tests/smoke-<image>.sh`](src/_tests/)。任一断言失败（如 OpenCV `find_package` 泄露、工具缺失、ROS target 错误）**会判定整个流水线失败**。
 - **标签**：`latest`、`main`、`sha-<git-sha>`。
 - **认证**：仅需 `GITHUB_TOKEN`，无需额外 secrets。
 

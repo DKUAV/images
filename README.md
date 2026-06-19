@@ -71,6 +71,7 @@ graph LR
   B --> C["merge-tier1\n(multi-arch manifest)"]
   C --> D["build-push-tier2\n(final image matrix)"]
   D --> E[merge-tier2]
+  E --> F["smoke-test\n(per-image, hard gate)"]
   A -. "tier2-only changes" .-> D
 ```
 
@@ -80,6 +81,7 @@ graph LR
   - Final image changed → rebuild that final only
   - `workflow_dispatch` → build everything
 - **Multi-arch**: amd64 (`ubuntu-24.04`) and arm64 (`ubuntu-24.04-arm`, native — no QEMU) are built separately, pushed by digest, and merged into a single multi-arch manifest. `arch_overrides` in `image-deps.json` limits arch-specific images.
+- **Smoke test (hard gate)**: every image actually built this run is pulled at its `sha-<git-sha>` tag and run against [`src/_tests/smoke-<image>.sh`](src/_tests/) on a native-arch runner. An assertion failure (e.g. OpenCV `find_package` leak, missing tool, wrong ROS target) **fails the whole pipeline**.
 - **Tags**: `latest`, `main`, `sha-<git-sha>`.
 - **Auth**: `GITHUB_TOKEN` only — no extra secrets needed.
 

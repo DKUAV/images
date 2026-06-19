@@ -6,8 +6,9 @@ This repository manages Docker images for the DKUAV project. Images are publishe
 
 ```
 src/
-  _scripts/               # Shared installation scripts (01–10)
+  _scripts/               # Shared installation scripts
   _assets/                # Shared assets (e.g. pre-commit config)
+  _tests/                 # Smoke tests run after CI merge (smoke-<image>.sh + _lib.sh)
   image-deps.json         # CI dependency + arch-override map
   <image-name>/           # One subdirectory per image
     Dockerfile            # Required (CI uses this to detect image directories)
@@ -15,7 +16,7 @@ src/
     README.md             # Optional, image documentation
     README_zh.md          # Optional, image documentation (Chinese)
 .github/workflows/
-  publish-images.yml      # CI: detect changes → multi-arch build → merge manifest
+  publish-images.yml      # CI: detect changes → multi-arch build → merge manifest → smoke test
 ```
 
 ## Image Naming Convention
@@ -102,11 +103,14 @@ docker build -f src/<image-name>/Dockerfile -t <image-name> .
 - **Change detection**: reads `image-deps.json`. If `src/_scripts/**` or `src/_assets/**` changed → rebuilds ALL images. If a base image changed → rebuilds that base + all its dependent final images. If a final image changed → rebuilds that final only. `workflow_dispatch` builds everything.
 - **Multi-arch**: `amd64` (`ubuntu-24.04`) and `arm64` (`ubuntu-24.04-arm` native runner, **no QEMU**) are built separately, pushed by digest, then merged into a single multi-arch manifest. `arch_overrides` limits certain images to arm64 only.
 - **Two-tier CI jobs**:
-  1. `detect-changes` — computes tier1 and tier2 build matrices
+  1. `detect-changes` — computes tier1, tier2, and smoke-test matrices
   2. `build-push-tier1` — builds base images (skipped if no base changes)
   3. `merge-tier1` — merges multi-arch manifests for base images
   4. `build-push-tier2` — builds final images (runs after merge-tier1, or if tier1 was skipped)
   5. `merge-tier2` — merges multi-arch manifests for final images
+  6. `smoke-test` — pulls each built image at its `sha-<git-sha>` tag on a **native arch runner** and runs `src/_tests/smoke-<image>.sh`; any assertion failure fails the whole pipeline
+- **Smoke tests (gate)**: `src/_tests/smoke-<image>.sh` is the per-image contract check (OpenCV `find_package` resolves to apt, `ros2` installable, dev shell tools present, mirror applied in Tier 2, etc.). Shared helpers live in `src/_tests/_lib.sh`. The job runs only for images that were *actually built* this run (skipped when nothing changed). It is a **hard gate**: a failed smoke test marks the workflow failed.
+  - To smoke-test locally: `docker run --rm -v "$PWD/src/_tests:/tmp/smoke:ro" <image> bash -lc '. /tmp/smoke/_lib.sh; source /tmp/smoke/smoke-<image>.sh'`
 - **Image tags**: `latest` (main branch), `main`, `sha-<git-sha>`.
 - **Registry**: `ghcr.io/dkuav/<image-name>`, authenticated via `GITHUB_TOKEN` — no extra secrets required.
 
