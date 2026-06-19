@@ -19,7 +19,7 @@ ghcr.io/dkuav/luciole-humble-l4t-dev:latest
 | Category | Details |
 |----------|---------|
 | **Base** | [`ghcr.io/dkuav/luciole-l4t-base`](../luciole-l4t-base/README.md) (system tools, TensorRT/Python, pip packages, user) |
-| **ROS 2** | Humble Desktop (`ros-humble-desktop`) + `colcon`, `rosdep`, `rosinstall-generator` |
+| **ROS 2** | Humble Base (`ros-humble-base`) + `colcon`, `rosdep`, `rosinstall-generator` |
 | **Build tools** | CMake 4.3.2 (binary release, aarch64) |
 | **C++ toolchain** | LLVM 21 — `clang-format`, `clang-tidy`, `lldb` |
 | **Runtime** | .NET SDK 8.0 |
@@ -40,7 +40,7 @@ ghcr.io/dkuav/luciole-humble-l4t-dev:latest
 | ARG | Default | Description |
 |-----|---------|-------------|
 | `ROS_DISTRO` | `humble` | ROS 2 distribution |
-| `ROS_TARGET` | `desktop` | ROS 2 install target (`desktop` / `base`) |
+| `ROS_TARGET` | `base` | ROS 2 install target (`desktop` / `base`) |
 | `CMAKE_VERSION` | `4.3.2` | CMake version to install |
 | `USERNAME` | `luciole` | Non-root user name |
 

@@ -15,7 +15,7 @@ ghcr.io/dkuav/luciole-humble-dev:latest
 | 类别 | 详情 |
 |------|------|
 | **基础镜像** | `mcr.microsoft.com/devcontainers/base:ubuntu22.04` |
-| **ROS 2** | Humble Desktop（`ros-humble-desktop`）+ `ros-dev-tools` |
+| **ROS 2** | Humble Base（`ros-humble-base`）+ `ros-dev-tools` |
 | **C++ 工具链** | GCC / G++、CMake、Ninja、GDB、clang-format 21、libgflags、libgoogle-glog、GTest / GMock |
 | **Python** | Python 3.10、pip（阿里云镜像）、uv、pytest 套件、FastAPI、pybind11、OpenCV、pandas、numpy 等 |
 | **Shell** | zsh（默认）+ oh-my-zsh（`ys` 主题）+ zsh-completions、zsh-autosuggestions、zsh-syntax-highlighting |
@@ -41,7 +41,7 @@ ghcr.io/dkuav/luciole-humble-dev:latest
 |-----|--------|------|
 | `TZ` | `Asia/Shanghai` | 时区 |
 | `ROS_DISTRO` | `humble` | ROS 2 发行版 |
-| `ROS_TARGET` | `desktop` | ROS 2 元包（`desktop` / `base` / `desktop-full`）|
+| `ROS_TARGET` | `base` | ROS 2 元包（`desktop` / `base` / `desktop-full`）|
 | `USERNAME` | `luciole` | 非 root 用户名 |
 | `USER_UID` | `1000` | 用户 UID |
 | `USER_GID` | `1000` | 用户 GID |

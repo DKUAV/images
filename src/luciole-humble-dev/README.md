@@ -15,7 +15,7 @@ ghcr.io/dkuav/luciole-humble-dev:latest
 | Category | Details |
 |----------|---------|
 | **Base** | `mcr.microsoft.com/devcontainers/base:ubuntu22.04` |
-| **ROS 2** | Humble Desktop (`ros-humble-desktop`) + `ros-dev-tools` |
+| **ROS 2** | Humble Base (`ros-humble-base`) + `ros-dev-tools` |
 | **C++ toolchain** | GCC / G++, CMake, Ninja, GDB, clang-format 21, libgflags, libgoogle-glog, GTest / GMock |
 | **Python** | Python 3.10, pip (Aliyun mirror), uv, pytest suite, FastAPI, pybind11, OpenCV, pandas, numpy, and more |
 | **Shell** | zsh (default) + oh-my-zsh (`ys` theme) with zsh-completions, zsh-autosuggestions, zsh-syntax-highlighting |
@@ -41,7 +41,7 @@ ghcr.io/dkuav/luciole-humble-dev:latest
 |-----|---------|-------------|
 | `TZ` | `Asia/Shanghai` | Timezone |
 | `ROS_DISTRO` | `humble` | ROS 2 distribution |
-| `ROS_TARGET` | `desktop` | ROS 2 metapackage (`desktop` / `base` / `desktop-full`) |
+| `ROS_TARGET` | `base` | ROS 2 metapackage (`desktop` / `base` / `desktop-full`) |
 | `USERNAME` | `luciole` | Non-root user name |
 | `USER_UID` | `1000` | User UID |
 | `USER_GID` | `1000` | User GID |

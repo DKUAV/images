@@ -19,7 +19,7 @@ ghcr.io/dkuav/luciole-humble-l4t-runtime:latest
 | 类别 | 详情 |
 |------|------|
 | **基础镜像** | [`ghcr.io/dkuav/luciole-l4t-base`](../luciole-l4t-base/README_zh.md)（系统工具、TensorRT/Python、pip 包、用户）|
-| **ROS 2** | Humble Desktop（`ros-humble-desktop`）+ `colcon`、`rosdep`、`rosinstall-generator` |
+| **ROS 2** | Humble Base（`ros-humble-base`）+ `colcon`、`rosdep`、`rosinstall-generator` |
 | **构建工具** | CMake 4.3.2（aarch64 二进制发行版）|
 
 > **不包含**：clang/LLVM、.NET SDK、devshell（zsh、neovim、oh-my-zsh 等）
@@ -37,7 +37,7 @@ ghcr.io/dkuav/luciole-humble-l4t-runtime:latest
 | ARG | 默认值 | 说明 |
 |-----|--------|------|
 | `ROS_DISTRO` | `humble` | ROS 2 发行版 |
-| `ROS_TARGET` | `desktop` | ROS 2 安装目标（`desktop` / `base`）|
+| `ROS_TARGET` | `base` | ROS 2 安装目标（`desktop` / `base`）|
 | `CMAKE_VERSION` | `4.3.2` | 安装的 CMake 版本 |
 | `USERNAME` | `luciole` | 非 root 用户名 |
 

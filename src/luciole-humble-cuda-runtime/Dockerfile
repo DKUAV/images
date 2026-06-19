@@ -9,7 +9,7 @@ COPY src/_scripts/ /tmp/scripts/
 RUN chmod +x /tmp/scripts/*.sh
 
 ARG ROS_DISTRO=humble
-ARG ROS_TARGET=desktop
+ARG ROS_TARGET=base
 RUN /tmp/scripts/ros2.sh
 
 ARG CMAKE_VERSION=4.3.2
