@@ -20,7 +20,8 @@ ghcr.io/dkuav/luciole-cuda-base:latest
 |------|------|
 | **基础镜像** | `nvcr.io/nvidia/pytorch:24.10-py3`（已含 Python + PyTorch + CUDA）|
 | **系统工具** | wget、vim、git、git-lfs、curl、zip/unzip、tmux、screen、htop、tree、parallel、rsync、build-essential、ninja-build、GDB、libssl、iputils、libgflags、libgoogle-glog、GTest / GMock |
-| **Python** | 由基础镜像提供；通过阿里云镜像追加 pip 包：uv、pytest 套件、FastAPI、pybind11、OpenCV、pandas、numpy、loguru 等 |
+| **Python** | 由基础镜像提供；通过阿里云镜像追加 pip 包：uv、pytest 套件、FastAPI、pybind11、pandas、numpy、loguru 等 |
+| **OpenCV** | C++：apt `libopencv-dev` 4.5.4（启用 FFMPEG + GStreamer）。Python：pip `opencv-contrib-python`（自带静态 FFMPEG）。NVIDIA 基础镜像自带的 OpenCV 4.7.0 库被移至 `/usr/local/lib/nvidia-opencv-4.7.0.disabled/`，确保 C++ `find_package(OpenCV)` 解析到 apt 版。详见 [`docs/opencv-status_zh.md`](../../docs/opencv-status_zh.md) |
 | **GUI** | WSLg 支持（dbus-x11、中日韩字体、Mesa、PulseAudio）|
 | **镜像加速** | 阿里云 apt 镜像 + 阿里云 PyPI 镜像 |
 | **时区** | `Asia/Shanghai`（可通过 `TZ` 覆盖）|
@@ -67,4 +68,5 @@ docker build -f src/luciole-cuda-base/Dockerfile -t luciole-cuda-base .
 - 这是一个**第一层基础镜像**，已发布至 GHCR，供 [`luciole-cuda-dev`](../luciole-cuda-dev/README_zh.md) 和 [`luciole-cuda-runtime`](../luciole-cuda-runtime/README_zh.md) 以 `FROM ghcr.io/dkuav/luciole-cuda-base:latest` 方式使用。
 - 由于 `pytorch:24.10-py3` 已内置 Python，构建时跳过 `python-install.sh`。
 - 本镜像不含 ROS 2、cmake、clang 或 devshell，这些内容由第二层最终镜像负责添加。
+- **OpenCV 替换**：NVIDIA `pytorch:24.10-py3` 自带的 `/usr/local/lib/libopencv_*.so.4.7.0` 在构建时禁用了全部视频解码后端（FFMPEG、GStreamer）。`opencv.sh` 把它隔离到 `/usr/local/lib/nvidia-opencv-4.7.0.disabled/`，并安装 apt 的 `libopencv-dev` 4.5.4（含全部后端）用于 C++ `find_package(OpenCV)`。Python `import cv2` 继续使用 pip 的 `opencv-contrib-python` wheel，该 wheel 自带静态 FFMPEG，与 C++ OpenCV 互不干扰。完整分析见 [`docs/opencv-status_zh.md`](../../docs/opencv-status_zh.md)。
 - 若基础镜像中 UID/GID 已被占用，构建时会自动删除原有用户后再创建 `luciole`。

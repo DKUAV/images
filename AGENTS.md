@@ -40,6 +40,7 @@ Numbered shell scripts that encapsulate all reusable installation logic:
 | `wslg.sh` | GUI / WSLg deps (D-Bus, CJK fonts, Mesa, PulseAudio) — run after `dev-tools.sh` | All base images |
 | `python-install.sh` | Python 3.10 from apt + pip bootstrap | Currently unused (pytorch:24.10-py3 already ships Python); kept for future CPU-only bases |
 | `pip-packages.sh` | pip packages, uv, aliyun mirror | All base images |
+| `opencv.sh` | Replace NVIDIA's incomplete OpenCV 4.7.0 (no FFMPEG / GStreamer) with apt's `libopencv-dev` 4.5.4; quarantine the original under `/usr/local/lib/nvidia-opencv-4.7.0.disabled/` | `luciole-cuda-base` |
 | `ros2.sh` | ROS 2 (reads `$ROS_DISTRO`, `$ROS_TARGET`) | All final images |
 | `cmake.sh` | Newer CMake binary release (reads `$CMAKE_VERSION`) | All final images |
 | `clang.sh` | LLVM 21 (clang-format, clang-tidy, lldb) | Dev final images only |
