@@ -12,7 +12,7 @@ DKUAV 项目的 Docker 镜像管理仓库。镜像通过 GitHub Actions 自动�
 graph TD
   C["nvcr.io/nvidia/pytorch:24.10-py3\n(已含 Python + PyTorch + CUDA)"] --> CB["ghcr.io/dkuav/luciole-cuda-base\n(system + pip + user)\namd64 + arm64"]
 
-  CB --> HCD["luciole-cuda-dev\n(ROS 2 + cmake + clang + .NET + devshell)\namd64 + arm64"]
+  CB --> HCD["luciole-cuda-dev\n(ROS 2 + cmake + clang + devshell)\namd64 + arm64"]
   CB --> HCR["luciole-cuda-runtime\n(ROS 2 + cmake)\namd64 + arm64"]
 ```
 
@@ -28,8 +28,8 @@ graph TD
 
 | 镜像 | 基础 | 架构 | 包含内容 |
 |------|------|------|---------|
-| [`luciole-cuda-dev`](src/luciole-cuda-dev/README_zh.md) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake · clang · .NET · devshell |
-| [`luciole-cuda-runtime`](src/luciole-cuda-runtime/) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake |
+| [`luciole-cuda-dev`](src/luciole-cuda-dev/README_zh.md) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake（继承自 base）· clang · devshell |
+| [`luciole-cuda-runtime`](src/luciole-cuda-runtime/) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake（继承自 base） |
 
 **devshell** 包含：zsh · oh-my-zsh · neovim（NvChad）· starship · nvm · bat · fzf · eza · zoxide · pre-commit（预缓存 hooks）
 

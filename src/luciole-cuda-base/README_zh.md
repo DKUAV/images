@@ -20,11 +20,11 @@ ghcr.io/dkuav/luciole-cuda-base:latest
 |------|------|
 | **基础镜像** | `nvcr.io/nvidia/pytorch:24.10-py3`（已含 Python + PyTorch + CUDA）|
 | **系统工具** | wget、vim、git、git-lfs、curl、zip/unzip、tmux、screen、htop、tree、parallel、rsync、build-essential、ninja-build、GDB、libssl、iputils、libgflags、libgoogle-glog、GTest / GMock |
-| **Python** | 由基础镜像提供；通过阿里云镜像追加 pip 包：uv、pytest 套件、FastAPI、pybind11、pandas、numpy、loguru 等 |
+| **Python** | 由基础镜像提供；构建期间追加 pip 包（uv、pytest 套件、FastAPI、pybind11、pandas、numpy、loguru 等）|
 | **OpenCV** | C++：apt `libopencv-dev` 4.5.4（启用 FFMPEG + GStreamer）。Python：pip `opencv-contrib-python`（自带静态 FFMPEG）。NVIDIA 基础镜像自带的 OpenCV 4.7.0 库被移至 `/usr/local/lib/nvidia-opencv-4.7.0.disabled/`，确保 C++ `find_package(OpenCV)` 解析到 apt 版。详见 [`docs/opencv-status_zh.md`](../../docs/opencv-status_zh.md) |
 | **构建工具** | CMake 4.3.2（二进制发行版）|
 | **GUI** | WSLg 支持（dbus-x11、中日韩字体、Mesa、PulseAudio）|
-| **镜像加速** | 阿里云 apt 镜像 + 阿里云 PyPI 镜像 |
+| **镜像加速** | 本 **基础镜像** 保持默认 Ubuntu / PyPI 源（构建期一并使用）。下游第二层最终镜像（`luciole-cuda-dev`、`luciole-cuda-runtime`）会在其构建的最后一步将持久化的源切换到阿里云。 |
 | **时区** | `Asia/Shanghai`（可通过 `TZ` 覆盖）|
 
 ## 默认用户

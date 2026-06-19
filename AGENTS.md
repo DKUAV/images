@@ -39,14 +39,15 @@ Numbered shell scripts that encapsulate all reusable installation logic:
 | `dev-tools.sh` | Developer CLI toolset (editors, VCS, build, debug, ffmpeg) — run right after `system.sh` | All base images |
 | `wslg.sh` | GUI / WSLg deps (D-Bus, CJK fonts, Mesa, PulseAudio) — run after `dev-tools.sh` | All base images |
 | `python-install.sh` | Python 3.10 from apt + pip bootstrap | Currently unused (pytorch:24.10-py3 already ships Python); kept for future CPU-only bases |
-| `pip-packages.sh` | pip packages, uv, aliyun mirror | All base images |
+| `pip-packages.sh` | pip packages, uv | All base images |
 | `opencv.sh` | Replace NVIDIA's incomplete OpenCV 4.7.0 (no FFMPEG / GStreamer) with apt's `libopencv-dev` 4.5.4; quarantine the original under `/usr/local/lib/nvidia-opencv-4.7.0.disabled/` | `luciole-cuda-base` |
 | `ros2.sh` | ROS 2 (reads `$ROS_DISTRO`, `$ROS_TARGET`) | All final images |
-| `cmake.sh` | Newer CMake binary release (reads `$CMAKE_VERSION`) | All final images |
+| `cmake.sh` | Newer CMake binary release (reads `$CMAKE_VERSION`) | `luciole-cuda-base` (inherited by every Tier 2 final) |
 | `clang.sh` | LLVM 21 (clang-format, clang-tidy, lldb) | Dev final images only |
 | `user.sh` | Non-root user + sudo (reads `$USERNAME`, `$USER_UID`) | All base images |
 | `devshell.sh` | zsh, oh-my-zsh, neovim, starship, nvm, … | Dev final images only — **must run as target user** |
 | `precommit.sh` | Pre-cache pre-commit hook environments from `_assets/.pre-commit-config.yaml` | Dev final images only — **must run as target user** |
+| `finalize-mirror.sh` | As the **final step**, rewrite apt + pip sources to Aliyun mirrors so users in China get fast installs post-pull. Build itself still uses upstream sources. **Must run as root, after every apt/pip install is finished.** | All Tier 2 final images |
 
 Each Dockerfile does `COPY src/_scripts/ /tmp/scripts/ && chmod +x /tmp/scripts/*.sh`, runs the required scripts, then `RUN rm -rf /tmp/scripts`. Dev images also `COPY src/_assets/ /tmp/assets/` for `precommit.sh`.
 
@@ -119,7 +120,7 @@ docker build -f src/<image-name>/Dockerfile -t <image-name> .
 
 ## Notes
 
-- Dockerfiles use Aliyun apt mirrors; pip is also configured to use Aliyun PyPI mirrors.
+- **Mirrors strategy**: during the build every script (`system.sh`, `ros2.sh`, `pip-packages.sh`, …) uses the upstream Ubuntu / PyPI sources, because GitHub Actions runners are usually closer to those than to Chinese mirrors. `finalize-mirror.sh` then flips the *persisted* apt + pip sources to Aliyun **as the very last step** of each Tier 2 final image, so end users in China get fast `apt` / `pip` out of the box without that mirror ever slowing down a build.
 - Default timezone is `Asia/Shanghai`; override via `ARG TZ`.
 - `devshell.sh` installs user-home dotfiles (oh-my-zsh, neovim, nvm). It **must** run as the target user (`USER ${USERNAME}` before the `RUN` step in the Dockerfile), followed by `USER root` for cleanup.
 - neovim is installed from a binary tarball; when adding an arm64-compatible script update, select the correct arch binary (`nvim-linux-x86_64` vs `nvim-linux-arm64`).

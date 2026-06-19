@@ -19,11 +19,11 @@ ghcr.io/dkuav/luciole-cuda-dev:latest
 | Category | Details |
 |----------|---------|
 | **Base** | [`ghcr.io/dkuav/luciole-cuda-base`](../luciole-cuda-base/README.md) (system tools, PyTorch/CUDA, pip packages, CMake, user) |
-| **ROS 2** | Humble Base (`ros-humble-base`) + `colcon`, `rosdep`, `rosinstall-generator` |
+| **ROS 2** | Humble `ros-base` (`ros-humble-ros-base`) + `colcon`, `rosdep`, `rosinstall-generator` |
 | **C++ toolchain** | LLVM 21 — `clang-format`, `clang-tidy`, `lldb` |
-| **Runtime** | .NET SDK 8.0 |
 | **Dev shell** | zsh + oh-my-zsh + neovim + starship + nvm + bat + fzf + eza + zoxide + more |
 | **Pre-commit** | pre-commit with pre-cached hook environments (ruff, trailing-whitespace, etc.) |
+| **Mirrors** | As the final build step, apt + pip sources are flipped to Aliyun so Chinese users get fast installs after pulling. The build itself uses the default sources. |
 
 ## Default User
 

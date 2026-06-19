@@ -19,11 +19,11 @@ ghcr.io/dkuav/luciole-cuda-dev:latest
 | 类别 | 详情 |
 |------|------|
 | **基础镜像** | [`ghcr.io/dkuav/luciole-cuda-base`](../luciole-cuda-base/README_zh.md)（系统工具、PyTorch/CUDA、pip 包、CMake、用户）|
-| **ROS 2** | Humble Base（`ros-humble-base`）+ `colcon`、`rosdep`、`rosinstall-generator` |
+| **ROS 2** | Humble `ros-base`（`ros-humble-ros-base`）+ `colcon`、`rosdep`、`rosinstall-generator` |
 | **C++ 工具链** | LLVM 21 — `clang-format`、`clang-tidy`、`lldb` |
-| **运行时** | .NET SDK 8.0 |
 | **开发 Shell** | zsh + oh-my-zsh + neovim + starship + nvm + bat + fzf + eza + zoxide 等 |
 | **Pre-commit** | pre-commit 及预缓存 hook 环境（ruff、trailing-whitespace 等）|
+| **镜像加速** | 构建最后一步会将 apt 与 pip 源切换为阿里云，用户 pull 后在国内可快速 apt/pip 安装；构建期仍使用默认源。 |
 
 ## 默认用户
 
@@ -39,7 +39,7 @@ ghcr.io/dkuav/luciole-cuda-dev:latest
 | ARG | 默认值 | 说明 |
 |-----|--------|------|
 | `ROS_DISTRO` | `humble` | ROS 2 发行版 |
-| `ROS_TARGET` | `base` | ROS 2 安装目标（`desktop` / `base`）|
+| `ROS_TARGET` | `ros-base` | ROS 2 安装目标（`desktop` / `ros-base`）|
 | `USERNAME` | `luciole` | 非 root 用户名 |
 
 ## 快速开始

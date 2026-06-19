@@ -246,8 +246,8 @@ Two steps:
 > never `python3-opencv`.
 >
 > The apt Python cv2 is also unnecessary for “following upstream”: all Luciole
-> Python packages consistently use pip (Aliyun PyPI mirror), so `python3-opencv`
-> would just be extra weight.
+> Python packages are installed via pip, so `python3-opencv` would just be
+> extra weight.
 
 > **Out of scope for this script**: the pip-side `opencv_python` /
 > `opencv-contrib-python` double-wheel fix lives at the source in

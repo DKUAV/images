@@ -24,6 +24,12 @@ RUN /tmp/scripts/devshell.sh
 RUN /tmp/scripts/precommit.sh
 
 USER root
+
+# Switch apt + pip sources to Aliyun mirrors as the FINAL step, so users in
+# China get fast installs after pulling. Build itself keeps using upstream
+# sources (this script runs after every apt/pip install in devshell.sh etc.).
+RUN /tmp/scripts/finalize-mirror.sh
+
 RUN rm -rf /tmp/scripts /tmp/assets
 
 USER ${USERNAME}

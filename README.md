@@ -12,7 +12,7 @@ The repository uses a **two-tier image hierarchy** to maximise layer reuse acros
 graph TD
   C["nvcr.io/nvidia/pytorch:24.10-py3\n(PyTorch + CUDA, Python built-in)"] --> CB["ghcr.io/dkuav/luciole-cuda-base\n(system + pip + user)\namd64 + arm64"]
 
-  CB --> HCD["luciole-cuda-dev\n(ROS 2 + cmake + clang + .NET + devshell)\namd64 + arm64"]
+  CB --> HCD["luciole-cuda-dev\n(ROS 2 + cmake + clang + devshell)\namd64 + arm64"]
   CB --> HCR["luciole-cuda-runtime\n(ROS 2 + cmake)\namd64 + arm64"]
 ```
 
@@ -28,8 +28,8 @@ Published to GHCR; used as `FROM` in Tier 2 Dockerfiles.
 
 | Image | Base | Arch | Includes |
 |-------|------|------|---------|
-| [`luciole-cuda-dev`](src/luciole-cuda-dev/README.md) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake · clang · .NET · devshell |
-| [`luciole-cuda-runtime`](src/luciole-cuda-runtime/) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake |
+| [`luciole-cuda-dev`](src/luciole-cuda-dev/README.md) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake (inherited from base) · clang · devshell |
+| [`luciole-cuda-runtime`](src/luciole-cuda-runtime/) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake (inherited from base) |
 
 **devshell** includes: zsh · oh-my-zsh · neovim (NvChad) · starship · nvm · bat · fzf · eza · zoxide · pre-commit (pre-cached hooks)
 
