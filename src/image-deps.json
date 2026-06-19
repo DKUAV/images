@@ -1,20 +1,27 @@
 {
-  "base_images": ["luciole-base", "luciole-cuda-base", "luciole-l4t-base"],
+  "base_images": [
+    "luciole-cuda-base"
+  ],
   "dependencies": {
-    "luciole-humble-dev":           ["luciole-base"],
-    "luciole-humble-cuda-dev":      ["luciole-cuda-base"],
-    "luciole-humble-cuda-runtime":  ["luciole-cuda-base"],
-    "luciole-humble-l4t-dev":       ["luciole-l4t-base"],
-    "luciole-humble-l4t-runtime":   ["luciole-l4t-base"]
+    "luciole-cuda-dev": [
+      "luciole-cuda-base"
+    ],
+    "luciole-cuda-runtime": [
+      "luciole-cuda-base"
+    ]
   },
   "arch_overrides": {
-    "luciole-base":                  ["amd64"],
-    "luciole-cuda-base":             ["amd64"],
-    "luciole-humble-dev":            ["amd64"],
-    "luciole-humble-cuda-dev":       ["amd64"],
-    "luciole-humble-cuda-runtime":   ["amd64"],
-    "luciole-l4t-base":             ["arm64"],
-    "luciole-humble-l4t-dev":       ["arm64"],
-    "luciole-humble-l4t-runtime":   ["arm64"]
+    "luciole-cuda-base": [
+      "amd64",
+      "arm64"
+    ],
+    "luciole-cuda-dev": [
+      "amd64",
+      "arm64"
+    ],
+    "luciole-cuda-runtime": [
+      "amd64",
+      "arm64"
+    ]
   }
 }

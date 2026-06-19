@@ -23,7 +23,7 @@ src/
 `src/<image-name>` → `ghcr.io/dkuav/<image-name>`
 
 - Directory name becomes the image name. **Do not** use uppercase letters or spaces.
-- Example: `src/luciole-humble-dev` → `ghcr.io/dkuav/luciole-humble-dev`
+- Example: `src/luciole-cuda-dev` → `ghcr.io/dkuav/luciole-cuda-dev`
 
 ## Build Context
 
@@ -38,7 +38,7 @@ Numbered shell scripts that encapsulate all reusable installation logic:
 | `system.sh` | Apt upgrade, timezone, locale — minimal system bootstrap | All base images |
 | `dev-tools.sh` | Developer CLI toolset (editors, VCS, build, debug, ffmpeg) — run right after `system.sh` | All base images |
 | `wslg.sh` | GUI / WSLg deps (D-Bus, CJK fonts, Mesa, PulseAudio) — run after `dev-tools.sh` | All base images |
-| `python-install.sh` | Python 3.10 from apt + pip bootstrap | `luciole-base` only (pytorch/l4t already have Python) |
+| `python-install.sh` | Python 3.10 from apt + pip bootstrap | Currently unused (pytorch:24.10-py3 already ships Python); kept for future CPU-only bases |
 | `pip-packages.sh` | pip packages, uv, aliyun mirror | All base images |
 | `ros2.sh` | ROS 2 (reads `$ROS_DISTRO`, `$ROS_TARGET`) | All final images |
 | `cmake.sh` | Newer CMake binary release (reads `$CMAKE_VERSION`) | All final images |
@@ -55,19 +55,14 @@ Each Dockerfile does `COPY src/_scripts/ /tmp/scripts/ && chmod +x /tmp/scripts/
 
 | Directory | Base FROM | Description |
 |-----------|-----------|-------------|
-| `src/luciole-base` | `mcr.microsoft.com/devcontainers/base:ubuntu22.04` | Ubuntu 22.04 + Python + pip packages + user (amd64 only) |
-| `src/luciole-cuda-base` | `nvcr.io/nvidia/pytorch:24.10-py3` | PyTorch/CUDA + pip packages + user (amd64 only) |
-| `src/luciole-l4t-base` | `nvcr.io/nvidia/l4t-tensorrt:r10.3.0-devel` | L4T TensorRT + pip packages + user (arm64 only) |
+| `src/luciole-cuda-base` | `nvcr.io/nvidia/pytorch:24.10-py3` | PyTorch/CUDA + pip packages + user (amd64, arm64) |
 
 ### Tier 2 — Final Images (depend on Tier 1 base images)
 
 | Directory | FROM (Tier 1) | Arch | Description |
 |-----------|---------------|------|-------------|
-| `src/luciole-humble-dev` | `luciole-base` | amd64 only | Ubuntu dev: ROS 2 + devtools + devshell |
-| `src/luciole-humble-cuda-dev` | `luciole-cuda-base` | amd64 only | CUDA dev: ROS 2 + devtools + devshell |
-| `src/luciole-humble-cuda-runtime` | `luciole-cuda-base` | amd64 only | CUDA runtime: ROS 2 + cmake only |
-| `src/luciole-humble-l4t-dev` | `luciole-l4t-base` | arm64 only | L4T dev: ROS 2 + devtools + devshell |
-| `src/luciole-humble-l4t-runtime` | `luciole-l4t-base` | arm64 only | L4T runtime: ROS 2 + cmake only |
+| `src/luciole-cuda-dev` | `luciole-cuda-base` | amd64, arm64 | CUDA dev: ROS 2 + devtools + devshell |
+| `src/luciole-cuda-runtime` | `luciole-cuda-base` | amd64, arm64 | CUDA runtime: ROS 2 + cmake only |
 
 ## `src/image-deps.json`
 
@@ -75,23 +70,15 @@ Drives CI change detection and dependency propagation:
 
 ```json
 {
-  "base_images": ["luciole-base", "luciole-cuda-base", "luciole-l4t-base"],
+  "base_images": ["luciole-cuda-base"],
   "dependencies": {
-    "luciole-humble-dev":           ["luciole-base"],
-    "luciole-humble-cuda-dev":      ["luciole-cuda-base"],
-    "luciole-humble-cuda-runtime":  ["luciole-cuda-base"],
-    "luciole-humble-l4t-dev":       ["luciole-l4t-base"],
-    "luciole-humble-l4t-runtime":   ["luciole-l4t-base"]
+    "luciole-cuda-dev":      ["luciole-cuda-base"],
+    "luciole-cuda-runtime":  ["luciole-cuda-base"]
   },
   "arch_overrides": {
-    "luciole-base":                  ["amd64"],
-    "luciole-cuda-base":             ["amd64"],
-    "luciole-humble-dev":            ["amd64"],
-    "luciole-humble-cuda-dev":       ["amd64"],
-    "luciole-humble-cuda-runtime":   ["amd64"],
-    "luciole-l4t-base":             ["arm64"],
-    "luciole-humble-l4t-dev":       ["arm64"],
-    "luciole-humble-l4t-runtime":   ["arm64"]
+    "luciole-cuda-base":     ["amd64", "arm64"],
+    "luciole-cuda-dev":      ["amd64", "arm64"],
+    "luciole-cuda-runtime":  ["amd64", "arm64"]
   }
 }
 ```

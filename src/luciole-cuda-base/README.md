@@ -1,6 +1,6 @@
 # luciole-cuda-base
 
-CUDA/PyTorch base image for the DKUAV / Luciole project. Built on NVIDIA's official PyTorch image, this layer adds system tools, pip packages, and a pre-configured non-root user for all CUDA-family Tier 2 images.
+CUDA/PyTorch base image for the DKUAV / Luciole project. Built on NVIDIA's official PyTorch image, this layer adds system tools, pip packages, and a pre-configured non-root user for all CUDA-family Tier 2 images. Targets both amd64 (x86_64 workstations) and arm64 (NVIDIA Jetson).
 
 > 中文文档请见 [README_zh.md](README_zh.md)
 
@@ -12,7 +12,7 @@ ghcr.io/dkuav/luciole-cuda-base:latest
 
 ## Architecture
 
-`amd64` only
+`amd64` + `arm64`
 
 ## What's Inside
 
@@ -64,7 +64,7 @@ docker build -f src/luciole-cuda-base/Dockerfile -t luciole-cuda-base .
 
 ## Notes
 
-- This is a **Tier 1 base image**. Published to GHCR and used as `FROM ghcr.io/dkuav/luciole-cuda-base:latest` in [`luciole-humble-cuda-dev`](../luciole-humble-cuda-dev/README.md) and [`luciole-humble-cuda-runtime`](../luciole-humble-cuda-runtime/README.md).
+- This is a **Tier 1 base image**. Published to GHCR and used as `FROM ghcr.io/dkuav/luciole-cuda-base:latest` in [`luciole-cuda-dev`](../luciole-cuda-dev/README.md) and [`luciole-cuda-runtime`](../luciole-cuda-runtime/README.md).
 - Python installation is skipped (`python-install.sh`) because `pytorch:24.10-py3` already ships Python.
 - No ROS 2, cmake, clang, or devshell — those are added in the Tier 2 final images.
 - If the requested UID/GID is already occupied in the base image, the old user is removed automatically.

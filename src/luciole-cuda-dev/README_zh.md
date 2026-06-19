@@ -1,18 +1,18 @@
-# luciole-humble-cuda-dev
+# luciole-cuda-dev
 
-包含 ROS 2 Humble、完整 C++ / Python 工具链及舒适交互式 Shell 的全功能 CUDA/PyTorch 开发容器。专为具有 NVIDIA GPU 的 amd64 工作站日常开发而设计。
+包含 ROS 2 Humble、完整 C++ / Python 工具链及舒适交互式 Shell 的全功能 CUDA/PyTorch 开发容器。专为具有 NVIDIA GPU 的 amd64 工作站和 arm64（Jetson）板卡日常开发而设计。
 
 > For English documentation, see [README.md](README.md)
 
 ## Registry
 
 ```
-ghcr.io/dkuav/luciole-humble-cuda-dev:latest
+ghcr.io/dkuav/luciole-cuda-dev:latest
 ```
 
 ## 支持架构
 
-仅 `amd64`
+`amd64` + `arm64`
 
 ## 内置内容
 
@@ -49,27 +49,27 @@ ghcr.io/dkuav/luciole-humble-cuda-dev:latest
 ### 从 Registry 拉取
 
 ```bash
-docker pull ghcr.io/dkuav/luciole-humble-cuda-dev:latest
-docker run -it --rm --gpus all ghcr.io/dkuav/luciole-humble-cuda-dev:latest
+docker pull ghcr.io/dkuav/luciole-cuda-dev:latest
+docker run -it --rm --gpus all ghcr.io/dkuav/luciole-cuda-dev:latest
 ```
 
 ### 本地构建
 
 ```bash
-cd src/luciole-humble-cuda-dev
+cd src/luciole-cuda-dev
 docker compose build
 ```
 
 或从仓库根目录构建：
 
 ```bash
-docker build -f src/luciole-humble-cuda-dev/Dockerfile -t luciole-humble-cuda-dev .
+docker build -f src/luciole-cuda-dev/Dockerfile -t luciole-cuda-dev .
 ```
 
 ### 启动并支持 WSLg GUI
 
 ```bash
-cd src/luciole-humble-cuda-dev
+cd src/luciole-cuda-dev
 docker compose run --rm app
 ```
 
@@ -88,6 +88,6 @@ load_ros          # 执行 source /opt/ros/humble/setup.zsh
 ## 注意事项
 
 - 这是依赖 `luciole-cuda-base` 的**第二层最终镜像**。
-- 仅支持 amd64 — Jetson / arm64 环境请使用 [`luciole-humble-l4t-dev`](../luciole-humble-l4t-dev/README_zh.md)。
+- 同时支持 `amd64`（x86_64 工作站）和 `arm64`（NVIDIA Jetson）。
 - neovim、nvm 和 oh-my-zsh 由 `devshell.sh` 安装到 `luciole` 用户的 home 目录下。
 - 容器内默认工作目录为 `/home/luciole`。

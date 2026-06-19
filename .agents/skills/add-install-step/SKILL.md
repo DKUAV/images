@@ -35,8 +35,8 @@ Check existing script numbers in `src/_scripts/` (currently 01–10) and pick th
 
 Determine the target scope:
 - **All images** → add to `system.sh` or a new script; update every Dockerfile
-- **All base images** → update `luciole-base`, `luciole-cuda-base`, `luciole-l4t-base`
-- **All dev images** → update `luciole-humble-dev`, `luciole-humble-cuda-dev`, `luciole-humble-l4t-dev`
+- **All base images** → update `luciole-cuda-base`
+- **All dev images** → update `luciole-cuda-dev`
 - **Specific image only** → update only that image's Dockerfile
 
 ## Step 2 — Write the Script

@@ -1,18 +1,18 @@
-# luciole-humble-cuda-dev
+# luciole-cuda-dev
 
-Full CUDA/PyTorch development container with ROS 2 Humble, a complete C++ / Python toolchain, and a comfortable interactive shell. Designed for day-to-day development on amd64 workstations with NVIDIA GPU support.
+Full CUDA/PyTorch development container with ROS 2 Humble, a complete C++ / Python toolchain, and a comfortable interactive shell. Designed for day-to-day development on amd64 workstations and arm64 (Jetson) boards with NVIDIA GPU support.
 
 > 中文文档请见 [README_zh.md](README_zh.md)
 
 ## Registry
 
 ```
-ghcr.io/dkuav/luciole-humble-cuda-dev:latest
+ghcr.io/dkuav/luciole-cuda-dev:latest
 ```
 
 ## Architecture
 
-`amd64` only
+`amd64` + `arm64`
 
 ## What's Inside
 
@@ -49,27 +49,27 @@ ghcr.io/dkuav/luciole-humble-cuda-dev:latest
 ### Pull from Registry
 
 ```bash
-docker pull ghcr.io/dkuav/luciole-humble-cuda-dev:latest
-docker run -it --rm --gpus all ghcr.io/dkuav/luciole-humble-cuda-dev:latest
+docker pull ghcr.io/dkuav/luciole-cuda-dev:latest
+docker run -it --rm --gpus all ghcr.io/dkuav/luciole-cuda-dev:latest
 ```
 
 ### Local Build
 
 ```bash
-cd src/luciole-humble-cuda-dev
+cd src/luciole-cuda-dev
 docker compose build
 ```
 
 Or from the repo root:
 
 ```bash
-docker build -f src/luciole-humble-cuda-dev/Dockerfile -t luciole-humble-cuda-dev .
+docker build -f src/luciole-cuda-dev/Dockerfile -t luciole-cuda-dev .
 ```
 
 ### Start with WSLg GUI Support
 
 ```bash
-cd src/luciole-humble-cuda-dev
+cd src/luciole-cuda-dev
 docker compose run --rm app
 ```
 
@@ -88,6 +88,6 @@ You can add `load_ros` to your `~/.zshrc` if you want it sourced on every shell 
 ## Notes
 
 - This is a **Tier 2 final image** that depends on `luciole-cuda-base`.
-- amd64 only — for Jetson/arm64 use [`luciole-humble-l4t-dev`](../luciole-humble-l4t-dev/README.md).
+- Supports both `amd64` (x86_64 workstations) and `arm64` (NVIDIA Jetson).
 - neovim, nvm, and oh-my-zsh are installed into the `luciole` user's home directory by `devshell.sh`.
 - The default working directory in the container is `/home/luciole`.

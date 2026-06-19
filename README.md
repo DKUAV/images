@@ -6,19 +6,14 @@ Docker image management repository for the DKUAV project. Images are automatical
 
 ## Image Architecture
 
-The repository uses a **two-tier image hierarchy** to maximise layer reuse across 3 OS families (Ubuntu, CUDA/PyTorch, L4T):
+The repository uses a **two-tier image hierarchy** to maximise layer reuse across hybrid amd64 (x86_64 workstations) and arm64 (NVIDIA Jetson) targets:
 
 ```mermaid
 graph TD
-  U["mcr.microsoft.com/devcontainers/base:ubuntu22.04"] --> LB["ghcr.io/dkuav/luciole-base\n(system + Python + pip + user)\namd64 only"]
-  C["nvcr.io/nvidia/pytorch:24.10-py3\n(PyTorch + CUDA, Python built-in)"] --> CB["ghcr.io/dkuav/luciole-cuda-base\n(system + pip + user)\namd64 only"]
-  L["nvcr.io/nvidia/l4t-tensorrt:r10.3.0-devel\n(TensorRT, Python built-in, arm64)"] --> LTB["ghcr.io/dkuav/luciole-l4t-base\n(system + pip + user)\narm64 only"]
+  C["nvcr.io/nvidia/pytorch:24.10-py3\n(PyTorch + CUDA, Python built-in)"] --> CB["ghcr.io/dkuav/luciole-cuda-base\n(system + pip + user)\namd64 + arm64"]
 
-  LB --> HD["luciole-humble-dev\n(ROS 2 + cmake + clang + .NET + devshell)\namd64 only"]
-  CB --> HCD["luciole-humble-cuda-dev\n(ROS 2 + cmake + clang + .NET + devshell)\namd64 only"]
-  CB --> HCR["luciole-humble-cuda-runtime\n(ROS 2 + cmake)\namd64 only"]
-  LTB --> HLD["luciole-humble-l4t-dev\n(ROS 2 + cmake + clang + .NET + devshell)\narm64 only"]
-  LTB --> HLR["luciole-humble-l4t-runtime\n(ROS 2 + cmake)\narm64 only"]
+  CB --> HCD["luciole-cuda-dev\n(ROS 2 + cmake + clang + .NET + devshell)\namd64 + arm64"]
+  CB --> HCR["luciole-cuda-runtime\n(ROS 2 + cmake)\namd64 + arm64"]
 ```
 
 ### Tier 1 — Base Images
@@ -27,19 +22,14 @@ Published to GHCR; used as `FROM` in Tier 2 Dockerfiles.
 
 | Image | Base FROM | Arch | Description |
 |-------|-----------|------|-------------|
-| [`luciole-base`](src/luciole-base/) | `mcr.microsoft.com/devcontainers/base:ubuntu22.04` | amd64 only | Ubuntu 22.04 + Python 3.10 + pip packages + user |
-| [`luciole-cuda-base`](src/luciole-cuda-base/) | `nvcr.io/nvidia/pytorch:24.10-py3` | amd64 only | PyTorch/CUDA + pip packages + user |
-| [`luciole-l4t-base`](src/luciole-l4t-base/) | `nvcr.io/nvidia/l4t-tensorrt:r10.3.0-devel` | arm64 only | L4T TensorRT + pip packages + user |
+| [`luciole-cuda-base`](src/luciole-cuda-base/) | `nvcr.io/nvidia/pytorch:24.10-py3` | amd64 + arm64 | PyTorch/CUDA + pip packages + user |
 
 ### Tier 2 — Final Images
 
 | Image | Base | Arch | Includes |
 |-------|------|------|---------|
-| [`luciole-humble-dev`](src/luciole-humble-dev/README.md) | `luciole-base` | amd64 only | ROS 2 Humble · cmake · clang · .NET · devshell |
-| [`luciole-humble-cuda-dev`](src/luciole-humble-cuda-dev/) | `luciole-cuda-base` | amd64 only | ROS 2 Humble · cmake · clang · .NET · devshell |
-| [`luciole-humble-cuda-runtime`](src/luciole-humble-cuda-runtime/) | `luciole-cuda-base` | amd64 only | ROS 2 Humble · cmake |
-| [`luciole-humble-l4t-dev`](src/luciole-humble-l4t-dev/) | `luciole-l4t-base` | arm64 only | ROS 2 Humble · cmake · clang · .NET · devshell |
-| [`luciole-humble-l4t-runtime`](src/luciole-humble-l4t-runtime/) | `luciole-l4t-base` | arm64 only | ROS 2 Humble · cmake |
+| [`luciole-cuda-dev`](src/luciole-cuda-dev/README.md) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake · clang · .NET · devshell |
+| [`luciole-cuda-runtime`](src/luciole-cuda-runtime/) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake |
 
 **devshell** includes: zsh · oh-my-zsh · neovim (NvChad) · starship · nvm · bat · fzf · eza · zoxide · pre-commit (pre-cached hooks)
 

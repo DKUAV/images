@@ -1,18 +1,18 @@
-# luciole-humble-cuda-runtime
+# luciole-cuda-runtime
 
-包含 ROS 2 Humble 和 CMake 的轻量级 CUDA/PyTorch 运行时容器。不含交互式开发工具、devshell 或 C++ 工具链扩展。适用于具有 NVIDIA GPU 的 amd64 机器上的部署及 CI 流水线。
+包含 ROS 2 Humble 和 CMake 的轻量级 CUDA/PyTorch 运行时容器。不含交互式开发工具、devshell 或 C++ 工具链扩展。适用于具有 NVIDIA GPU 的 amd64 工作站和 arm64（Jetson）板卡上的部署及 CI 流水线。
 
 > For English documentation, see [README.md](README.md)
 
 ## Registry
 
 ```
-ghcr.io/dkuav/luciole-humble-cuda-runtime:latest
+ghcr.io/dkuav/luciole-cuda-runtime:latest
 ```
 
 ## 支持架构
 
-仅 `amd64`
+`amd64` + `arm64`
 
 ## 内置内容
 
@@ -46,21 +46,21 @@ ghcr.io/dkuav/luciole-humble-cuda-runtime:latest
 ### 从 Registry 拉取
 
 ```bash
-docker pull ghcr.io/dkuav/luciole-humble-cuda-runtime:latest
-docker run -it --rm --gpus all ghcr.io/dkuav/luciole-humble-cuda-runtime:latest bash
+docker pull ghcr.io/dkuav/luciole-cuda-runtime:latest
+docker run -it --rm --gpus all ghcr.io/dkuav/luciole-cuda-runtime:latest bash
 ```
 
 ### 本地构建
 
 ```bash
-cd src/luciole-humble-cuda-runtime
+cd src/luciole-cuda-runtime
 docker compose build
 ```
 
 或从仓库根目录构建：
 
 ```bash
-docker build -f src/luciole-humble-cuda-runtime/Dockerfile -t luciole-humble-cuda-runtime .
+docker build -f src/luciole-cuda-runtime/Dockerfile -t luciole-cuda-runtime .
 ```
 
 ## ROS 2 配置
@@ -74,6 +74,6 @@ source /opt/ros/humble/setup.bash
 ## 注意事项
 
 - 这是依赖 `luciole-cuda-base` 的**第二层最终镜像**。
-- 仅支持 amd64 — Jetson / arm64 环境请使用 [`luciole-humble-l4t-runtime`](../luciole-humble-l4t-runtime/README_zh.md)。
+- 同时支持 `amd64`（x86_64 工作站）和 `arm64`（NVIDIA Jetson）。
 - 不含 devshell，默认 Shell 为 `bash`，`load_ros` 别名和 zsh 配置不可用。
 - 适用于 CI 流水线、批量推理或其他无需交互式开发工具的部署场景。

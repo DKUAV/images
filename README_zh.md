@@ -6,19 +6,14 @@ DKUAV 项目的 Docker 镜像管理仓库。镜像通过 GitHub Actions 自动�
 
 ## 镜像架构
 
-本仓库采用**两级镜像层级**，在 3 个 OS 家族（Ubuntu、CUDA/PyTorch、L4T）之间最大化复用镜像层：
+本仓库采用**两级镜像层级**，统一在 amd64（x86_64 工作站）与 arm64（NVIDIA Jetson）之间最大化复用镜像层：
 
 ```mermaid
 graph TD
-  U["mcr.microsoft.com/devcontainers/base:ubuntu22.04"] --> LB["ghcr.io/dkuav/luciole-base\n(system + Python + pip + user)\namd64 only"]
-  C["nvcr.io/nvidia/pytorch:24.10-py3\n(已含 Python + PyTorch + CUDA)"] --> CB["ghcr.io/dkuav/luciole-cuda-base\n(system + pip + user)\namd64 only"]
-  L["nvcr.io/nvidia/l4t-tensorrt:r10.3.0-devel\n(已含 Python + TensorRT, arm64)"] --> LTB["ghcr.io/dkuav/luciole-l4t-base\n(system + pip + user)\narm64 only"]
+  C["nvcr.io/nvidia/pytorch:24.10-py3\n(已含 Python + PyTorch + CUDA)"] --> CB["ghcr.io/dkuav/luciole-cuda-base\n(system + pip + user)\namd64 + arm64"]
 
-  LB --> HD["luciole-humble-dev\n(ROS 2 + cmake + clang + .NET + devshell)\namd64 only"]
-  CB --> HCD["luciole-humble-cuda-dev\n(ROS 2 + cmake + clang + .NET + devshell)\namd64 only"]
-  CB --> HCR["luciole-humble-cuda-runtime\n(ROS 2 + cmake)\namd64 only"]
-  LTB --> HLD["luciole-humble-l4t-dev\n(ROS 2 + cmake + clang + .NET + devshell)\narm64 only"]
-  LTB --> HLR["luciole-humble-l4t-runtime\n(ROS 2 + cmake)\narm64 only"]
+  CB --> HCD["luciole-cuda-dev\n(ROS 2 + cmake + clang + .NET + devshell)\namd64 + arm64"]
+  CB --> HCR["luciole-cuda-runtime\n(ROS 2 + cmake)\namd64 + arm64"]
 ```
 
 ### 第一层 — 基础镜像
@@ -27,19 +22,14 @@ graph TD
 
 | 镜像 | 基础 FROM | 架构 | 描述 |
 |------|-----------|------|------|
-| [`luciole-base`](src/luciole-base/) | `mcr.microsoft.com/devcontainers/base:ubuntu22.04` | 仅 amd64 | Ubuntu 22.04 + Python 3.10 + pip 包 + 用户 |
-| [`luciole-cuda-base`](src/luciole-cuda-base/) | `nvcr.io/nvidia/pytorch:24.10-py3` | 仅 amd64 | PyTorch/CUDA + pip 包 + 用户 |
-| [`luciole-l4t-base`](src/luciole-l4t-base/) | `nvcr.io/nvidia/l4t-tensorrt:r10.3.0-devel` | 仅 arm64 | L4T TensorRT + pip 包 + 用户 |
+| [`luciole-cuda-base`](src/luciole-cuda-base/) | `nvcr.io/nvidia/pytorch:24.10-py3` | amd64 + arm64 | PyTorch/CUDA + pip 包 + 用户 |
 
 ### 第二层 — 最终镜像
 
 | 镜像 | 基础 | 架构 | 包含内容 |
 |------|------|------|---------|
-| [`luciole-humble-dev`](src/luciole-humble-dev/README_zh.md) | `luciole-base` | 仅 amd64 | ROS 2 Humble · cmake · clang · .NET · devshell |
-| [`luciole-humble-cuda-dev`](src/luciole-humble-cuda-dev/) | `luciole-cuda-base` | 仅 amd64 | ROS 2 Humble · cmake · clang · .NET · devshell |
-| [`luciole-humble-cuda-runtime`](src/luciole-humble-cuda-runtime/) | `luciole-cuda-base` | 仅 amd64 | ROS 2 Humble · cmake |
-| [`luciole-humble-l4t-dev`](src/luciole-humble-l4t-dev/) | `luciole-l4t-base` | 仅 arm64 | ROS 2 Humble · cmake · clang · .NET · devshell |
-| [`luciole-humble-l4t-runtime`](src/luciole-humble-l4t-runtime/) | `luciole-l4t-base` | 仅 arm64 | ROS 2 Humble · cmake |
+| [`luciole-cuda-dev`](src/luciole-cuda-dev/README_zh.md) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake · clang · .NET · devshell |
+| [`luciole-cuda-runtime`](src/luciole-cuda-runtime/) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake |
 
 **devshell** 包含：zsh · oh-my-zsh · neovim（NvChad）· starship · nvm · bat · fzf · eza · zoxide · pre-commit（预缓存 hooks）
 

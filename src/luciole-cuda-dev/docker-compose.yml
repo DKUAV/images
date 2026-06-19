@@ -2,8 +2,8 @@ services:
   app:
     build:
       context: ../..
-      dockerfile: src/luciole-humble-cuda-dev/Dockerfile
-    image: ghcr.io/dkuav/luciole-humble-cuda-dev:latest
+      dockerfile: src/luciole-cuda-dev/Dockerfile
+    image: ghcr.io/dkuav/luciole-cuda-dev:latest
     user: luciole
 
     stdin_open: true
