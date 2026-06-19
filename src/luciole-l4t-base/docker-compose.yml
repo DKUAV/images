@@ -1,7 +1,0 @@
-services:
-  app:
-    build:
-      context: ../..
-      dockerfile: src/luciole-l4t-base/Dockerfile
-    image: ghcr.io/dkuav/luciole-l4t-base:latest
-    platform: linux/arm64
