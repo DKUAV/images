@@ -16,12 +16,24 @@ set -uo pipefail
 
 base_main() {
     header "User & privileges"
-    assert_cmd_contains "non-root user 'luciole' active" "luciole" id -un
-    assert_cmd_contains "uid is 1000" "uid=1000" id -u
-    assert_cmd "passwordless sudo works" sudo -n true
+    # NOTE: luciole-cuda-base intentionally has NO trailing `USER` directive —
+    # its default user is root (inherited from the NVIDIA base) because base
+    # is a build-stone for Tier 2, not a runtime container for end users. The
+    # Tier 2 finals (dev / runtime) switch to `USER luciole` at their own end.
+    # So we assert that the luciole *account* exists with the right uid, not
+    # that we're currently running as it.
+    assert_cmd_contains "user 'luciole' exists" "luciole" id luciole
+    assert_cmd_contains "luciole uid is 1000" "uid=1000" id luciole
+    # sudoers entry must grant passwordless sudo to luciole.
+    assert_cmd "passwordless sudo granted to luciole" \
+        sudo -u luciole -n true
 
     header "System tools"
-    for tool in git curl wget vim tmux htop rsync ripgrep ffmpeg; do
+    # NOTE: the Debian apt package name ≠ binary name in two cases we symlink:
+    #   - apt `ripgrep`  → binary `rg`
+    #   - apt `fd-find`  → binary `fd`   (symlinked by dev-tools.sh)
+    #   - apt `bat`      → binary `bat`  (symlinked by dev-tools.sh)
+    for tool in git curl wget vim tmux htop rsync rg ffmpeg; do
         command -v "$tool" >/dev/null 2>&1 \
             && ok "tool present: $tool" \
             || fail "tool missing: $tool"
