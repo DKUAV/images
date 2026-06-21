@@ -32,5 +32,11 @@ RUN /tmp/scripts/finalize-mirror.sh
 
 RUN rm -rf /tmp/scripts /tmp/assets
 
+# Rebuild the dynamic linker cache after every apt/pip step above (ros2.sh,
+# clang.sh, devshell.sh, finalize-mirror.sh installs). Base already did one
+# ldconfig but these later layers added new libs; refresh so torch's dlopen path
+# matches the final .so state.
+RUN ldconfig
+
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
