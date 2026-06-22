@@ -77,6 +77,20 @@ assert_import() {
     assert_cmd "$desc" python3 -c "import $mod; print(getattr($mod, '__version__', '(no __version__)'))"
 }
 
+# assert_path_executable "desc" "/absolute/path/to/binary"
+# Passes iff the file exists and is executable (--x bit set). Used for tools
+# installed to a fixed absolute path (e.g. ~/.fzf/bin/fzf) where PATH may not
+# include them in a non-interactive login shell (bash -lc sources .profile,
+# NOT .bashrc where devshell.sh wrote its PATH export).
+assert_path_executable() {
+    local desc="$1"; local path="$2"
+    if [ -x "$path" ]; then
+        ok "$desc ($path)"
+    else
+        fail "$desc" "expected executable at: $path"
+    fi
+}
+
 # Final summary. Exits non-zero if any assertion failed → CI pipeline fails.
 smoke_summary() {
     echo

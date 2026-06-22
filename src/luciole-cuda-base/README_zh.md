@@ -72,4 +72,5 @@ docker build -f src/luciole-cuda-base/Dockerfile -t luciole-cuda-base .
 - 本镜像预装 CMake，使两个第二层镜像共享同一个构建工具版本。
 - 本镜像不含 ROS 2、clang 或 devshell，这些内容由第二层最终镜像负责添加。
 - **OpenCV 替换**：NVIDIA `pytorch:24.10-py3` 自带的 `/usr/local/lib/libopencv_*.so.4.7.0` 在构建时禁用了全部视频解码后端（FFMPEG、GStreamer）。`opencv.sh` 把它隔离到 `/usr/local/lib/nvidia-opencv-4.7.0.disabled/`，并安装 apt 的 `libopencv-dev` 4.5.4（含全部后端）用于 C++ `find_package(OpenCV)`。Python `import cv2` 继续使用 pip 的 `opencv-contrib-python` wheel，该 wheel 自带静态 FFMPEG，与 C++ OpenCV 互不干扰。完整分析见 [`docs/opencv-status_zh.md`](../../docs/opencv-status_zh.md)。
+- **ld.so.cache 注册**：NVIDIA NGC 镜像**只在 amd64 上** 才会预注册 HPC-X（以及其他 `/opt` 厂商路径）的 `.so` 路径。如果不注册，`ldconfig` 不会扫描那些路径，重度依赖 dlopen 的 import（如 `import torch`）会在 arm64 上报 `undefined symbol: ucs_config_doc_nop`。Dockerfile 的最后一步会动态发现 NVIDIA 厂商根下所有含 `.so` 的目录，写入 `/etc/ld.so.conf.d/zz-ngc-extra.conf`，然后执行一次 `ldconfig`。完整根因分析（含第二层镜像为何“恰好”能跑）见 [`docs/ld-cache-notes_zh.md`](../../docs/ld-cache-notes_zh.md)。
 - 若基础镜像中 UID/GID 已被占用，构建时会自动删除原有用户后再创建 `luciole`。

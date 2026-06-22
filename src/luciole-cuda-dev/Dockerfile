@@ -32,10 +32,9 @@ RUN /tmp/scripts/finalize-mirror.sh
 
 RUN rm -rf /tmp/scripts /tmp/assets
 
-# Rebuild the dynamic linker cache after every apt/pip step above (ros2.sh,
-# clang.sh, devshell.sh, finalize-mirror.sh installs). Base already did one
-# ldconfig but these later layers added new libs; refresh so torch's dlopen path
-# matches the final .so state.
+# Refresh the dynamic linker cache for libs added by ros2.sh / clang.sh /
+# devshell.sh above. Base already registered NVIDIA vendor .so paths; see
+# docs/ld-cache-notes.md for why this remains necessary on Tier 2 images.
 RUN ldconfig
 
 USER ${USERNAME}

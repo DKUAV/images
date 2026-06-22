@@ -21,12 +21,17 @@ dev_main() {
         bash -lc "source /opt/ros/humble/setup.bash && ros2 --help"
 
     header "Devshell tools"
-    # Core dev tools installed under the luciole user's home + /usr/local.
-    for tool in zsh nvim starship fzf eza; do
+    # Core dev tools installed via apt (zsh/starship) or to /usr/local (nvim):
+    # these are on PATH even in a non-interactive login shell.
+    for tool in zsh nvim starship eza; do
         command -v "$tool" >/dev/null 2>&1 \
             && ok "tool present: $tool" \
             || fail "tool missing: $tool"
     done
+    # fzf is git-cloned to ~/.fzf/bin/fzf by devshell.sh, which only adds it to
+    # PATH via .bashrc/.zshrc (NOT .profile). A non-interactive `bash -lc` smoke
+    # shell therefore won't see it on PATH — verify the binary exists directly.
+    assert_path_executable "fzf installed" "$HOME/.fzf/bin/fzf"
     # nvm + node live in /home/luciole/.nvm
     assert_cmd_contains "node via nvm" "v" \
         bash -lc '. "$HOME/.nvm/nvm.sh" && node --version'

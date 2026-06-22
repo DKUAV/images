@@ -36,15 +36,19 @@ RUN /tmp/scripts/user.sh
 
 RUN rm -rf /tmp/scripts
 
-# Rebuild the dynamic linker cache as the FINAL step. Earlier scripts install
-# libraries into /usr/local/lib and /usr/lib (apt hf, pip wheels like
-# opencv-contrib-python, NVIDIA's HPC-X under /opt/hpcx/...). Each RUN layer
-# snapshots /etc/ld.so.cache, so installers run on top of a stale cache. Without
-# a final ldconfig, dlopen() at runtime can resolve against a lib from the
-# wrong version — e.g. torch's _C loading libucc.so.1 first before libucs.so
-# provides the matching `ucs_config_doc_nop` symbol:
-#   ImportError: /opt/hpcx/ucc/lib/libucc.so.1: undefined symbol: ucs_config_doc_nop
-# Re-running ldconfig once here makes the cache reflect the final .so state.
-RUN ldconfig
+# Refresh the dynamic linker cache + register NVIDIA vendor .so dirs so
+# dlopen-heavy imports (e.g. torch's _C) resolve against the correct .so on
+# both amd64 and arm64. See docs/ld-cache-notes.md for the full root-cause
+# analysis and rationale for `zz-ngc-extra.conf`.
+RUN find \
+        /opt/hpcx \
+        /opt/tensorrt \
+        /opt/nvidia \
+        /opt/ros \
+        /usr/local/lib \
+        -type f -name '*.so*' 2>/dev/null \
+        | xargs -r dirname \
+        | sort -u > /etc/ld.so.conf.d/zz-ngc-extra.conf \
+    ; ldconfig
 
 ENV XDG_RUNTIME_DIR=/run/user/${USER_UID}
