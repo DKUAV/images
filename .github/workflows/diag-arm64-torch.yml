@@ -1,0 +1,129 @@
+name: Diagnose arm64 torch import
+
+# TEMPORARY diagnostic workflow. Manual only — does NOT trigger on pushes.
+# Goal: pinpoint why `import torch` fails on arm64 luciole-cuda-base with
+#   ImportError: /opt/hpcx/ucc/lib/libucc.so.1: undefined symbol: ucs_config_doc_nop
+# while amd64 succeeds. Run from a branch on the PR, then delete this file
+# once the root cause is confirmed.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "luciole-cuda-base tag to diagnose (default: latest)"
+        required: false
+        default: "latest"
+
+jobs:
+  diagnose:
+    name: Diagnose (${{ matrix.platform_id }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform_id: amd64
+            runner: ubuntu-24.04
+          - platform_id: arm64
+            runner: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull luciole-cuda-base
+        run: docker pull ghcr.io/dkuav/luciole-cuda-base:${{ inputs.tag }}
+
+      - name: Reproduce import + dump diagnostics
+        run: |
+          set +e
+          echo "================================================================"
+          echo "ARCH: ${{ matrix.platform_id }}"
+          echo "================================================================"
+
+          docker run --rm ghcr.io/dkuav/luciole-cuda-base:${{ inputs.tag }} bash -lc '
+            set +e
+            echo "### uname / os-release ###"
+            uname -a
+            (. /etc/os-release && echo "ID=$ID VERSION=$VERSION CODENAME=${VERSION_CODENAME:-}")
+            dpkg --print-architecture
+
+            echo
+            echo "### ldconfig / ld.so.conf.d ###"
+            echo "--- /etc/ld.so.conf ---"
+            cat /etc/ld.so.conf
+            echo "--- /etc/ld.so.conf.d/*.conf ---"
+            ls -la /etc/ld.so.conf.d/
+            for f in /etc/ld.so.conf.d/*; do
+                echo "### $f ###"
+                cat "$f"
+                echo
+            done
+
+            echo
+            echo "### zz-ngc-extra.conf (expected to list hpcx .so dirs) ###"
+            if [ -f /etc/ld.so.conf.d/zz-ngc-extra.conf ]; then
+                cat /etc/ld.so.conf.d/zz-ngc-extra.conf
+            else
+                echo "FILE MISSING — finalize-mirror / ldconfig step did NOT write it"
+            fi
+
+            echo
+            echo "### All hpcx .so files actually on disk ###"
+            find /opt/hpcx -type f -name "*.so*" 2>/dev/null | sort | head -100
+            echo "Total hpcx .so files: $(find /opt/hpcx -type f -name "*.so*" 2>/dev/null | wc -l)"
+
+            echo
+            echo "### Any libucc / libucs anywhere on disk ###"
+            find /opt /usr/local /usr/lib -name "libucc*.so*" 2>/dev/null | sort
+            find /opt /usr/local /usr/lib -name "libucs*.so*" 2>/dev/null | sort
+            find /opt /usr/local /usr/lib -name "libucx*.so*" 2>/dev/null | sort
+
+            echo
+            echo "### ldconfig -p: libucc / libucs / libucx ###"
+            ldconfig -p | grep -iE "libucc|libucs|libucx"
+
+            echo
+            echo "### Where does libucc.so.1 actually resolve? ###"
+            LD_DEBUG=libs python3 -c "import torch" 2>&1 | grep -iE "ucc|ucs|init: " | head -40
+
+            echo
+            echo "### Does the libucs that ldconfig picks actually export ucs_config_doc_nop? ###"
+            for so in $(ldconfig -p | grep -i "libucs.*\.so" | awk "{print \$NF}" | sort -u); do
+                echo "--- $so ---"
+                echo "version: $(strings \"$so\" 2>/dev/null | grep -iE \"ucs_version|UCT.*version\" | head -3)"
+                echo "has ucs_config_doc_nop symbol: $(printf \"%s\\n\" \
+                    \"Y\" \"$(nm -D \"$so\" 2>/dev/null | grep -c ucs_config_doc_nop)\")"
+                echo "snapshots of similar symbols:"
+                nm -D "$so" 2>/dev/null | grep "ucs_config" | head -10
+            done
+
+            echo
+            echo "### Same probe on raw libucs files on disk (not just ldconfig cache) ###"
+            for so in $(find /opt/hpcx -name "libucs*.so*" 2>/dev/null | sort -u); do
+                echo "--- $so ---"
+                echo "size: $(stat -c %s \"$so\" 2>/dev/null) bytes"
+                echo "has ucs_config_doc_nop: $(nm -D \"$so\" 2>/dev/null | grep -c ucs_config_doc_nop)"
+            done
+
+            echo
+            echo "### Version metadata bundled with HPC-X ###"
+            for f in /opt/hpcx/VERSION /opt/hpcx/version /opt/hpcx/*/VERSION /opt/hpcx/*/version; do
+                [ -f "$f" ] && echo "--- $f ---" && cat "$f" && echo
+            done
+
+            echo
+            echo "### Final reproduction: import torch ###"
+            python3 -c "import torch; print(\"torch\", torch.__version__)"
+            echo "torch import rc=$?"
+          '
+
+          echo
+          echo "================================================================"
+          echo "DONE"
+          echo "================================================================"
