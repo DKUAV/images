@@ -19,9 +19,10 @@ ghcr.io/dkuav/luciole-cuda-runtime:latest
 | Category | Details |
 |----------|---------|
 | **Base** | [`ghcr.io/dkuav/luciole-cuda-base`](../luciole-cuda-base/README.md) (system tools, PyTorch/CUDA, pip packages, user) |
-| **ROS 2** | Humble Base (`ros-humble-base`) + `colcon`, `rosdep`, `rosinstall-generator` |
+| **ROS 2** | Humble `ros-base` (`ros-humble-ros-base`) + `colcon`, `rosdep`, `rosinstall-generator` |
+| **Mirrors** | As the final build step, apt + pip sources are flipped to Aliyun so Chinese users get fast installs after pulling. The build itself uses the default sources. |
 
-> **Not included**: clang/LLVM, .NET SDK, devshell (zsh, neovim, oh-my-zsh, etc.)
+> **Not included**: clang/LLVM, devshell (zsh, neovim, oh-my-zsh, etc.)
 
 ## Default User
 
@@ -36,7 +37,7 @@ ghcr.io/dkuav/luciole-cuda-runtime:latest
 | ARG | Default | Description |
 |-----|---------|-------------|
 | `ROS_DISTRO` | `humble` | ROS 2 distribution |
-| `ROS_TARGET` | `base` | ROS 2 install target (`desktop` / `base`) |
+| `ROS_TARGET` | `ros-base` | ROS 2 install target (`desktop` / `ros-base`) |
 | `USERNAME` | `luciole` | Non-root user name |
 
 ## Quick Start

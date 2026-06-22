@@ -24,7 +24,18 @@ RUN /tmp/scripts/devshell.sh
 RUN /tmp/scripts/precommit.sh
 
 USER root
+
+# Switch apt + pip sources to Aliyun mirrors as the FINAL step, so users in
+# China get fast installs after pulling. Build itself keeps using upstream
+# sources (this script runs after every apt/pip install in devshell.sh etc.).
+RUN /tmp/scripts/finalize-mirror.sh
+
 RUN rm -rf /tmp/scripts /tmp/assets
+
+# Refresh the dynamic linker cache for libs added by ros2.sh / clang.sh /
+# devshell.sh above. Base already registered NVIDIA vendor .so paths; see
+# docs/ld-cache-notes.md for why this remains necessary on Tier 2 images.
+RUN ldconfig
 
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}

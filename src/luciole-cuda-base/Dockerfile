@@ -36,4 +36,19 @@ RUN /tmp/scripts/user.sh
 
 RUN rm -rf /tmp/scripts
 
+# Refresh the dynamic linker cache + register NVIDIA vendor .so dirs so
+# dlopen-heavy imports (e.g. torch's _C) resolve against the correct .so on
+# both amd64 and arm64. See docs/ld-cache-notes.md for the full root-cause
+# analysis and rationale for `zz-ngc-extra.conf`.
+RUN find \
+        /opt/hpcx \
+        /opt/tensorrt \
+        /opt/nvidia \
+        /opt/ros \
+        /usr/local/lib \
+        -type f -name '*.so*' 2>/dev/null \
+        | xargs -r dirname \
+        | sort -u > /etc/ld.so.conf.d/zz-ngc-extra.conf \
+    ; ldconfig
+
 ENV XDG_RUNTIME_DIR=/run/user/${USER_UID}

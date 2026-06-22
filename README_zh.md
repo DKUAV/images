@@ -12,7 +12,7 @@ DKUAV 项目的 Docker 镜像管理仓库。镜像通过 GitHub Actions 自动�
 graph TD
   C["nvcr.io/nvidia/pytorch:24.10-py3\n(已含 Python + PyTorch + CUDA)"] --> CB["ghcr.io/dkuav/luciole-cuda-base\n(system + pip + user)\namd64 + arm64"]
 
-  CB --> HCD["luciole-cuda-dev\n(ROS 2 + cmake + clang + .NET + devshell)\namd64 + arm64"]
+  CB --> HCD["luciole-cuda-dev\n(ROS 2 + cmake + clang + devshell)\namd64 + arm64"]
   CB --> HCR["luciole-cuda-runtime\n(ROS 2 + cmake)\namd64 + arm64"]
 ```
 
@@ -28,8 +28,8 @@ graph TD
 
 | 镜像 | 基础 | 架构 | 包含内容 |
 |------|------|------|---------|
-| [`luciole-cuda-dev`](src/luciole-cuda-dev/README_zh.md) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake · clang · .NET · devshell |
-| [`luciole-cuda-runtime`](src/luciole-cuda-runtime/) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake |
+| [`luciole-cuda-dev`](src/luciole-cuda-dev/README_zh.md) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake（继承自 base）· clang · devshell |
+| [`luciole-cuda-runtime`](src/luciole-cuda-runtime/) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake（继承自 base） |
 
 **devshell** 包含：zsh · oh-my-zsh · neovim（NvChad）· starship · nvm · bat · fzf · eza · zoxide · pre-commit（预缓存 hooks）
 
@@ -71,6 +71,7 @@ graph LR
   B --> C["merge-tier1\n（合并 multi-arch manifest）"]
   C --> D["build-push-tier2\n（最终镜像 matrix）"]
   D --> E[merge-tier2]
+  E --> F["smoke-test\n（按镜像，硬门禁）"]
   A -. "仅 tier2 变更" .-> D
 ```
 
@@ -80,6 +81,7 @@ graph LR
   - 最终镜像有变更 → 只重建该最终镜像
   - `workflow_dispatch` → 构建全部镜像
 - **多架构**：amd64（`ubuntu-24.04`）和 arm64（`ubuntu-24.04-arm` 原生 Runner，无 QEMU）分别构建，按 digest 推送后合并为 multi-arch manifest。`image-deps.json` 中的 `arch_overrides` 可限制镜像仅在特定架构构建。
+- **Smoke 测试（硬门禁）**：本次实际构建的每个镜像都会以其 `sha-<git-sha>` 标签被拉下，在原生架构 runner 上跑 [`src/_tests/smoke-<image>.sh`](src/_tests/)。任一断言失败（如 OpenCV `find_package` 泄露、工具缺失、ROS target 错误）**会判定整个流水线失败**。
 - **标签**：`latest`、`main`、`sha-<git-sha>`。
 - **认证**：仅需 `GITHUB_TOKEN`，无需额外 secrets。
 

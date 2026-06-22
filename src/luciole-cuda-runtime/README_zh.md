@@ -19,9 +19,10 @@ ghcr.io/dkuav/luciole-cuda-runtime:latest
 | 类别 | 详情 |
 |------|------|
 | **基础镜像** | [`ghcr.io/dkuav/luciole-cuda-base`](../luciole-cuda-base/README_zh.md)（系统工具、PyTorch/CUDA、pip 包、用户）|
-| **ROS 2** | Humble Base（`ros-humble-base`）+ `colcon`、`rosdep`、`rosinstall-generator` |
+| **ROS 2** | Humble `ros-base`（`ros-humble-ros-base`）+ `colcon`、`rosdep`、`rosinstall-generator` |
+| **镜像加速** | 构建最后一步会将 apt 与 pip 源切换为阿里云，用户 pull 后在国内可快速 apt/pip 安装；构建期仍使用默认源。 |
 
-> **不包含**：clang/LLVM、.NET SDK、devshell（zsh、neovim、oh-my-zsh 等）
+> **不包含**：clang/LLVM、devshell（zsh、neovim、oh-my-zsh 等）
 
 ## 默认用户
 

@@ -12,7 +12,7 @@ The repository uses a **two-tier image hierarchy** to maximise layer reuse acros
 graph TD
   C["nvcr.io/nvidia/pytorch:24.10-py3\n(PyTorch + CUDA, Python built-in)"] --> CB["ghcr.io/dkuav/luciole-cuda-base\n(system + pip + user)\namd64 + arm64"]
 
-  CB --> HCD["luciole-cuda-dev\n(ROS 2 + cmake + clang + .NET + devshell)\namd64 + arm64"]
+  CB --> HCD["luciole-cuda-dev\n(ROS 2 + cmake + clang + devshell)\namd64 + arm64"]
   CB --> HCR["luciole-cuda-runtime\n(ROS 2 + cmake)\namd64 + arm64"]
 ```
 
@@ -28,8 +28,8 @@ Published to GHCR; used as `FROM` in Tier 2 Dockerfiles.
 
 | Image | Base | Arch | Includes |
 |-------|------|------|---------|
-| [`luciole-cuda-dev`](src/luciole-cuda-dev/README.md) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake · clang · .NET · devshell |
-| [`luciole-cuda-runtime`](src/luciole-cuda-runtime/) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake |
+| [`luciole-cuda-dev`](src/luciole-cuda-dev/README.md) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake (inherited from base) · clang · devshell |
+| [`luciole-cuda-runtime`](src/luciole-cuda-runtime/) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake (inherited from base) |
 
 **devshell** includes: zsh · oh-my-zsh · neovim (NvChad) · starship · nvm · bat · fzf · eza · zoxide · pre-commit (pre-cached hooks)
 
@@ -71,6 +71,7 @@ graph LR
   B --> C["merge-tier1\n(multi-arch manifest)"]
   C --> D["build-push-tier2\n(final image matrix)"]
   D --> E[merge-tier2]
+  E --> F["smoke-test\n(per-image, hard gate)"]
   A -. "tier2-only changes" .-> D
 ```
 
@@ -80,6 +81,7 @@ graph LR
   - Final image changed → rebuild that final only
   - `workflow_dispatch` → build everything
 - **Multi-arch**: amd64 (`ubuntu-24.04`) and arm64 (`ubuntu-24.04-arm`, native — no QEMU) are built separately, pushed by digest, and merged into a single multi-arch manifest. `arch_overrides` in `image-deps.json` limits arch-specific images.
+- **Smoke test (hard gate)**: every image actually built this run is pulled at its `sha-<git-sha>` tag and run against [`src/_tests/smoke-<image>.sh`](src/_tests/) on a native-arch runner. An assertion failure (e.g. OpenCV `find_package` leak, missing tool, wrong ROS target) **fails the whole pipeline**.
 - **Tags**: `latest`, `main`, `sha-<git-sha>`.
 - **Auth**: `GITHUB_TOKEN` only — no extra secrets needed.
 
