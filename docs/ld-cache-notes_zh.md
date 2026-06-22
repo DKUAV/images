@@ -98,57 +98,51 @@ libucs 备胎 → torch 失败。
 不要依赖这个侥幸。两个存活的 arm64 情况都是偶然；升 ROS 2 或在镜像中去掉
 ROS 2 都会立即重现问题。
 
-## 4. 修复：把 HPC-X 的 libucc / libucx 路径从 ld.so 注册中剔除
+## 4. 修复：从 ld.so 中剔除 HPC-X libucc/libucx 注册 —— **仅 arm64**
 
-最干净的修法：就让 torch 看不到 HPC-X 那套坏了的 libucc/libucx。它们不在 torch 的
+最干净的修法：在 arm64 上就让 torch 看不到 HPC-X 那套坏了的 libucc/libucx。它们不在 torch 的
 RPATH 中；torch 只是"不慎"看到了而已，是因为 `/etc/ld.so.conf.d/hpcx.conf`
 （NVIDIA 提供）把 `/opt/hpcx/ucc/lib` 与 `/opt/hpcx/ucx/lib` 注册进了全局搜索路径。
 
-在 `src/luciole-cuda-base/Dockerfile` 里，所有安装脚本之后的最后一条 `RUN`
-现在做以下三件事：
+**关键**：这条剔除**必须按架构 gate**。amd64 上 HPC-X 的 UCX/UCC 内部一致，**而且 torch 真的就 dlopen
+libucc.so.1**——如果 amd64 上也剔除注册，torch 会崩 `libucc.so.1: cannot open shared object file: No such file or
+directory`。剔除只针对 arm64。
 
-1. **从 `hpcx.conf` 中删除 `/opt/hpcx/{ucc,ucx}/lib` 两行**（sed）。
-2. 写入新的 `zz-ngc-extra.conf`，里面注册其他所有厂商 `.so` 树（CUDA toolkit、
-   TensorRT、hpcx/{hcoll,ompi,sharp,nccl_rdma_sharp_plugin}、ROS、`/usr/local/lib`），
-   **唯独不包含那两个坏掉了的 HPC-X 通讯库目录**。
-3. 跑 `ldconfig`。
+在 `src/luciole-cuda-base/Dockerfile` 里，所有安装脚本之后的最后一条 `RUN`：
+
+- 通过 `dpkg --print-architecture` 检测当前架构，
+- 若 arm64：执行 `sed -i -E '\@^/opt/hpcx/(ucc|ucx)/lib$@d' hpcx.conf`
+  **只删那两行**（其他 4 行 HPC-X 注册行保留），
+- 若 amd64：`hpcx.conf` 完全不动，
+- 然后两个架构都执行一次 `ldconfig`。
 
 ```dockerfile
-RUN sed -i -E '\@^/opt/hpcx/(ucc|ucx)/lib$@d' \
-        /etc/ld.so.conf.d/hpcx.conf 2>/dev/null || true \
-    ; find \
-        /opt/hpcx/hcoll \
-        /opt/hpcx/ompi \
-        /opt/hpcx/sharp \
-        /opt/hpcx/nccl_rdma_sharp_plugin \
-        /opt/tensorrt \
-        /opt/nvidia \
-        /opt/ros \
-        /usr/local/lib \
-        -type f -name '*.so*' 2>/dev/null \
-        | xargs -r dirname \
-        | sort -u > /etc/ld.so.conf.d/zz-ngc-extra.conf \
-    ; ldconfig
+RUN set -e; \
+    if [ "$(dpkg --print-architecture)" = "arm64" ]; then \
+        sed -i -E '\@^/opt/hpcx/(ucc|ucx)/lib$@d' /etc/ld.so.conf.d/hpcx.conf; \
+    fi; \
+    ldconfig
 ```
 
 ### 为什么这个修复是对的
 
-- torch 不再从 `/opt/hpcx/ucc/lib` 解析 `libucc.so.1` → 其搜索链里没有任何东西引用那个坏符号链。
-- 其他 HPC-X 用户（MPI worker）不会丢东西：他们会自己
+- arm64 上 torch 不再从 `/opt/hpcx/ucc/lib` 解析 `libucc.so.1` → 搜索链里完全找不到 libucc，
+  而镜像上唯一副本又是坏的，所以"找不到"反而是对的。
+- amd64 上 HPC-X 注册和 torch 的 libucc link **都保持原样**（这正是为什么要按架构 gate）。
+- arm64 上其他 HPC-X 用户（MPI worker）仍然运行时可用：他们会自己
   `source /opt/hpcx/.../hpcx-init.sh`，该脚本会 export 出完整的 HPC-X
-  `LD_LIBRARY_PATH` —— 与 ld.so.conf.d 无关，运行时仍然可用。
-- amd64 不受影响（sed 是 no-op；那边的 HPC-X 库本身内部一致）。
-- HPC-X 的其他库（hcoll、ompi、sharp、nccl_rdma_sharp_plugin）仍然注册在 ldconfig
-  —— 只剔除肋骨坏了的那 2 个。
+  `LD_LIBRARY_PATH` —— 与 ld.so.conf.d 无关。
+- arm64 上 HPC-X 的其他库（hcoll、ompi、sharp、nccl_rdma_sharp_plugin）仍然注册着
+  —— 只剔除符号错配的那 2 个。
 
 ### 这条指令在哪些文件里
 
-- `src/luciole-cuda-base/Dockerfile`：base 构建最后一步写 `hpcx.conf` 补丁 +
-  `zz-ngc-extra.conf` + `ldconfig` —— 修正 arm64 base 独立使用时的原始故障。
+- `src/luciole-cuda-base/Dockerfile`：按架构 gate 的 sed 删 `hpcx.conf` 两行 +
+  `ldconfig`，作为 base 构建最后一步——修正 arm64 base 独立使用时的原始故障，amd64 原样保留。
 - `src/luciole-cuda-dev/Dockerfile`、`src/luciole-cuda-runtime/Dockerfile`：
-  从 base 继承该 conf；各自末尾再跑一次 `RUN ldconfig` 作为安全网，让
+  从 base 继承（修正后的）`hpcx.conf`；各自末尾再跑一次 `RUN ldconfig` 作为安全网，让
   `ros2.sh`、`clang.sh`、（仅 dev）`devshell.sh` 引入的新 `.so` 也进缓存。
-  它们也不会重新加回 `hpcx/ucc/lib` 或 `hpcx/ucx/lib`。
+  arm64 上它们也不会重新加回 `hpcx/ucc/lib` 或 `hpcx/ucx/lib`。
 
 ## 5. 验证
 
@@ -192,3 +186,8 @@ bug 对没 source 对应 `profile.d` 脚本的用户隐藏掉。）
   `.github/workflows/diag-arm64-torch.yml` 诊断工作流，拉 `ghcr.io/dkuav/luciole-cuda-base:latest`。dump 揭示了**真正**根因：NVIDIA HPC-X v2.20 arm64
   把 UCX 1.17 与 UCC 1.4 打包在一起——符号不匹配（`ucs_config_doc_nop`）。
   随后的修复是：从 `hpcx.conf` 中去掉 `/opt/hpcx/{ucc,ucx}/lib` 两行，并保证它们不进入 `zz-ngc-extra.conf`。Tier 2 镜像末尾的 `ldconfig` 保留作为安全网。
+- 2026-06-23 — **把该剔除按架构 gate**。上一版在两个架构上都从 `hpcx.conf` 剔除
+  `/opt/hpcx/{ucc,ucx}/lib`，这破坏了 amd64：amd64 上 torch 的确从那里 dlopen
+  `libucc.so.1`，剔除后链接器报 `libucc.so.1: cannot open shared object file: No
+  such file or directory`。现在 sed 只在 `dpkg --print-architecture = arm64` 时跑，amd64
+  完全不动。同时去掉了 `zz-ngc-extra.conf` 写入器——针对性的 sed 已经够用，没必要再维护一个发现式 conf。

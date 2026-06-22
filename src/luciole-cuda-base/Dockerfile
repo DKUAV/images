@@ -36,34 +36,28 @@ RUN /tmp/scripts/user.sh
 
 RUN rm -rf /tmp/scripts
 
-# Work around a real NVIDIA NGC pytorch:24.10-py3 (arm64) bug: HPC-X v2.20
-# bundles UCC 1.4.0 against UCX 1.17.0, but libucc.so references
-# `ucs_config_doc_nop` — a symbol added only in UCX 1.18+. On arm64 there is
-# therefore NO libucs anywhere on disk that exports that symbol. When torch's
-# `_C` is dlopened, the linker finds libucc.so.1 via `/opt/hpcx/ucc/lib`
-# (pre-registered by NVIDIA in /etc/ld.so.conf.d/hpcx.conf) and aborts with:
+# Work around an arm64-only NVIDIA NGC pytorch:24.10-py3 bug: HPC-X v2.20
+# bundles UCC 1.4 against UCX 1.17, but UCC 1.4 references `ucs_config_doc_nop`
+# (a symbol added only in UCX 1.18+). On arm64 there is therefore NO libucs
+# anywhere on disk that can satisfy libucc — torch's `_C` dlopen fails with:
 #   ImportError: /opt/hpcx/ucc/lib/libucc.so.1: undefined symbol: ucs_config_doc_nop
-# torch itself doesn't need HPC-X's libucc/libucx — it just trips over them
-# because they are on the global ld.so search path. Fix = unregister those two
-# HPC-X comm-lib paths from the NVIDIA-provided hpcx.conf AND never put them
-# into our own zz-ngc-extra.conf. Any real MPI/UCC user will `source
-# /opt/hpcx/.../hpcx-init.sh` which sets LD_LIBRARY_PATH explicitly and
-# restores them at runtime. amd64 doesn't have the version skew, so the sed
-# is a no-op there. See docs/ld-cache-notes.md for the full diagnosis.
-RUN sed -i -E '\@^/opt/hpcx/(ucc|ucx)/lib$@d' \
-        /etc/ld.so.conf.d/hpcx.conf 2>/dev/null || true \
-    ; find \
-        /opt/hpcx/hcoll \
-        /opt/hpcx/ompi \
-        /opt/hpcx/sharp \
-        /opt/hpcx/nccl_rdma_sharp_plugin \
-        /opt/tensorrt \
-        /opt/nvidia \
-        /opt/ros \
-        /usr/local/lib \
-        -type f -name '*.so*' 2>/dev/null \
-        | xargs -r dirname \
-        | sort -u > /etc/ld.so.conf.d/zz-ngc-extra.conf \
-    ; ldconfig
+#
+# torch itself doesn't actually need HPC-X's libucc/libucx (its `_C` references
+# libucc symbolically but the HPC-X copy is broken). Fix = on arm64 only, strip
+# `/opt/hpcx/{ucc,ucx}/lib` from NVIDIA's hpcx.conf so torch's dlopen search
+# chain can't find the broken copy.
+#
+# amd64 is UNTOUCHED by this gate: there the HPC-X UCX/UCC pair is internally
+# consistent and torch really does link libucc — removing the registration
+# would crash amd64 with "libucc.so.1: cannot open shared object file".
+#
+# Tier 2 images inherit this fix from base. Real MPI/UCC users on arm64 still
+# have HPC-X at runtime via `source /opt/hpcx/.../hpcx-init.sh` which exports
+# LD_LIBRARY_PATH explicitly. See docs/ld-cache-notes.md for the full diagnosis.
+RUN set -e; \
+    if [ "$(dpkg --print-architecture)" = "arm64" ]; then \
+        sed -i -E '\@^/opt/hpcx/(ucc|ucx)/lib$@d' /etc/ld.so.conf.d/hpcx.conf; \
+    fi; \
+    ldconfig
 
 ENV XDG_RUNTIME_DIR=/run/user/${USER_UID}

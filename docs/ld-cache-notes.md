@@ -110,64 +110,60 @@ torch fails.
 Don't rely on this. Both Tier 2 arm64 cases were accidental; bumping ROS 2
 or removing ROS 2 from the image would re-break them.
 
-## 4. The fix: unregister HPC-X's libucc / libucx paths from ld.so
+## 4. The fix: strip HPC-X's libucc / libucx ld.so registration — **arm64 only**
 
-The cleanest fix is to make torch not see HPC-X's broke libucc/libucx at
-all. They are NOT in torch's RPATH; torch only loads them by accident
-because `/etc/ld.so.conf.d/hpcx.conf` (NVIDIA-provided)
-registered `/opt/hpcx/ucc/lib` and `/opt/hpcx/ucx/lib` in the global search
-path.
+The cleanest fix is to make torch not see HPC-X's broken libucc/libucx at
+all on arm64. They are NOT in torch's RPATH; torch only loads them by
+accident because `/etc/ld.so.conf.d/hpcx.conf` (NVIDIA-provided) registered
+`/opt/hpcx/ucc/lib` and `/opt/hpcx/ucx/lib` in the global search path.
+
+**Crucial**: this strip must be gated on architecture. On amd64 the
+HPC-X UCX/UCC pair is internally consistent AND torch really does dlopen
+`libucc.so.1` from there — removing the registration on amd64 crashes
+torch with `libucc.so.1: cannot open shared object file: No such file or
+directory`. The strip is arm64-only.
 
 In `src/luciole-cuda-base/Dockerfile`, the final `RUN` after every
-installer script now:
+installer script:
 
-1. **Strips `/opt/hpcx/{ucc,ucx}/lib`** from `hpcx.conf` (sed delete).
-2. Writes a NEW `zz-ngc-extra.conf` that registers every *other* vendor
-   `.so` tree (CUDA toolkit, TensorRT, hpcx/{hcoll,ompi,sharp,
-   nccl_rdma_sharp_plugin}, ROS, `/usr/local/lib`), but explicitly NOT the
-   two broken HPC-X comm-lib dirs.
-3. Runs `ldconfig`.
+- detects the host arch via `dpkg --print-architecture`,
+- if arm64: runs `sed -i -E '\@^/opt/hpcx/(ucc|ucx)/lib$@d' hpcx.conf`
+  to delete exactly those two lines (the other 4 HPC-X lines stay),
+- if amd64: leaves `hpcx.conf` untouched,
+- then runs `ldconfig` on both arches.
 
 ```dockerfile
-RUN sed -i -E '\@^/opt/hpcx/(ucc|ucx)/lib$@d' \
-        /etc/ld.so.conf.d/hpcx.conf 2>/dev/null || true \
-    ; find \
-        /opt/hpcx/hcoll \
-        /opt/hpcx/ompi \
-        /opt/hpcx/sharp \
-        /opt/hpcx/nccl_rdma_sharp_plugin \
-        /opt/tensorrt \
-        /opt/nvidia \
-        /opt/ros \
-        /usr/local/lib \
-        -type f -name '*.so*' 2>/dev/null \
-        | xargs -r dirname \
-        | sort -u > /etc/ld.so.conf.d/zz-ngc-extra.conf \
-    ; ldconfig
+RUN set -e; \
+    if [ "$(dpkg --print-architecture)" = "arm64" ]; then \
+        sed -i -E '\@^/opt/hpcx/(ucc|ucx)/lib$@d' /etc/ld.so.conf.d/hpcx.conf; \
+    fi; \
+    ldconfig
 ```
 
 ### Why this is correct
 
-- torch no longer resolves `libucc.so.1` from `/opt/hpcx/ucc/lib` →
-  nothing in its search chain references the broken symbol chain.
-- Other HPC-X users (MPI workers) don't lose anything: they `source
-  /opt/hpcx/.../hpcx-init.sh` themselves, which exports `LD_LIBRARY_PATH`
-  with the full HPC-X prefix at runtime — independent of ld.so.conf.d.
-- amd64 is unaffected (sed is a no-op; the HPC-X libs there are internally
-  consistent).
+- On arm64, torch no longer resolves `libucc.so.1` from
+  `/opt/hpcx/ucc/lib` → its search chain can't find any libucc at all, and
+  since the only on-disk copy was broken it's better to find none.
+- On amd64, the HPC-X registration and torch's libucc link both stay intact
+  (this is why the arch gate matters).
+- Other HPC-X users on arm64 (MPI workers) still have HPC-X at runtime via
+  `source /opt/hpcx/.../hpcx-init.sh`, which exports `LD_LIBRARY_PATH`
+  with the full HPC-X prefix — independent of ld.so.conf.d.
 - All other HPC-X libs (hcoll, ompi, sharp, nccl_rdma_sharp_plugin) stay
-  registered — only the two broken comm libs are removed.
+  registered on arm64 — only the two symbol-skewed comm lib paths are
+  removed.
 
 ### Where this runs
 
-- `src/luciole-cuda-base/Dockerfile`: writes `hpcx.conf` patch +
-  `zz-ngc-extra.conf` + `ldconfig` as the final step of the base image —
-  fixes standalone use of the base image on arm64 (the original failure).
+- `src/luciole-cuda-base/Dockerfile`: arch-gated sed of `hpcx.conf` +
+  `ldconfig` as the final step of the base image — fixes standalone arm64
+  use of the base image (the original failure), leaves amd64 untouched.
 - `src/luciole-cuda-dev/Dockerfile`, `src/luciole-cuda-runtime/Dockerfile`:
-  inherit the patched conf from base; they also run `RUN ldconfig` once more
-  at their own end so any extra `.so` files introduced by `ros2.sh`,
+  inherit the patched conf from base; they run `RUN ldconfig` once more at
+  their own end so any extra `.so` files introduced by `ros2.sh`,
   `clang.sh`, and `devshell.sh` (only dev) land in the cache. They never
-  re-add `hpcx/ucc/lib` or `hpcx/ucx/lib`.
+  re-add `hpcx/ucc/lib` or `hpcx/ucx/lib` on arm64.
 
 ## 5. Verification
 
@@ -222,3 +218,11 @@ shield image ends up doing this discovery pass once.
   `/opt/hpcx/{ucc,ucx}/lib` from `hpcx.conf` and keep them out of
   `zz-ngc-extra.conf`. Tier 2 images retain their own final `ldconfig` as a
   safety net.
+- 2026-06-23 — **arch-gated the strip**. The previous version stripped
+  `/opt/hpcx/{ucc,ucx}/lib` from `hpcx.conf` on BOTH arches, which broke
+  amd64: torch on amd64 actually dlopens `libucc.so.1` from there, so
+  removing the registration made the linker fail with
+  `libucc.so.1: cannot open shared object file: No such file or directory`.
+  Now the sed runs only when `dpkg --print-architecture = arm64`; amd64 is
+  wholly untouched. Also dropped the `zz-ngc-extra.conf` writer — it was
+  unnecessary complexity now that the targeted sed does the job.
