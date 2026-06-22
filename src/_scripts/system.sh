@@ -12,6 +12,9 @@ apt-get update
 apt-get -y upgrade
 apt-get -y install tzdata lsb-release wget software-properties-common gnupg locales
 
+# Workaround for missing UCX libraries in NGC docker
+apt-get -y install libucx0 libucc1
+
 ln -snf /usr/share/zoneinfo/${TZ_VAL} /etc/localtime
 echo ${TZ_VAL} > /etc/timezone
 locale-gen en_US.UTF-8
