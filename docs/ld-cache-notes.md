@@ -29,55 +29,65 @@ CI smoke tests on `luciole-cuda-base` (arm64) failed at:
 ImportError: /opt/hpcx/ucc/lib/libucc.so.1: undefined symbol: ucs_config_doc_nop
 ```
 
-`ucs_config_doc_nop` is a HPC-X symbol defined in `libucs.so` (the UCX core).
-`libucc.so.1` expects it but, when torch dlopen()s `_C`, the dynamic linker
-loaded a version of `libucc` whose sibling `libucs` doesn't provide the symbol.
+`ucs_config_doc_nop` is a UCX core symbol that lives in `libucs.so`.
 
-## 2. Root cause: ld.so.cache staleness + missing ld.so.conf registration
+## 2. Root cause: HPC-X v2.20 ships mismatched UCX 1.17 / UCC 1.4 on arm64
 
-Two independent conditions have to line up for the failure, both baked into
-how Docker layering interacts with `ldconfig`:
+> ⚠️ **This is an upstream NVIDIA NGC bug**, NOT something wrong with how this
+> repo registers ld.so paths. Earlier drafts of this doc (now superseded)
+> blamed ld.so.cache staleness or missing ld.so.conf entries; both were
+> disproved by the diagnostic dump in `run.log` (kept under the same repo for
+> reference). The real story:
 
-### 2.1 ld.so.cache is snapshotted per Docker layer
+### 2.1 The version skew in NVIDIA HPC-X v2.20 (arm64)
 
-Each Dockerfile `RUN` produces a layer whose filesystem snapshot includes
-`/etc/ld.so.cache` **as it was at the end of that RUN**. Subsequent RUNs that
-add `.so` files do so on top of a now-stale cache unless they re-run
-`ldconfig` themselves. So if e.g. `opencv.sh` runs `ldconfig` and later
-`pip-packages.sh` drops new `.so` files, those new files are **not** in the
-cache that the final owning layer sees.
+`/opt/hpcx/VERSION` on this image reads:
 
-This alone is fixable by appending `RUN ldconfig` everywhere — and that
-sufficed for lots of containers. But it was *not* sufficient here, because of
-condition #2.
+```
+HPC-X v2.20
+ucc-...  1.4.0
+ucx-39c8f9b  1.17.0
+```
 
-### 2.2 ldconfig only scans paths declared in ld.so.conf
+**UCC 1.4.0 was compiled against symbols present in UCX 1.18+** (notably
+`ucs_config_doc_nop`, added in the UCX 1.18 release). But the UCX that ships
+**in the same HPC-X bundle is 1.17.0** — one minor version behind. So on
+arm64:
 
-`ldconfig` does **not** walk the whole filesystem. It scans:
+- `libucc.so.1` references `ucs_config_doc_nop` (compiled in)
+- `libucs.so.0` everywhere on disk (both `/opt/hpcx/ucx/lib/libucs.so.0`
+  and `/lib/aarch64-linux-gnu/libucs.so.0`) **does NOT export it**
+  (confirmed by `nm -D <libucs> | grep ucs_config_doc_nop` returning 0
+  matches across every copy on disk)
 
-- `/usr/lib` and the multiarch triplet (`/usr/lib/x86_64-linux-gnu`,
-  `/usr/lib/aarch64-linux-gnu`, …)
-- every file `/etc/ld.so.conf` includes, in turn everything under
-  `/etc/ld.so.conf.d/*.conf`
+There is, in other words, **no libucs on this image that can satisfy
+libucc**. This is a packaging bug in NVIDIA NGC pytorch:24.10-py3 (arm64);
+amd64 not affected.
 
-So **`RUN ldconfig` is only as good as the conf files let it be.** If a
-vendor puts `.so` files under a directory that isn't on any conf line,
-`ldconfig` will never register them — no matter how many times you run it.
+### 2.2 Why this surfaces as a torch import error
 
-### 2.3 The asymmetry: NVIDIA pre-registers on amd64 but not on arm64
+torch itself does **not** use HPC-X's libucc/libucx. But when torch's `_C`
+is `dlopen`'d, the dynamic linker walks the global ld.so search path for any
+of torch's dependencies. `LD_DEBUG=libs python3 -c "import torch"` shows
+libucc.so.1 is found via `/opt/hpcx/ucc/lib/libucc.so.1`, which NVIDIA
+pre-registered in `/etc/ld.so.conf.d/hpcx.conf`. Loading it then fails the
+symbol resolution described in 2.1, which propagates up as the torch
+ImportError.
 
-NVIDIA's NGC `pytorch:24.10-py3` image ships the HPC-X stack
-(UCX, UCC, Sharp, …) under `/opt/hpcx/...`:
+Note that ld.so.cache was **already correctly built**: NVIDIA's `hpcx.conf`
+exists on both arches, and `ldconfig -p` lists both `libucc.so.1 →
+/opt/hpcx/ucc/lib/libucc.so.1` and `libucs.so.0 → /opt/hpcx/ucx/lib/libucs.so.0`.
+The cache did "the right thing" — it pointed to the only libucc on disk. The
+problem is at the binary level, not the cache level.
 
-- On **amd64**, they pre-register every `lib` subdirectory via
-  `/etc/ld.so.conf.d/...` files. `ldconfig` therefore picks them up.
-- On **aarch64 / Jetson L4T**, the equivalent conf entries are **missing**
-  in current NGC releases. `ldconfig` has nothing to scan and the cache
-  silently knows nothing about HPC-X.
+### 2.3 Recap of what didn't work
 
-This is a long-standing complaint about Jetson NGC images and is completely
-invisible until a binary (`import torch`) actually dlopen()s into the affected
-`.so` chain.
+- `RUN ldconfig` at the end of the Dockerfile — fixed the *unrelated*
+  amd64-base issue (some libs not in cache) but **not** arm64 base.
+- A dynamic-discovery `zz-ngc-extra.conf` re-registering all HPC-X lib paths —
+  irrelevant: NVIDIA's own `hpcx.conf` already registered them. The issue
+  is the libraries themselves,
+  not their registration.
 
 ## 3. Why Tier 2 images "worked by accident"
 
@@ -88,42 +98,44 @@ apt-get -y install ros-${ROS_DISTRO_VAL}-${ROS_TARGET_VAL}
 apt-get -y install ros-dev-tools
 ```
 
-Installing ROS 2 pulls in a large closing set of shared-library dpkg
-packages. **dpkg, after any package that ships `.so` files, runs `ldconfig`
-as a maintainer script trigger.** That implicit trigger ran at the tail of
-`apt-get install ros-…`, and:
+ROS 2's transitive apt deps pull in a system-ports version of `libucs`
+under `/usr/lib/aarch64-linux-gnu/`. Because the system lib path sorts
+earlier in ld.so.conf than NVIDIA's `hpcx.conf`, the dynamic linker prefers
+it. That system `libucs` is **old enough to be the dominant match, and on
+some ROS 2 releases the system `libucs` had `ucs_config_doc_nop`** while
+NVIDIA's HPC-X `libucs` did not — so importing torch on Tier 2 arm64 happened
+to succeed. On base, no ROS 2 → no system libucs → no workable fallback →
+torch fails.
 
-1. It refreshed the ld.so.cache for that layer.
-2. ROS 2's transitive deps also pulled in system-ports versions of
-   `libucc` / `libucs` under `/usr/lib/aarch64-linux-gnu` (the default-triplet
-   path, which *is* registered by default). Those showed up at a higher
-   preload priority than the missing-from-cache `/opt/hpcx/...` ones, so the
-   dlopen chain happened to resolve to a self-consistent pair.
+Don't rely on this. Both Tier 2 arm64 cases were accidental; bumping ROS 2
+or removing ROS 2 from the image would re-break them.
 
-On the base image — which doesn't run `ros2.sh` — neither side effect fires.
-On amd64 base, NVIDIA's own ld.so.conf entries cover HPC-X, so it still works.
-On arm64 base, neither covers anything. Hence the matrix:
+## 4. The fix: unregister HPC-X's libucc / libucx paths from ld.so
 
-| Image          | amd64                                | arm64                                                    |
-|----------------|--------------------------------------|----------------------------------------------------------|
-| `luciole-cuda-base`     | ✓ — NVIDIA pre-registers HPC-X | ✗ — no ros2 trigger, no NVIDIA registration → torch fails |
-| `luciole-cuda-dev`      | ✓ — both effects cover it     | ✓ — ros2.sh's dpkg trigger happened to repair the cache  |
-| `luciole-cuda-runtime`  | ✓ — both effects cover it     | ✓ — same as dev                                          |
+The cleanest fix is to make torch not see HPC-X's broke libucc/libucx at
+all. They are NOT in torch's RPATH; torch only loads them by accident
+because `/etc/ld.so.conf.d/hpcx.conf` (NVIDIA-provided)
+registered `/opt/hpcx/ucc/lib` and `/opt/hpcx/ucx/lib` in the global search
+path.
 
-Both surviving arm64 cases were **accidental**, depending on the specific
-ROS 2 dependency graph of `ros-humble-ros-base`. A future ROS 2 release, or
-the same image used without ROS 2 sourced, would re-break.
+In `src/luciole-cuda-base/Dockerfile`, the final `RUN` after every
+installer script now:
 
-## 4. The generic fix: dynamic ld.so.conf discovery + ldconfig
-
-In `src/luciole-cuda-base/Dockerfile`, the final `RUN` after every installer
-script now writes a single file — `/etc/ld.so.conf.d/zz-ngc-extra.conf` —
-containing **every directory that actually contains a `.so` file** under the
-NVIDIA /opt vendor roots and `/usr/local/lib`, then runs `ldconfig`:
+1. **Strips `/opt/hpcx/{ucc,ucx}/lib`** from `hpcx.conf` (sed delete).
+2. Writes a NEW `zz-ngc-extra.conf` that registers every *other* vendor
+   `.so` tree (CUDA toolkit, TensorRT, hpcx/{hcoll,ompi,sharp,
+   nccl_rdma_sharp_plugin}, ROS, `/usr/local/lib`), but explicitly NOT the
+   two broken HPC-X comm-lib dirs.
+3. Runs `ldconfig`.
 
 ```dockerfile
-RUN find \
-        /opt/hpcx \
+RUN sed -i -E '\@^/opt/hpcx/(ucc|ucx)/lib$@d' \
+        /etc/ld.so.conf.d/hpcx.conf 2>/dev/null || true \
+    ; find \
+        /opt/hpcx/hcoll \
+        /opt/hpcx/ompi \
+        /opt/hpcx/sharp \
+        /opt/hpcx/nccl_rdma_sharp_plugin \
         /opt/tensorrt \
         /opt/nvidia \
         /opt/ros \
@@ -134,35 +146,28 @@ RUN find \
     ; ldconfig
 ```
 
-### Why this is robust
+### Why this is correct
 
-- **Dynamic discovery, not a hardcoded list** (`ucx/lib`, `ucc/lib`,
-  `sharp/lib`, …). It survives HPC-X internal path renames and future NGC
-  packages dropped under `/opt/<newthing>` without anyone having to update
-  this Dockerfile.
-- `-type f -name '*.so*'` filters to directories that **actually contain a
-  shared object**, so empty `lib/` placeholders inside `/opt/nvidia` etc.
-  don't pollute the conf.
-- `xargs -r dirname | sort -u` emits one absolute path per line with no
-  duplicates — exactly the ld.so.conf.d format.
-- `zz-` prefix sorts this conf last, so when NVIDIA or Ubuntu add their own
-  conf later they take priority over us for same-named libs we don't want to
-  shadow.
-- `2>/dev/null` makes the command tolerate missing top-level directories
-  (e.g., images without `/opt/tensorrt`).
-- Architecture-agnostic: the same command produces amd64-only entries on
-  amd64 and arm64-only entries on arm64, because `find` only emits paths that
-  actually exist in the image being built.
+- torch no longer resolves `libucc.so.1` from `/opt/hpcx/ucc/lib` →
+  nothing in its search chain references the broken symbol chain.
+- Other HPC-X users (MPI workers) don't lose anything: they `source
+  /opt/hpcx/.../hpcx-init.sh` themselves, which exports `LD_LIBRARY_PATH`
+  with the full HPC-X prefix at runtime — independent of ld.so.conf.d.
+- amd64 is unaffected (sed is a no-op; the HPC-X libs there are internally
+  consistent).
+- All other HPC-X libs (hcoll, ompi, sharp, nccl_rdma_sharp_plugin) stay
+  registered — only the two broken comm libs are removed.
 
 ### Where this runs
 
-- `src/luciole-cuda-base/Dockerfile`: writes `zz-ngc-extra.conf` and runs
-  `ldconfig` as the final step of the base image — fixes standalone use of
-  the base image on arm64 (the original failure).
+- `src/luciole-cuda-base/Dockerfile`: writes `hpcx.conf` patch +
+  `zz-ngc-extra.conf` + `ldconfig` as the final step of the base image —
+  fixes standalone use of the base image on arm64 (the original failure).
 - `src/luciole-cuda-dev/Dockerfile`, `src/luciole-cuda-runtime/Dockerfile`:
-  inherit the conf from base; they also run `RUN ldconfig` once more at their
-  own end so any extra `.so` files introduced by `ros2.sh`, `clang.sh`, and
-  `devshell.sh` (only dev) land in the cache.
+  inherit the patched conf from base; they also run `RUN ldconfig` once more
+  at their own end so any extra `.so` files introduced by `ros2.sh`,
+  `clang.sh`, and `devshell.sh` (only dev) land in the cache. They never
+  re-add `hpcx/ucc/lib` or `hpcx/ucx/lib`.
 
 ## 5. Verification
 
@@ -204,11 +209,16 @@ shield image ends up doing this discovery pass once.
 
 ## 7. Update log
 
-- 2026-06-19 — added `RUN ldconfig` to all three Dockerfiles. Fixed amd64
-  (`luciole-cuda-base`) torch import. Did **not** fix arm64 base.
-- 2026-06-22 — replaced the bare `ldconfig` with the dynamic-discovery
+- 2026-06-19 — added a final `RUN ldconfig` to all three Dockerfiles. Fixed
+  amd64 base torch import. Did **not** fix arm64 base.
+- 2026-06-22 (a) — replaced the bare `ldconfig` with a dynamic-discovery
   `zz-ngc-extra.conf` write + `ldconfig` in `luciole-cuda-base/Dockerfile`.
-  Now fixes arm64 base standalone. Tier 2 images were already passing (by
-  accident); they keep a redundant final `ldconfig` as a safety net and to
-  register their own additions (`/opt/ros/...` from ros2.sh, `.so` from
-  clang/devshell).
+  Did **not** fix arm64 base either.
+- 2026-06-22 (b) — ran the `.github/workflows/diag-arm64-torch.yml`
+  diagnostic on a native arm64 GH runner against
+  `ghcr.io/dkuav/luciole-cuda-base:latest`. The dump revealed the **real**
+  root cause: NVIDIA HPC-X v2.20 ships UCX 1.17 with UCC 1.4 — incompatible
+  symbol (`ucs_config_doc_nop`) — on arm64. Subsequent fix: strip
+  `/opt/hpcx/{ucc,ucx}/lib` from `hpcx.conf` and keep them out of
+  `zz-ngc-extra.conf`. Tier 2 images retain their own final `ldconfig` as a
+  safety net.

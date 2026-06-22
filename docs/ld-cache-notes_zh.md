@@ -30,45 +30,54 @@ ImportError: /opt/hpcx/ucc/lib/libucc.so.1: undefined symbol: ucs_config_doc_nop
 `libucc.so.1` 期望它，但在 torch 经 dlopen() 加载 `_C` 时，动态链接器加载的
 `libucc` 对应的同源 `libucs` 里却没有这个符号（版本/路径不匹配）。
 
-## 2. 根因：ld.so.cache 过期 + ld.so.conf 未注册
+## 2. 根因：HPC-X v2.20 arm64 版本里 UCX 1.17 与 UCC 1.4 版本不匹配
 
-要触发这个失败需要两个独立条件同时成立，二者都源自 Docker 分层与
-`ldconfig` 的交互机制：
+> ⚠️ **这是上游 NVIDIA NGC 镜像的打包 bug**，不是本仓库配置 ld.so 路径出错。
+> 本文档的早期版本（现已作废）曾把锅扣到 "ld.so.cache 过期" 或 "ld.so.conf 未注册" 上，
+> 两者都被 `run.log`（保留在同仓库作为参考）里的诊断 dump 否定了。真实情况：
 
-### 2.1 ld.so.cache 按 Docker 层做快照
+### 2.1 NVIDIA HPC-X v2.20 arm64 的版本错配
 
-Dockerfile 里每一条 `RUN` 产生一层，该层文件系统快照里包含的 `/etc/ld.so.cache`
-是 **该 RUN 结束时的状态**。后续 RUN 添加 `.so` 文件时，是在"已过期"的缓存之上
-添加的——除非它们自己再跑一次 `ldconfig`。例如：`opencv.sh` 跑了 `ldconfig`，
-之后 `pip-packages.sh` 又解出新 `.so`，那么这些新文件**不在**最终层看到的缓存中。
+镜像里 `/opt/hpcx/VERSION` 内容为：
 
-光这一点理论上加 `RUN ldconfig` 就能修；但本案例不够，因为还有条件 #2。
+```
+HPC-X v2.20
+ucc-...  1.4.0
+ucx-39c8f9b  1.17.0
+```
 
-### 2.2 ldconfig 只扫 ld.so.conf 中声明过的路径
+**UCC 1.4.0 编译时使用的是 UCX 1.18+ 才有的符号**（特别地 `ucs_config_doc_nop`
+是在 UCX 1.18 引入的）。但同一个 HPC-X bundle 里**同时附带的 UCX 却是 1.17.0**
+——落后一个小版本。所以在 arm64 上：
 
-`ldconfig` **不会全盘扫描整个文件系统**。它只扫：
+- `libucc.so.1` 引用了 `ucs_config_doc_nop`（编译时被装入）
+- 镜像上所有 `libucs.so.0`（无论 `/opt/hpcx/ucx/lib/libucs.so.0` 还是
+  `/lib/aarch64-linux-gnu/libucs.so.0`）**都不提供该符号**
+  （已由 `nm -D <libucs> | grep ucs_config_doc_nop` 在镜像上所有副本上返 0 证实）
 
-- `/usr/lib` 与 multiarch triplet（`/usr/lib/x86_64-linux-gnu`、
-  `/usr/lib/aarch64-linux-gnu` 等）
-- `/etc/ld.so.conf` include 的所有内容，也就是 `/etc/ld.so.conf.d/*.conf`
-  里列出的路径
+也就是说，**镜像上没有任何一份 libucs 能满足 libucc**。这是 NVIDIA NGC
+pytorch:24.10-py3（arm64）的打包 bug；amd64 不受影响。
 
-所以 **`RUN ldconfig` 的效果由 conf 文件决定。** 如果某个厂商把 `.so` 文件
-放到一个没在任何 conf 行里声明过的目录下，`ldconfig` **永远是发现不了它**
-的——你跑多少次都没用。
+### 2.2 为什么会报成 torch import 错误
 
-### 2.3 不对称：NVIDIA 在 amd64 预注册，arm64 没有
+torch 本身**不使用** HPC-X 的 libucc/libucx。但 torch `_C` 被 `dlopen` 时，
+动态链接器会沿全局 ld.so 搜索路径查找 torch 的依赖。`LD_DEBUG=libs python3 -c
+'import torch'` 显示 libucc.so.1 是从 `/opt/hpcx/ucc/lib/libucc.so.1` 被找到的
+——因为 NVIDIA 把 `/opt/hpcx/ucc/lib` 预注册到了 `/etc/ld.so.conf.d/hpcx.conf`。
+加载它之后 §2.1 所述的符号未解析错误就出现了，最后以 torch ImportError 的形式
+浮上来。
 
-NVIDIA 的 NGC `pytorch:24.10-py3` 镜像把 HPC-X 栈（UCX、UCC、Sharp 等）
-放在 `/opt/hpcx/`：
+注意：**ld.so.cache 本身已经构造正确**。NVIDIA 的 `hpcx.conf` 在两个架构上都存在，
+`ldconfig -p` 同时列了 `libucc.so.1 → /opt/hpcx/ucc/lib/libucc.so.1` 和
+`libucs.so.0 → /opt/hpcx/ucx/lib/libucs.so.0`。cache 干了"正确的事"——指向
+镜像上唯一的副本。问题在二进制本身，不在缓存。
 
-- 在 **amd64** 上，他们通过 `/etc/ld.so.conf.d/...` 文件预注册了每一个
-  `lib` 子目录，`ldconfig` 就会扫到。
-- 在 **aarch64 / Jetson L4T** 上，对应的 conf 条目在当前 NGC release 里
-  **缺失**。`ldconfig` 没东西可扫，缓存对 HPC-X 一无所知。
+### 2.3 哪些尝试不凑效
 
-这是 Jetson NGC 镜像的老问题，在"有人设 dlopen 进那条 .so 链"之前完全
-看不见——而 `import torch` 就恰好是这么干的。
+- 在 Dockerfile 末尾加 `RUN ldconfig` —— 修复了**另一个独立的** amd64 base
+  问题（某些库未进缓存），但**修不好** arm64 base。
+- 动态生成的 `zz-ngc-extra.conf` 重注册所有 HPC-X 库路径 —— 无关：NVIDIA 自己的
+  `hpcx.conf` 已经注册了。问题出在库本身，不在注册。
 
 ## 3. 为什么 Tier 2 镜像"恰好"是好的
 
@@ -79,39 +88,39 @@ apt-get -y install ros-${ROS_DISTRO_VAL}-${ROS_TARGET_VAL}
 apt-get -y install ros-dev-tools
 ```
 
-装 ROS 2 会拉入一大堆共享库 dpkg 包。**dpkg 在装任何含 `.so` 的包之后，
-会作为 maintainer script trigger 跑 `ldconfig`。** 这个隐式 trigger 在
-`apt-get install ros-…` 流程末尾跑了，效果是：
+ROS 2 的传递 apt 依赖拉进了系统 ports 版本的 `libucs`，装在
+`/usr/lib/aarch64-linux-gnu/` 下。由于系统 lib 路径在 ld.so.conf 里比 NVIDIA 的
+`hpcx.conf` 靠前，动态链接器优先使用它。在某些 ROS 2 release 里，那份系统
+`libucs` **够新**，本身含 `ucs_config_doc_nop`，而 HPC-X 自带的 libucs 不含——
+于是在 Tier 2 arm64 上导入 torch "恰好"能过。而在 base 上 ROS 2 未装 → 无系统
+libucs 备胎 → torch 失败。
 
-1. 把那一层的 ld.so.cache 刷了一次。
-2. ROS 2 的传递依赖还顺带拉进了系统 ports 版本的 `libucc` / `libucs`
-   （装在 `/usr/lib/aarch64-linux-gnu`，**这个 triplet 路径默认是注册的**）。
-   它们在 dlopen 排序里比"缺失于缓存"的 `/opt/hpcx/...` 版本更靠前，于是
-   dlopen 链巧合命中了一对自洽的版本。
+不要依赖这个侥幸。两个存活的 arm64 情况都是偶然；升 ROS 2 或在镜像中去掉
+ROS 2 都会立即重现问题。
 
-base 镜像不跑 `ros2.sh`，两个副作用都没有。amd64 base 上，NVIDIA 自带的
-ld.so.conf 条目覆盖了 HPC-X，所以仍工作；arm64 base 上谁都没有，于是挂。
-矩阵汇总：
+## 4. 修复：把 HPC-X 的 libucc / libucx 路径从 ld.so 注册中剔除
 
-| 镜像        | amd64                                  | arm64                                                          |
-|-------------|----------------------------------------|----------------------------------------------------------------|
-| `luciole-cuda-base`     | ✓ — NVIDIA 预注册了 HPC-X         | ✗ — 没 ros2 trigger，也没 NVIDIA 注册 → torch 失败              |
-| `luciole-cuda-dev`      | ✓ — 两个效果都覆盖                | ✓ — ros2.sh 的 dpkg trigger 恰好把缓存修好                     |
-| `luciole-cuda-runtime`  | ✓ — 两个效果都覆盖                | ✓ — 同 dev                                                     |
+最干净的修法：就让 torch 看不到 HPC-X 那套坏了的 libucc/libucx。它们不在 torch 的
+RPATH 中；torch 只是"不慎"看到了而已，是因为 `/etc/ld.so.conf.d/hpcx.conf`
+（NVIDIA 提供）把 `/opt/hpcx/ucc/lib` 与 `/opt/hpcx/ucx/lib` 注册进了全局搜索路径。
 
-两个存活的 arm64 情况都是**侥幸**，依赖的是 `ros-humble-ros-base` 这个具体
-依赖图。换一版 ROS 2，或者在不 source ROS 2 的情况下用同一镜像，就会再挂。
+在 `src/luciole-cuda-base/Dockerfile` 里，所有安装脚本之后的最后一条 `RUN`
+现在做以下三件事：
 
-## 4. 通用修复：动态发现 ld.so.conf + ldconfig
-
-在 `src/luciole-cuda-base/Dockerfile`，所有安装脚本之后的最后一条 `RUN`
-现在会写一个文件——`/etc/ld.so.conf.d/zz-ngc-extra.conf`，里面是
-**NVIDIA /opt 厂商根与 `/usr/local/lib` 下所有真实含 `.so` 文件的目录**，
-然后再跑 `ldconfig`：
+1. **从 `hpcx.conf` 中删除 `/opt/hpcx/{ucc,ucx}/lib` 两行**（sed）。
+2. 写入新的 `zz-ngc-extra.conf`，里面注册其他所有厂商 `.so` 树（CUDA toolkit、
+   TensorRT、hpcx/{hcoll,ompi,sharp,nccl_rdma_sharp_plugin}、ROS、`/usr/local/lib`），
+   **唯独不包含那两个坏掉了的 HPC-X 通讯库目录**。
+3. 跑 `ldconfig`。
 
 ```dockerfile
-RUN find \
-        /opt/hpcx \
+RUN sed -i -E '\@^/opt/hpcx/(ucc|ucx)/lib$@d' \
+        /etc/ld.so.conf.d/hpcx.conf 2>/dev/null || true \
+    ; find \
+        /opt/hpcx/hcoll \
+        /opt/hpcx/ompi \
+        /opt/hpcx/sharp \
+        /opt/hpcx/nccl_rdma_sharp_plugin \
         /opt/tensorrt \
         /opt/nvidia \
         /opt/ros \
@@ -122,30 +131,24 @@ RUN find \
     ; ldconfig
 ```
 
-### 为什么这样最稳
+### 为什么这个修复是对的
 
-- **动态发现，而非硬编码列表**（`ucx/lib`、`ucc/lib`、`sharp/lib`……）。
-  能扛住 HPC-X 内部路径改名、以及未来扔到 `/opt/<新东西>` 下的任何 NGC 包，
-  不需要有人回头改这条 Dockerfile。
-- `-type f -name '*.so*'` 只挑**真正含共享对象**的目录，避免把
-  `/opt/nvidia` 里空 `lib/` 占位目录也注册进去污染 conf。
-- `xargs -r dirname | sort -u` 输出"每行一个绝对路径、去重"，正是
-  ld.so.conf.d 期望的格式。
-- `zz-` 前缀让这个 conf 排在最后，将来 NVIDIA 或 Ubuntu 加他们自己的 conf
-  时对同名 lib 优先于我们（我们不想 shadow 别人的）。
-- `2>/dev/null` 让命令在顶层目录缺失（比如没有 `/opt/tensorrt`）时也容错。
-- 与架构无关：在 amd64 镜像里 find 只出 amd64 的目录，在 arm64 镜像里只出
-  arm64 的——因为它只列出**当下镜像里实际存在**的路径。
+- torch 不再从 `/opt/hpcx/ucc/lib` 解析 `libucc.so.1` → 其搜索链里没有任何东西引用那个坏符号链。
+- 其他 HPC-X 用户（MPI worker）不会丢东西：他们会自己
+  `source /opt/hpcx/.../hpcx-init.sh`，该脚本会 export 出完整的 HPC-X
+  `LD_LIBRARY_PATH` —— 与 ld.so.conf.d 无关，运行时仍然可用。
+- amd64 不受影响（sed 是 no-op；那边的 HPC-X 库本身内部一致）。
+- HPC-X 的其他库（hcoll、ompi、sharp、nccl_rdma_sharp_plugin）仍然注册在 ldconfig
+  —— 只剔除肋骨坏了的那 2 个。
 
 ### 这条指令在哪些文件里
 
-- `src/luciole-cuda-base/Dockerfile`：base 构建的最后一步写
-  `zz-ngc-extra.conf` 并跑 `ldconfig` —— 修正 arm64 base 独立使用时的原始
-  故障。
+- `src/luciole-cuda-base/Dockerfile`：base 构建最后一步写 `hpcx.conf` 补丁 +
+  `zz-ngc-extra.conf` + `ldconfig` —— 修正 arm64 base 独立使用时的原始故障。
 - `src/luciole-cuda-dev/Dockerfile`、`src/luciole-cuda-runtime/Dockerfile`：
-  从 base 继承该 conf；它们各自末尾再跑一次 `RUN ldconfig` 作为安全网，
-  让 `ros2.sh`、`clang.sh`、（仅 dev）`devshell.sh` 引入的新 `.so` 也落到
-  缓存里。
+  从 base 继承该 conf；各自末尾再跑一次 `RUN ldconfig` 作为安全网，让
+  `ros2.sh`、`clang.sh`、（仅 dev）`devshell.sh` 引入的新 `.so` 也进缓存。
+  它们也不会重新加回 `hpcx/ucc/lib` 或 `hpcx/ucx/lib`。
 
 ## 5. 验证
 
@@ -181,10 +184,11 @@ bug 对没 source 对应 `profile.d` 脚本的用户隐藏掉。）
 
 ## 7. 变更日志
 
-- 2026-06-19 — 三个 Dockerfile 都加了 `RUN ldconfig`。修复了 amd64
-  （`luciole-cuda-base`）的 torch import。**没修好** arm64 base。
-- 2026-06-22 — 在 `luciole-cuda-base/Dockerfile` 把裸 `ldconfig` 替换为
-  "动态发现写 `zz-ngc-extra.conf` + ldconfig"。自此修复了 arm64 base
-  独立使用场景。Tier 2 镜像此前本就通过（侥幸），保留各自末尾的冗余
-  `ldconfig` 作为安全网，并把自己引入的 `/opt/ros/...`（ros2.sh）、
-  clang/devshell 的 `.so` 也注册进去。
+- 2026-06-19 — 三个 Dockerfile 末尾都加了 `RUN ldconfig`。修了 amd64 base
+  的 torch import。**没修好** arm64 base。
+- 2026-06-22 (a) — 在 `luciole-cuda-base/Dockerfile` 把裸 `ldconfig` 换成
+  动态写 `zz-ngc-extra.conf` + `ldconfig`。**仍没修好** arm64 base。
+- 2026-06-22 (b) — 在原生 arm64 GH runner 上跑过
+  `.github/workflows/diag-arm64-torch.yml` 诊断工作流，拉 `ghcr.io/dkuav/luciole-cuda-base:latest`。dump 揭示了**真正**根因：NVIDIA HPC-X v2.20 arm64
+  把 UCX 1.17 与 UCC 1.4 打包在一起——符号不匹配（`ucs_config_doc_nop`）。
+  随后的修复是：从 `hpcx.conf` 中去掉 `/opt/hpcx/{ucc,ucx}/lib` 两行，并保证它们不进入 `zz-ngc-extra.conf`。Tier 2 镜像末尾的 `ldconfig` 保留作为安全网。

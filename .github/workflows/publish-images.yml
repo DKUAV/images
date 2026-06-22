@@ -465,6 +465,12 @@ jobs:
     permissions:
       contents: read
       packages: read
+    env:
+      # Hard gate: any smoke assertion failure propagates non-zero exit and
+      # fails the whole publish pipeline. Local `docker run` smoke runs have
+      # no such env, so they stay advisory for hands-on debugging — set
+      # SMOKE_HARD_GATE=1 locally if you want the same strictness.
+      SMOKE_HARD_GATE: '1'
     strategy:
       fail-fast: false
       matrix:
@@ -497,6 +503,7 @@ jobs:
           # is a fresh tmpfs so devshell dotfiles live in their expected place.
           script="/tmp/smoke/${{ matrix.script }}"
           docker run --rm \
+            -e SMOKE_HARD_GATE="${SMOKE_HARD_GATE}" \
             -v "$PWD/src/_tests:/tmp/smoke:ro" \
             ${{ steps.registry.outputs.image }}:${{ matrix.tag }} \
             bash -lc '
