@@ -191,3 +191,9 @@ bug 对没 source 对应 `profile.d` 脚本的用户隐藏掉。）
   `libucc.so.1`，剔除后链接器报 `libucc.so.1: cannot open shared object file: No
   such file or directory`。现在 sed 只在 `dpkg --print-architecture = arm64` 时跑，amd64
   完全不动。同时去掉了 `zz-ngc-extra.conf` 写入器——针对性的 sed 已经够用，没必要再维护一个发现式 conf。
+- 2026-06-23 (b) — **CI 把 base 的 smoke 改为 advisory**。即使按架构 gate 了，arm64
+  base 的 `import torch` 在 HPC-X 版本错配上仍然失败。预期修复点：升级上游 NVIDIA NGC
+  pytorch 基础镜像。`src/_tests/smoke-base.sh` 仍然跑（每次构建 ✓/✗ 日志可见，作为
+  回归诊断有用），只是失败不再挂 pipeline。CI gate（`.github/workflows/publish-images.yml`
+  的 `SMOKE_ADVISORY_IMAGES` 集合）将 `luciole-cuda-base` 标为 advisory；Tier 2 镜像仍
+  hard gate。修复后从该集合中去掉 `luciole-cuda-base` 即可恢复硬门禁。

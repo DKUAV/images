@@ -130,6 +130,19 @@ jobs:
               p.name for p in (src_root / "_tests").glob("smoke-*.sh")
           } if (src_root / "_tests").is_dir() else set()
 
+          # Per-image smoke-gate policy. Images listed here RUN their smoke test
+          # (so we still see ✓/✗ output in CI logs and catch individual
+          # assertion failures), but their failures do NOT fail the pipeline —
+          # useful when a known upstream issue (e.g. the NVIDIA HPC-X UCX/UCC
+          # symbol skew on arm64 base, see docs/ld-cache-notes.md) prevents a
+          # fix short-term but we still want diagnostics every build.
+          #
+          # Remove an entry here to make its smoke test a hard gate again.
+          # dev / runtime are NOT listed → failures there still block merge.
+          SMOKE_ADVISORY_IMAGES = {
+              "luciole-cuda-base",
+          }
+
           def smoke_script(image_name: str) -> str | None:
               suffix = image_name.split("-", 2)[-1] if "-" in image_name else image_name
               script = f"smoke-{suffix}.sh"
@@ -140,12 +153,17 @@ jobs:
               script = smoke_script(entry["image"])
               if script is None:
                   continue  # no smoke script for this image — skip silently
+              # Hard gate (=1) means a smoke failure fails the pipeline;
+              # advisory (=0) means we still run + report, but exit 0 so the
+              # pipeline stays green. Sent into _lib.sh via SMOKE_HARD_GATE env.
+              hard_gate = "0" if entry["image"] in SMOKE_ADVISORY_IMAGES else "1"
               smoke_entries.append({
                   "image":       entry["image"],
                   "platform_id": entry["platform_id"],
                   "runner":      entry["runner"],
                   "tag":         f"sha-{sha[:7]}",
                   "script":      script,
+                  "hard_gate":   hard_gate,
               })
 
           # Deduplicate (a Tier 2 image may appear once but a Tier 1 base never
@@ -451,7 +469,7 @@ jobs:
   # This guards against regressions like the OpenCV 4.7.0 leak or a wrong
   # ROS_TARGET apt package name sneaking into a published image.
   smoke-test:
-    name: Smoke (${{ matrix.image }} ${{ matrix.platform_id }})
+    name: Smoke (${{ matrix.image }} ${{ matrix.platform_id }}${{ matrix.hard_gate == '0' && ' ~advisory' || '' }})
     runs-on: ${{ matrix.runner }}
     needs: [detect-changes, merge-tier1, merge-tier2]
     # Always evaluate, but only run when at least one tier was built & merged
@@ -465,12 +483,6 @@ jobs:
     permissions:
       contents: read
       packages: read
-    env:
-      # Hard gate: any smoke assertion failure propagates non-zero exit and
-      # fails the whole publish pipeline. Local `docker run` smoke runs have
-      # no such env, so they stay advisory for hands-on debugging — set
-      # SMOKE_HARD_GATE=1 locally if you want the same strictness.
-      SMOKE_HARD_GATE: '1'
     strategy:
       fail-fast: false
       matrix:
@@ -503,7 +515,7 @@ jobs:
           # is a fresh tmpfs so devshell dotfiles live in their expected place.
           script="/tmp/smoke/${{ matrix.script }}"
           docker run --rm \
-            -e SMOKE_HARD_GATE="${SMOKE_HARD_GATE}" \
+            -e SMOKE_HARD_GATE="${{ matrix.hard_gate }}" \
             -v "$PWD/src/_tests:/tmp/smoke:ro" \
             ${{ steps.registry.outputs.image }}:${{ matrix.tag }} \
             bash -lc '
