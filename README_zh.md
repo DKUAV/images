@@ -10,7 +10,7 @@ DKUAV 项目的 Docker 镜像管理仓库。镜像通过 GitHub Actions 自动�
 
 ```mermaid
 graph TD
-  C["nvcr.io/nvidia/pytorch:24.10-py3\n(已含 Python + PyTorch + CUDA)"] --> CB["ghcr.io/dkuav/luciole-cuda-base\n(system + pip + user)\namd64 + arm64"]
+  C["nvcr.io/nvidia/pytorch:26.06-py3\n(已含 Python + PyTorch + CUDA)"] --> CB["ghcr.io/dkuav/luciole-cuda-base\n(system + pip + user)\namd64 + arm64"]
 
   CB --> HCD["luciole-cuda-dev\n(ROS 2 + cmake + clang + devshell)\namd64 + arm64"]
   CB --> HCR["luciole-cuda-runtime\n(ROS 2 + cmake)\namd64 + arm64"]
@@ -22,7 +22,7 @@ graph TD
 
 | 镜像 | 基础 FROM | 架构 | 描述 |
 |------|-----------|------|------|
-| [`luciole-cuda-base`](src/luciole-cuda-base/) | `nvcr.io/nvidia/pytorch:24.10-py3` | amd64 + arm64 | PyTorch/CUDA + pip 包 + 用户 |
+| [`luciole-cuda-base`](src/luciole-cuda-base/) | `nvcr.io/nvidia/pytorch:26.06-py3` | amd64 + arm64 | PyTorch/CUDA + pip 包 + 用户 |
 
 ### 第二层 — 最终镜像
 

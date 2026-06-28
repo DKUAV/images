@@ -10,7 +10,7 @@ The repository uses a **two-tier image hierarchy** to maximise layer reuse acros
 
 ```mermaid
 graph TD
-  C["nvcr.io/nvidia/pytorch:24.10-py3\n(PyTorch + CUDA, Python built-in)"] --> CB["ghcr.io/dkuav/luciole-cuda-base\n(system + pip + user)\namd64 + arm64"]
+  C["nvcr.io/nvidia/pytorch:26.06-py3\n(PyTorch + CUDA, Python built-in)"] --> CB["ghcr.io/dkuav/luciole-cuda-base\n(system + pip + user)\namd64 + arm64"]
 
   CB --> HCD["luciole-cuda-dev\n(ROS 2 + cmake + clang + devshell)\namd64 + arm64"]
   CB --> HCR["luciole-cuda-runtime\n(ROS 2 + cmake)\namd64 + arm64"]
@@ -22,7 +22,7 @@ Published to GHCR; used as `FROM` in Tier 2 Dockerfiles.
 
 | Image | Base FROM | Arch | Description |
 |-------|-----------|------|-------------|
-| [`luciole-cuda-base`](src/luciole-cuda-base/) | `nvcr.io/nvidia/pytorch:24.10-py3` | amd64 + arm64 | PyTorch/CUDA + pip packages + user |
+| [`luciole-cuda-base`](src/luciole-cuda-base/) | `nvcr.io/nvidia/pytorch:26.06-py3` | amd64 + arm64 | PyTorch/CUDA + pip packages + user |
 
 ### Tier 2 — Final Images
 

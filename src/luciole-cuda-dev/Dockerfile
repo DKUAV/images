@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.4
 # Tier 2 final: CUDA/PyTorch dev environment with ROS2, devtools and full devshell
-# FROM: ghcr.io/dkuav/luciole-cuda-base (pytorch:24.10-py3 + system + pip + cmake + user)
+# FROM: ghcr.io/dkuav/luciole-cuda-base (pytorch:26.06-py3 + system + pip + cmake + user)
 
 ARG BASE_TAG=latest
 FROM ghcr.io/dkuav/luciole-cuda-base:${BASE_TAG}

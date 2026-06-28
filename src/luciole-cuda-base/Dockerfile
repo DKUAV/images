@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1.4
-# Tier 1 base: nvcr.io/nvidia/pytorch:24.10-py3 (already ships Python + PyTorch + CUDA)
+# Tier 1 base: nvcr.io/nvidia/pytorch:26.06-py3 (already ships Python + PyTorch + CUDA)
 #              + system tools + pip packages + cmake + user
 # Published as ghcr.io/dkuav/luciole-cuda-base
 
-FROM nvcr.io/nvidia/pytorch:24.10-py3
+FROM nvcr.io/nvidia/pytorch:26.06-py3
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG="en_US.UTF-8"
@@ -19,7 +19,7 @@ RUN chmod +x /tmp/scripts/*.sh
 RUN /tmp/scripts/system.sh
 # Replace NVIDIA's incomplete OpenCV 4.7.0 (no FFMPEG / GStreamer backends)
 # with apt's libopencv-dev 4.5.4 (full video I/O) and install clean python cv2.
-RUN /tmp/scripts/opencv.sh
+# RUN /tmp/scripts/opencv.sh
 RUN /tmp/scripts/dev-tools.sh
 RUN /tmp/scripts/wslg.sh
 # Skip python-install.sh: Python is already provided by the base image
@@ -36,7 +36,7 @@ RUN /tmp/scripts/user.sh
 
 RUN rm -rf /tmp/scripts
 
-# Work around an arm64-only NVIDIA NGC pytorch:24.10-py3 bug: HPC-X v2.20
+# Work around an arm64-only NVIDIA NGC pytorch:26.06-py3 bug: HPC-X v2.20
 # bundles UCC 1.4 against UCX 1.17, but UCC 1.4 references `ucs_config_doc_nop`
 # (a symbol added only in UCX 1.18+). On arm64 there is therefore NO libucs
 # anywhere on disk that can satisfy libucc — torch's `_C` dlopen fails with:
