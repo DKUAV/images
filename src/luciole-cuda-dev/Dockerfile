@@ -37,5 +37,11 @@ RUN rm -rf /tmp/scripts /tmp/assets
 # docs/ld-cache-notes.md for why this remains necessary on Tier 2 images.
 RUN ldconfig
 
+# Tell the inherited entrypoint to drop to the dev user on boot (and keep
+# sshd up). Override the inherited `CMD ["/bin/bash"]` so an interactive
+# `docker run -it` lands in zsh — the dev shell this image is built around.
+ENV APP_USER=${USERNAME}
 USER ${USERNAME}
+
 WORKDIR /home/${USERNAME}
+CMD ["/bin/zsh"]

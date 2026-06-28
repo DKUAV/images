@@ -23,6 +23,8 @@ ghcr.io/dkuav/luciole-cuda-base:latest
 | **Python** | 由基础镜像提供；构建期间追加 pip 包（uv、pytest 套件、FastAPI、pybind11、pandas、numpy、loguru 等）|
 | **OpenCV** | C++：apt `libopencv-dev` 4.5.4（启用 FFMPEG + GStreamer）。Python：pip `opencv-contrib-python`（自带静态 FFMPEG）。NVIDIA 基础镜像自带的 OpenCV 4.7.0 库被移至 `/usr/local/lib/nvidia-opencv-4.7.0.disabled/`，确保 C++ `find_package(OpenCV)` 解析到 apt 版。详见 [`docs/opencv-status_zh.md`](../../docs/opencv-status_zh.md) |
 | **构建工具** | CMake 4.3.2（二进制发行版）|
+| **网络库** | libdatachannel v0.24.5（WebRTC 数据通道）、rpclib v2.3.0（TCP RPC）、iceoryx v2.0.8（零拷贝共享内存传输）|
+| **SSH** | 预装 `openssh-server`（启用公钥认证 + root 登录）；sshd 由共享 entrypoint 在容器启动时拉起 |
 | **GUI** | WSLg 支持（dbus-x11、中日韩字体、Mesa、PulseAudio）|
 | **镜像加速** | 本 **基础镜像** 保持默认 Ubuntu / PyPI 源（构建期一并使用）。下游第二层最终镜像（`luciole-cuda-dev`、`luciole-cuda-runtime`）会在其构建的最后一步将持久化的源切换到阿里云。 |
 | **时区** | `Asia/Shanghai`（可通过 `TZ` 覆盖）|
@@ -41,9 +43,45 @@ ghcr.io/dkuav/luciole-cuda-base:latest
 |-----|--------|------|
 | `TZ` | `Asia/Shanghai` | 时区 |
 | `CMAKE_VERSION` | `4.3.2` | 安装的 CMake 版本 |
+| `LIBDATACHANNEL_VERSION` | `v0.24.5` | libdatachannel 发布 tag |
+| `RPCLIB_VERSION` | `v2.3.0` | rpclib 发布 tag |
+| `ICEORYX_VERSION` | `v2.0.8` | iceoryx 发布 tag |
 | `USERNAME` | `luciole` | 非 root 用户名 |
 | `USER_UID` | `1000` | 用户 UID |
 | `USER_GID` | `1000` | 用户 GID |
+
+## Entrypoint 与 SSH
+
+本家族所有镜像都继承由基础镜像在 `/usr/local/bin/docker-entrypoint.sh`
+安装的共享 entrypoint。容器启动时它会：
+
+1. **启动 sshd**（`service ssh start`）使容器立即可被 SSH 访问——host key
+   与 `sshd_config` 由 [`ssh.sh`](../_scripts/ssh.sh) 在构建期备好，但
+   `docker build` 层不能运行守护进程，真实的拉起必须在运行期发生。
+2. **降权**到 `$APP_USER`（缺省为空 → 保持 root）后用 `gosu` + `exec` 接管
+   用户命令，使信号（`SIGTERM` 等）正确传播，`docker stop` 能及时结束。
+
+基础镜像设 `APP_USER=""`，所以启动后为 **root**（base 是构建积木而非
+最终运行容器，默认用户故意是 root）。第二层最终镜像（`luciole-cuda-dev`、
+`luciole-cuda-runtime`）设置 `ENV APP_USER=luciole` 以着陆到开发账户。
+运行期可用 `-e APP_USER=…` 覆盖。
+
+### 通过 SSH 连接
+
+暴露端口后即可用 `luciole` / `root` 账户登录（默认口令 `123456`；更推荐
+把公钥写入 `~/.ssbold/authorized_keys`）：
+
+```bash
+docker run -d --gpus all -p 2222:22 ghcr.io/dkuav/luciole-cuda-dev:latest
+ssh -p 2222 luciole@localhost
+```
+
+| 配置项 | 值 |
+|--------|----|
+| Host key | 构建期由 `ssh-keygen -A` 生成（烘入镜像）|
+| 口令（root / luciole）| `123456`（运行期用 `chpasswd` 修改）|
+| `PubkeyAuthentication` | `yes` |
+| `PermitRootLogin` | `yes` |
 
 ## 快速开始
 

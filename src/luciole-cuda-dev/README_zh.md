@@ -23,6 +23,7 @@ ghcr.io/dkuav/luciole-cuda-dev:latest
 | **C++ 工具链** | LLVM 21 — `clang-format`、`clang-tidy`、`lldb` |
 | **开发 Shell** | zsh + oh-my-zsh + neovim + starship + nvm + bat + fzf + eza + zoxide 等 |
 | **Pre-commit** | pre-commit 及预缓存 hook 环境（ruff、trailing-whitespace 等）|
+| **SSH** | 继承自 base 的 `openssh-server`，由共享 entrypoint 在启动时拉起；连接映射的端口即可 |
 | **镜像加速** | 构建最后一步会将 apt 与 pip 源切换为阿里云，用户 pull 后在国内可快速 apt/pip 安装；构建期仍使用默认源。 |
 
 ## 默认用户
@@ -82,6 +83,27 @@ load_ros          # 执行 source /opt/ros/humble/setup.zsh
 ```
 
 如需每次打开 Shell 时自动加载，可将 `load_ros` 添加到 `~/.zshrc`。
+
+## Entrypoint、SSH 与 APP_USER
+
+本镜像继承自
+[`luciole-cuda-base`](../luciole-cuda-base/README_zh.md#entrypoint-与-ssh) 的
+共享 entrypoint。启动时会拉起 sshd，随后降权到 `APP_USER=luciole`，因此
+一条 `docker run -it` 会直接进入 `luciole` 用户的 zsh。可用
+`APP_USER`（例如 `-e APP_USER=root`）覆盖以保持 root。
+
+| 配置项 | 值 |
+|--------|----|
+| 启动后默认用户 | `luciole`（zsh）|
+| SSH 端口（镜像内）| `22`（`docker-compose.yml` 映射到宿主机 `2222`）|
+| 口令（root / luciole）| `123456` |
+
+通过 SSH 快速验证：
+
+```bash
+docker run -d --gpus all -p 2222:22 ghcr.io/dkuav/luciole-cuda-dev:latest
+ssh -p 2222 luciole@localhost
+```
 
 ## 注意事项
 

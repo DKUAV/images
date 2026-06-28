@@ -33,3 +33,6 @@ chmod 0440 /etc/sudoers.d/"${USERNAME_VAL}"
 mkdir -p /run/user/"${USER_UID_VAL}"
 chown "${USERNAME_VAL}":"${USERNAME_VAL}" /run/user/"${USER_UID_VAL}"
 chmod 0700 /run/user/"${USER_UID_VAL}"
+
+# set password for the user (default: 123456)
+echo "${USERNAME_VAL}:123456" | chpasswd

@@ -20,6 +20,7 @@ ghcr.io/dkuav/luciole-cuda-runtime:latest
 |----------|---------|
 | **Base** | [`ghcr.io/dkuav/luciole-cuda-base`](../luciole-cuda-base/README.md) (system tools, PyTorch/CUDA, pip packages, user) |
 | **ROS 2** | Humble `ros-base` (`ros-humble-ros-base`) + `colcon`, `rosdep`, `rosinstall-generator` |
+| **SSH** | `openssh-server` (inherited from base) launched at boot by the shared entrypoint |
 | **Mirrors** | As the final build step, apt + pip sources are flipped to Aliyun so Chinese users get fast installs after pulling. The build itself uses the default sources. |
 
 > **Not included**: clang/LLVM, devshell (zsh, neovim, oh-my-zsh, etc.)
@@ -69,6 +70,19 @@ ROS 2 is installed but **not sourced** automatically. Source it manually before 
 ```bash
 source /opt/ros/humble/setup.bash
 ```
+
+## Entrypoint, SSH & APP_USER
+
+This image inherits the shared entrypoint from
+[`luciole-cuda-base`](../luciole-cuda-base/README.md#entrypoint--ssh).
+On boot it starts sshd and then drops to `APP_USER=luciole`. Override
+`APP_USER` (e.g. `-e APP_USER=root`) to stay root.
+
+| Setting | Value |
+|---------|-------|
+| Default user on boot | `luciole` (bash) |
+| SSH port (in image) | `22` (`docker-compose.yml` maps it to host `2222`) |
+| Password (root / luciole) | `123456` |```
 
 ## Notes
 

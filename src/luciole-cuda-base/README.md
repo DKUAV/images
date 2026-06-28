@@ -23,6 +23,8 @@ ghcr.io/dkuav/luciole-cuda-base:latest
 | **Python** | Provided by base image; additional pip packages added during build (uv, pytest suite, FastAPI, pybind11, pandas, numpy, loguru, and more) |
 | **OpenCV** | C++: apt `libopencv-dev` 4.5.4 (FFMPEG + GStreamer). Python: pip `opencv-contrib-python` (bundles its own static FFMPEG). NVIDIA's incomplete OpenCV 4.7.0 from the base image is quarantined under `/usr/local/lib/nvidia-opencv-4.7.0.disabled/` so C++ `find_package(OpenCV)` resolves to the apt build. See [`docs/opencv-status.md`](../../docs/opencv-status.md) |
 | **Build tools** | CMake 4.3.2 (binary release) |
+| **Networking libs** | libdatachannel v0.24.5 (WebRTC data channels), rpclib v2.3.0 (TCP RPC), iceoryx v2.0.8 (zero-copy shared-memory transport) |
+| **SSH** | `openssh-server` pre-configured (pubkey + root login enabled); sshd launched at container runtime by the shared entrypoint |
 | **GUI** | WSLg support (dbus-x11, CJK fonts, Mesa, PulseAudio) |
 | **Mirrors** | This **base** image keeps the default Ubuntu / PyPI sources (build-time inclusively). The downstream Tier 2 finals (`luciole-cuda-dev`, `luciole-cuda-runtime`) flip the persisted sources to Aliyun as their final build step. |
 | **Timezone** | `Asia/Shanghai` (overridable via `TZ`) |
@@ -41,9 +43,47 @@ ghcr.io/dkuav/luciole-cuda-base:latest
 |-----|---------|-------------|
 | `TZ` | `Asia/Shanghai` | Timezone |
 | `CMAKE_VERSION` | `4.3.2` | CMake version to install |
+| `LIBDATACHANNEL_VERSION` | `v0.24.5` | libdatachannel release tag |
+| `RPCLIB_VERSION` | `v2.3.0` | rpclib release tag |
+| `ICEORYX_VERSION` | `v2.0.8` | iceoryx release tag |
 | `USERNAME` | `luciole` | Non-root user name |
 | `USER_UID` | `1000` | User UID |
 | `USER_GID` | `1000` | User GID |
+
+## Entrypoint & SSH
+
+All images in this family inherit a shared entrypoint installed by this base
+image at `/usr/local/bin/docker-entrypoint.sh`. On container start it:
+
+1. **starts sshd** (`service ssh start`) so the container is reachable via SSH
+   right away — host keys and `sshd_config` are baked in at build time by
+   [`ssh.sh`](../_scripts/ssh.sh), but a `docker build` layer cannot run a
+   daemon, so the actual launch must happen at runtime.
+2. **drops privileges** to `$APP_USER` (default unset → stays root) using
+   `gosu` and `exec`s the user command, so signals (`SIGTERM`, …) propagate
+   correctly and `docker stop` is prompt.
+
+The base image sets `APP_USER=""` so it boots as **root** (base is a build-stone,
+not an end-user container — its default user is intentionally root). The Tier 2
+finals (`luciole-cuda-dev`, `luciole-cuda-runtime`) set `ENV APP_USER=luciole` to
+land in the dev account. Override at runtime with `-e APP_USER=…`.
+
+### Connecting via SSH
+
+Expose the port and use the `luciole` / `root` accounts (password `123456`, or
+better, drop your public key into `~/.ssh/authorized_keys`):
+
+```bash
+docker run -d --gpus all -p 2222:22 ghcr.io/dkuav/luciole-cuda-dev:latest
+ssh -p 2222 luciole@localhost
+```
+
+| Setting | Value |
+|---------|-------|
+| Hostkey | generated at build time by `ssh-keygen -A` (baked into the image) |
+| Password (root / luciole) | `123456` (change at runtime by `chpasswd`) |
+| `PubkeyAuthentication` | `yes` |
+| `PermitRootLogin` | `yes` |
 
 ## Quick Start
 

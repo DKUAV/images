@@ -28,5 +28,7 @@ RUN rm -rf /tmp/scripts
 # why this remains necessary on Tier 2 images.
 RUN ldconfig
 
-USER ${USERNAME}
+# Tell the inherited entrypoint to drop to the runtime user on boot (and keep
+# sshd up). No trailing `USER` directive — dropping is the entrypoint's job.
+ENV APP_USER=${USERNAME}
 WORKDIR /home/${USERNAME}

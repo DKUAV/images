@@ -20,6 +20,7 @@ ghcr.io/dkuav/luciole-cuda-runtime:latest
 |------|------|
 | **基础镜像** | [`ghcr.io/dkuav/luciole-cuda-base`](../luciole-cuda-base/README_zh.md)（系统工具、PyTorch/CUDA、pip 包、用户）|
 | **ROS 2** | Humble `ros-base`（`ros-humble-ros-base`）+ `colcon`、`rosdep`、`rosinstall-generator` |
+| **SSH** | 继承自 base 的 `openssh-server`，由共享 entrypoint 在启动时拉起 |
 | **镜像加速** | 构建最后一步会将 apt 与 pip 源切换为阿里云，用户 pull 后在国内可快速 apt/pip 安装；构建期仍使用默认源。 |
 
 > **不包含**：clang/LLVM、devshell（zsh、neovim、oh-my-zsh 等）
@@ -69,6 +70,19 @@ ROS 2 已安装但**不会**自动加载到 Shell。使用前请手动加载：
 ```bash
 source /opt/ros/humble/setup.bash
 ```
+
+## Entrypoint、SSH 与 APP_USER
+
+本镜像继承自
+[`luciole-cuda-base`](../luciole-cuda-base/README_zh.md#entrypoint-与-ssh) 的
+共享 entrypoint。启动时会拉起 sshd，随后降权到 `APP_USER=luciole`。可用
+`APP_USER`（例如 `-e APP_USER=root`）覆盖以保持 root。
+
+| 配置项 | 值 |
+|--------|----|
+| 启动后默认用户 | `luciole`（bash）|
+| SSH 端口（镜像内）| `22`（`docker-compose.yml` 映射到宿主机 `2222`）|
+| 口令（root / luciole）| `123456` |
 
 ## 注意事项
 
