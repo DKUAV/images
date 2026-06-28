@@ -17,7 +17,7 @@ apt-get -y install dbus-x11
 apt-get -y install fonts-wqy-zenhei fonts-noto-cjk
 
 # --- OpenGL / Mesa (GL apps, rviz, etc.) ---
-apt-get -y install mesa-utils libgl1-mesa-glx
+apt-get -y install mesa-utils libgl1 libglx-mesa0
 
 # --- Audio (PulseAudio over WSLg) ---
 apt-get -y install pulseaudio
