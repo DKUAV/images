@@ -1,49 +1,35 @@
 #!/bin/bash
 # Container entrypoint shared by every Tier 2 final image (and inherited from
-# the Tier 1 base). Responsibilities, in order:
+# the Tier 1 base). Single responsibility: bring sshd up at runtime, then exec
+# the user-supplied command.
 #
-#   1. Bootstrap the SSH daemon (build-time `ssh.sh` only writes config/keys;
-#      a docker build layer can't actually run a long-lived service).
-#   2. Drop to the non-root application user (APP_USER) via `gosu` and `exec`
-#      the user-supplied command — so a plain `docker run -it <image>` lands in
-#      a non-root shell, while `docker run <image> bash -lc '...'` still runs
-#      as that user.
-#
-# APP_USER semantics:
-#   - empty / unset / "root"  → keep the root identity (the Tier 1 base's
-#     default, matching its "build-stone, not end-user container" contract).
-#   - any other existing user → drop to that account (`Tier 2` finals set
-#     `ENV APP_USER=luciole`). Override at runtime with `-e APP_USER=…`.
+# Privilege model: this entrypoint runs as whatever user the image declared via
+# its trailing `USER` directive.
+#   - Tier 1 base   → no `USER`, so it's root (base is a build-stone, and smoke
+#     tests invoke `bash -lc '...'` overriding CMD; entrypoint is exercised but
+#     irrelevant there).
+#   - Tier 2 finals → `USER <appuser>` (luciole). The entrypoint uses luciole's
+#     passwordless sudo (NOPASSWD:ALL from user.sh) to start sshd, then execs
+#     the user command AS luciole — no gosu needed since PID 1 is already luciole.
+#     Critically, this means overriding ENTRYPOINT with `docker run --entrypoint`
+#     STILL leaves the container running as luciole (root is opt-in via sudo).
 set -eo pipefail
 
-APP_USER="${APP_USER:-}"
+# Start sshd using sudo (this entrypoint runs as the non-root user thanks to
+# the image's `USER <appuser>` directive). luciole has NOPASSWD:ALL via
+# sudoers, so `sudo -n service ssh start` works without a password. Doing it
+# here (instead of relying on a root entrypoint + gosu) keeps the container's
+# default identity as the non-root user even if someone overrides ENTRYPOINT
+# with `docker run --entrypoint …` — i.e. privilege is the default, root is
+# opt-in via explicit sudo.
+#
+# Idempotent: `/run/sshd` is tmpfs (empty on every boot) so create it first;
+# `service ssh start` is a no-op if sshd is already up.
+sudo -n mkdir -p /run/sshd 2>/dev/null || true
+sudo -n service ssh start >/dev/null 2>&1 \
+    || echo "[entrypoint] WARN: 'sudo service ssh start' failed (already running?)" >&2
 
-# ─── 1. Start sshd (idempotent) ────────────────────────────────────────────
-# Create the privileged-separation dir sshd expects at runtime.
-mkdir -p /run/sshd
-
-# `service ssh start` works on Debian/Ubuntu without systemd (uses sysvinit
-# fallback). Re-running it is a no-op if sshd is already up.
-if command -v service >/dev/null 2>&1; then
-    service ssh start >/dev/null 2>&1 || \
-        echo "[entrypoint] WARN: 'service ssh start' failed (already running?)" >&2
-fi
-
-# ─── 2. Drop privileges & exec the user command ────────────────────────────
-# Pass through completely when:
-#   - APP_USER is empty or "root", OR
-#   - the target user doesn't exist (e.g. base image booted without user.sh)
-if [ -z "${APP_USER}" ] || [ "${APP_USER}" = "root" ] || \
-   ! id "${APP_USER}" >/dev/null 2>&1; then
-    exec "$@"
-fi
-
-# Drop privileges and replace the shell with the user command. `exec gosu`
-# ensures signals (SIGTERM, SIGINT) propagate to the final process so
-# `docker stop` works promptly.
-if command -v gosu >/dev/null 2>&1; then
-    exec gosu "${APP_USER}" "$@"
-else
-    # Fallback: runuser, present on every Debian/Ubuntu base.
-    exec runuser -u "${APP_USER}" -- "$@"
-fi
+# Privilege drop is NOT needed here — the image's `USER <appuser>` directive
+# already makes PID 1 run as the non-root user. Just exec the user command so
+# signals (SIGTERM, …) propagate directly (`docker stop` is prompt).
+exec "$@"

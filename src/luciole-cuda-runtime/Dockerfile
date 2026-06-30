@@ -28,7 +28,13 @@ RUN rm -rf /tmp/scripts
 # why this remains necessary on Tier 2 images.
 RUN ldconfig
 
-# Tell the inherited entrypoint to drop to the runtime user on boot (and keep
-# sshd up). No trailing `USER` directive — dropping is the entrypoint's job.
+# Tell the inherited entrypoint what user we are. NOTE: with the Docker-USER +
+# sudo-sshd design, the entrypoint no longer needs APP_USER itself; we keep the
+# ENV for documentation / tooling that introspects it.
 ENV APP_USER=${USERNAME}
+# Real `USER` directive below — this is the actual privilege gate. The
+# container boots as luciole; entrypoint uses luciole's passwordless sudo to
+# start sshd, then execs the user's command as luciole. Even if someone runs
+# `docker run --entrypoint bash <img>`, this USER keeps identity = luciole.
+USER ${USERNAME}
 WORKDIR /home/${USERNAME}

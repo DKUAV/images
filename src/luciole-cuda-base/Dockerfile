@@ -51,20 +51,21 @@ ARG USER_UID=1000
 ARG USER_GID=${USER_UID}
 RUN /tmp/scripts/user.sh
 
-# Install the shared entrypoint (starts sshd + drops to APP_USER).
-# gosu (used for the privilege drop here) is installed via dev-tools.sh.
-# Lives outside /tmp so it survives the cleanup below.
+# Install the shared entrypoint (used by every Tier 2 final too). The
+# entrypoint just starts sshd (via sudo) and execs the user command; it does
+# NOT take responsibility for privilege drop — that's the image's `USER`
+# directive's job (see dev/runtime Dockerfiles). Lives outside /tmp so it
+# survives the cleanup below.
 RUN install -D -m 0755 /tmp/assets/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 RUN rm -rf /tmp/scripts /tmp/assets
 
 ENV XDG_RUNTIME_DIR=/run/user/${USER_UID}
-# Base intentionally has NO trailing `USER`/`APP_USER` — its default user is
+# Base intentionally has NO trailing `USER` directive — its default user is
 # root (inherited from the NVIDIA base) because base is a build-stone for
-# Tier 2, not a runtime container for end users. Tier 2 finals set
-# ENV APP_USER=luciole so the entrypoint drops to the dev account on boot.
-# Explicitly clearing APP_USER here guarantees the inherited root-only contract
-# even if a future Tier 2 layer forgets to set it differently.
-ENV APP_USER=""
+# Tier 2, not a runtime container for end users. The Tier 2 finals add a
+# real `USER <appuser>` directive at their own end, so the entrypoint picks
+# up that identity on boot. (The entrypoint itself is privilege-agnostic: it
+# uses `sudo -n` to start sshd, which works whether PID 1 is root or a sudoer.)
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["/bin/bash"]
