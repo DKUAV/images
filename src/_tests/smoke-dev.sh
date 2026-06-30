@@ -18,7 +18,7 @@ dev_main() {
     assert_cmd_contains "non-root user 'luciole'" "luciole" id -un
     assert_cmd_contains "cmake runs" "cmake version" cmake --version
     assert_cmd_contains "ros2 CLI available" "ros2" \
-        bash -lc "source /opt/ros/humble/setup.bash && ros2 --help"
+        bash -lc "source /opt/ros/jazzy/setup.bash && ros2 --help"
 
     header "Devshell tools"
     # Core dev tools installed via apt (zsh/starship) or to /usr/local (nvim):

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Smoke test for ghcr.io/dkuav/luciole-cuda-runtime.
-# runtime = base + ROS 2 humble/ros-base + finalize-mirror.
+# runtime = base + ROS 2 jazzy/ros-base + finalize-mirror.
 #
 # Verifies:
 #   - everything base guarantees (sourced assertions)
@@ -18,18 +18,18 @@ runtime_main() {
     assert_cmd_contains "cmake runs" "cmake version" cmake --version
     assert_cmd_contains "non-root user 'luciole'" "luciole" id -un
 
-    header "ROS 2 Humble (ros-base)"
+    header "ROS 2 Jazzy (ros-base)"
     # /opt/ros/<distro>/setup.bash must exist before ROS binaries are on PATH.
-    if [ -f /opt/ros/humble/setup.bash ]; then
-        ok "/opt/ros/humble installed"
+    if [ -f /opt/ros/jazzy/setup.bash ]; then
+        ok "/opt/ros/jazzy installed"
     else
-        fail "/opt/ros/humble/setup.bash missing"
+        fail "/opt/ros/jazzy/setup.bash missing"
     fi
     # `ros2` is only on PATH after sourcing the setup, to avoid polluting the base shell.
     assert_cmd_contains "ros2 CLI version" "ros2" \
-        bash -lc "source /opt/ros/humble/setup.bash && ros2 --help"
+        bash -lc "source /opt/ros/jazzy/setup.bash && ros2 --help"
     assert_cmd "colcon present" \
-        bash -lc "source /opt/ros/humble/setup.bash && command -v colcon"
+        bash -lc "source /opt/ros/jazzy/setup.bash && command -v colcon"
 
     header "finalize-mirror applied (Tier-2 policy)"
     if [ -f /etc/pip.conf ] && grep -q aliyun /etc/pip.conf 2>/dev/null; then

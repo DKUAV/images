@@ -1,10 +1,10 @@
 #!/bin/bash
 # Developer shell setup: zsh, oh-my-zsh, neovim (NvChad), nvm, fzf, eza, starship, sheldon, zoxide.
 # Must run as the target non-root user (USER directive before this RUN in the Dockerfile).
-# Reads ROS_DISTRO (default: humble).
+# Reads ROS_DISTRO (default: jazzy).
 set -euo pipefail
 
-ROS_DISTRO_VAL=${ROS_DISTRO:-humble}
+ROS_DISTRO_VAL=${ROS_DISTRO:-jazzy}
 
 # ─── Init Apt ─────────────────────────────────────────────────────────────────
 

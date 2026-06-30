@@ -6,7 +6,7 @@
 > （`luciole-base`、`luciole-cuda-base`、`luciole-l4t-base`）。当前仓库仅
 > 发布 `luciole-cuda-base`（以及 `luciole-cuda-dev` / `luciole-cuda-runtime`，
 > 均为 amd64 + arm64）。下文中对 `luciole-base` / `luciole-l4t-base` /
-> `luciole-humble-cuda-dev:sha-bca2ba9` 的引用按原文保留，因为它们描述的是
+> `luciole-jazzy-cuda-dev:sha-bca2ba9` 的引用按原文保留，因为它们描述的是
 > 当时被调查的那份构建；关于 OpenCV 4.7.0 videoio 后端缺失的结论对今天的
 > `luciole-cuda-base` 仍然成立。
 >
@@ -33,12 +33,12 @@ Luciole `luciole-cuda-base` 镜像基于 `nvcr.io/nvidia/pytorch:24.10-py3`。
 
 ## 2. 容器内 OpenCV 安装现状
 
-运行 `ghcr.io/dkuav/luciole-humble-cuda-dev:sha-bca2ba9`（含一系列 OpenCV 修复尝试）后，
+运行 `ghcr.io/dkuav/luciole-jazzy-cuda-dev:sha-bca2ba9`（含一系列 OpenCV 修复尝试）后，
 容器内存在 3 个独立的 OpenCV 安装：
 
 | # | 安装路径 | 版本 | 来源 | FFMPEG | GStreamer | CUDA | cuDNN | 状态 |
 |---|---|---|---|:---:|:---:|:---:|:---:|---|
-| 1 | `/usr/lib/x86_64-linux-gnu/libopencv_*.so.4.5.4d` | 4.5.4 | Ubuntu Jammy apt（`ros-humble-desktop` 间接拉入） | ✅ 58.134.100 | ✅ 1.19.90 | ❌ | ❌ | ✅ 可解码视频 |
+| 1 | `/usr/lib/x86_64-linux-gnu/libopencv_*.so.4.5.4d` | 4.5.4 | Ubuntu Jammy apt（`ros-jazzy-desktop` 间接拉入） | ✅ 58.134.100 | ✅ 1.19.90 | ❌ | ❌ | ✅ 可解码视频 |
 | 2 | `/usr/local/lib/libopencv_*.so.4.7.0` | 4.7.0 | **NVIDIA `pytorch:24.10-py3` 基础镜像自带（自编译）** | ❌ | ❌ | ❌ | ❌ | ⚠️ videoio 缺后端 |
 | 3 | `/usr/local/lib/python3.10/dist-packages/cv2/cv2.abi3.so` | 4.11.0.86 | pip `opencv-contrib-python` wheel（自带全套静态依赖） | ✅ (内部 libavcodec 59) | ❌ | ❌ | ❌ | ✅ Python 可用 |
 
@@ -138,8 +138,8 @@ OpenCV 仅承担 CPU 侧的图像处理。
    - 最终镜像的 Dockerfile：`ARG ROS_TARGET=desktop` → `base`
      （当前仅 `luciole-cuda-dev` 与 `luciole-cuda-runtime` 两处）
 
-   修复后 Tier 2 镜像只安装 `ros-humble-base` 元包，依赖树
-   `apt-cache depends --recurse ros-humble-base` 中**完全不含 opencv**。
+   修复后 Tier 2 镜像只安装 `ros-jazzy-base` 元包，依赖树
+   `apt-cache depends --recurse ros-jazzy-base` 中**完全不含 opencv**。
 
 2. **以 apt 版替换 NVIDIA 自带 4.7.0（方案 A，已落地）**：
    - 新增 `src/_scripts/opencv.sh`，**仅由 `luciole-cuda-base` 一处**调用

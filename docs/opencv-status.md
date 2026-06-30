@@ -7,7 +7,7 @@
 > `luciole-l4t-base`). The current repository only ships
 > `luciole-cuda-base` (+ `luciole-cuda-dev` / `luciole-cuda-runtime`, both
 > amd64 + arm64). Historical references to `luciole-base` /
-> `luciole-l4t-base` / `luciole-humble-cuda-dev:sha-bca2ba9` below are
+> `luciole-l4t-base` / `luciole-jazzy-cuda-dev:sha-bca2ba9` below are
 > retained verbatim because they describe the build under investigation; the
 > OpenCV findings (4.7.0 with missing videoio back-ends) remain valid for
 > today's `luciole-cuda-base`.
@@ -42,12 +42,12 @@ follow-up fix decision.
 
 ## 2. Inventory of OpenCV installations in the container
 
-Running `ghcr.io/dkuav/luciole-humble-cuda-dev:sha-bca2ba9` (after a series of
+Running `ghcr.io/dkuav/luciole-jazzy-cuda-dev:sha-bca2ba9` (after a series of
 OpenCV fix attempts), the container shows three distinct OpenCV installations:
 
 | # | Path | Version | Source | FFMPEG | GStreamer | CUDA | cuDNN | Status |
 |---|---|---|---|:---:|:---:|:---:|:---:|---|
-| 1 | `/usr/lib/x86_64-linux-gnu/libopencv_*.so.4.5.4d` | 4.5.4 | Ubuntu Jammy apt (pulled in transitively by `ros-humble-desktop`) | ✅ 58.134.100 | ✅ 1.19.90 | ❌ | ❌ | ✅ Can decode video |
+| 1 | `/usr/lib/x86_64-linux-gnu/libopencv_*.so.4.5.4d` | 4.5.4 | Ubuntu Jammy apt (pulled in transitively by `ros-jazzy-desktop`) | ✅ 58.134.100 | ✅ 1.19.90 | ❌ | ❌ | ✅ Can decode video |
 | 2 | `/usr/local/lib/libopencv_*.so.4.7.0` | 4.7.0 | **Bundled in NVIDIA `pytorch:24.10-py3` base (self-built)** | ❌ | ❌ | ❌ | ❌ | ⚠️ videoio back-ends missing |
 | 3 | `/usr/local/lib/python3.10/dist-packages/cv2/cv2.abi3.so` | 4.11.0.86 | pip `opencv-contrib-python` wheel (ships its own static deps) | ✅ (internal libavcodec 59) | ❌ | ❌ | ❌ | ✅ Python usable |
 
@@ -155,9 +155,9 @@ OpenCV situation from a latent risk into a properly resolved state:
    - Final-image Dockerfiles: `ARG ROS_TARGET=desktop` → `base`
      (currently the two `luciole-cuda-dev` and `luciole-cuda-runtime` files)
 
-   After this change Tier 2 images only install the `ros-humble-base` meta-
+   After this change Tier 2 images only install the `ros-jazzy-base` meta-
    package; the dependency tree
-   (`apt-cache depends --recurse ros-humble-base`) **contains no opencv
+   (`apt-cache depends --recurse ros-jazzy-base`) **contains no opencv
    packages at all**.
 
 2. **Replace NVIDIA's bundled 4.7.0 with the apt build (Plan A, landed)**:
@@ -187,7 +187,7 @@ OpenCV situation from a latent risk into a properly resolved state:
 > target.
 >
 > Conversely, doing only step 2 while keeping `ROS_TARGET=desktop` could
-> revive apt 4.5.4 transitively through `ros-humble-desktop`, recreating a
+> revive apt 4.5.4 transitively through `ros-jazzy-desktop`, recreating a
 > multi-version state. The two fixes are intentionally interlocking.
 >
 > Fix #3 (pip wheel dedup) must ship in the same release as either of the

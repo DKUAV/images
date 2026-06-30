@@ -1,8 +1,8 @@
 #!/bin/bash
-# Install ROS2. Reads ROS_DISTRO (default: humble) and ROS_TARGET (default: ros-base).
+# Install ROS2. Reads ROS_DISTRO (default: jazzy) and ROS_TARGET (default: ros-base).
 set -euo pipefail
 
-ROS_DISTRO_VAL=${ROS_DISTRO:-humble}
+ROS_DISTRO_VAL=${ROS_DISTRO:-jazzy}
 ROS_TARGET_VAL=${ROS_TARGET:-ros-base}
 
 apt-get update

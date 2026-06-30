@@ -8,7 +8,7 @@ FROM ghcr.io/dkuav/luciole-cuda-base:${BASE_TAG}
 COPY src/_scripts/ /tmp/scripts/
 RUN chmod +x /tmp/scripts/*.sh
 
-ARG ROS_DISTRO=humble
+ARG ROS_DISTRO=jazzy
 ARG ROS_TARGET=ros-base
 RUN /tmp/scripts/ros2.sh
 

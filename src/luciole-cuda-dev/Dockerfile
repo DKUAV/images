@@ -9,7 +9,7 @@ COPY src/_scripts/ /tmp/scripts/
 COPY src/_assets/ /tmp/assets/
 RUN chmod +x /tmp/scripts/*.sh
 
-ARG ROS_DISTRO=humble
+ARG ROS_DISTRO=jazzy
 ARG ROS_TARGET=ros-base
 RUN /tmp/scripts/ros2.sh
 

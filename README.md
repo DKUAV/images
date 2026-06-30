@@ -28,8 +28,8 @@ Published to GHCR; used as `FROM` in Tier 2 Dockerfiles.
 
 | Image | Base | Arch | Includes |
 |-------|------|------|---------|
-| [`luciole-cuda-dev`](src/luciole-cuda-dev/README.md) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake (inherited from base) · clang · devshell |
-| [`luciole-cuda-runtime`](src/luciole-cuda-runtime/) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake (inherited from base) |
+| [`luciole-cuda-dev`](src/luciole-cuda-dev/README.md) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Jazzy · cmake (inherited from base) · clang · devshell |
+| [`luciole-cuda-runtime`](src/luciole-cuda-runtime/) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Jazzy · cmake (inherited from base) |
 
 **devshell** includes: zsh · oh-my-zsh · neovim (NvChad) · starship · nvm · bat · fzf · eza · zoxide · pre-commit (pre-cached hooks)
 

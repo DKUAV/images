@@ -1,6 +1,6 @@
 # luciole-cuda-dev
 
-包含 ROS 2 Humble、完整 C++ / Python 工具链及舒适交互式 Shell 的全功能 CUDA/PyTorch 开发容器。专为具有 NVIDIA GPU 的 amd64 工作站和 arm64（Jetson）板卡日常开发而设计。
+包含 ROS 2 Jazzy、完整 C++ / Python 工具链及舒适交互式 Shell 的全功能 CUDA/PyTorch 开发容器。专为具有 NVIDIA GPU 的 amd64 工作站和 arm64（Jetson）板卡日常开发而设计。
 
 > For English documentation, see [README.md](README.md)
 
@@ -19,7 +19,7 @@ ghcr.io/dkuav/luciole-cuda-dev:latest
 | 类别 | 详情 |
 |------|------|
 | **基础镜像** | [`ghcr.io/dkuav/luciole-cuda-base`](../luciole-cuda-base/README_zh.md)（系统工具、PyTorch/CUDA、pip 包、CMake、用户）|
-| **ROS 2** | Humble `ros-base`（`ros-humble-ros-base`）+ `colcon`、`rosdep`、`rosinstall-generator` |
+| **ROS 2** | Jazzy `ros-base`（`ros-jazzy-ros-base`）+ `colcon`、`rosdep`、`rosinstall-generator` |
 | **C++ 工具链** | LLVM 21 — `clang-format`、`clang-tidy`、`lldb` |
 | **开发 Shell** | zsh + oh-my-zsh + neovim + starship + nvm + bat + fzf + eza + zoxide 等 |
 | **Pre-commit** | pre-commit 及预缓存 hook 环境（ruff、trailing-whitespace 等）|
@@ -39,7 +39,7 @@ ghcr.io/dkuav/luciole-cuda-dev:latest
 
 | ARG | 默认值 | 说明 |
 |-----|--------|------|
-| `ROS_DISTRO` | `humble` | ROS 2 发行版 |
+| `ROS_DISTRO` | `jazzy` | ROS 2 发行版 |
 | `ROS_TARGET` | `ros-base` | ROS 2 安装目标（`desktop` / `ros-base`）|
 | `USERNAME` | `luciole` | 非 root 用户名 |
 
@@ -79,7 +79,7 @@ docker compose run --rm app
 ROS 2 已安装但**不会**自动加载到 Shell，以避免潜在冲突。可使用内置别名手动加载：
 
 ```bash
-load_ros          # 执行 source /opt/ros/humble/setup.zsh
+load_ros          # 执行 source /opt/ros/jazzy/setup.zsh
 ```
 
 如需每次打开 Shell 时自动加载，可将 `load_ros` 添加到 `~/.zshrc`。
