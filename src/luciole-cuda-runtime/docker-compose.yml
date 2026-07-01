@@ -4,7 +4,18 @@ services:
       context: ../..
       dockerfile: src/luciole-cuda-runtime/Dockerfile
     image: ghcr.io/dkuav/luciole-cuda-runtime:latest
-    user: luciole
 
+    # NOTE: the image's ENTRYPOINT starts sshd as root, then drops to the
+    # runtime user (APP_USER=luciole) via gosu. Do NOT set `user:` here —
+    # overriding it would prevent sshd from starting.
     stdin_open: true
     tty: true
+
+    ports:
+      # SSH exposed by the entrypoint; map to a host port so you can
+      # `ssh -p 2222 luciole@localhost` from the host.
+      - "2222:22"
+
+    environment:
+      # Drop to this user on entry; override (e.g. APP_USER=root) to stay root.
+      - APP_USER=luciole

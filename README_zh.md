@@ -10,7 +10,7 @@ DKUAV 项目的 Docker 镜像管理仓库。镜像通过 GitHub Actions 自动�
 
 ```mermaid
 graph TD
-  C["nvcr.io/nvidia/pytorch:24.10-py3\n(已含 Python + PyTorch + CUDA)"] --> CB["ghcr.io/dkuav/luciole-cuda-base\n(system + pip + user)\namd64 + arm64"]
+  C["nvcr.io/nvidia/pytorch:26.06-py3\n(已含 Python + PyTorch + CUDA)"] --> CB["ghcr.io/dkuav/luciole-cuda-base\n(system + pip + user)\namd64 + arm64"]
 
   CB --> HCD["luciole-cuda-dev\n(ROS 2 + cmake + clang + devshell)\namd64 + arm64"]
   CB --> HCR["luciole-cuda-runtime\n(ROS 2 + cmake)\namd64 + arm64"]
@@ -22,14 +22,14 @@ graph TD
 
 | 镜像 | 基础 FROM | 架构 | 描述 |
 |------|-----------|------|------|
-| [`luciole-cuda-base`](src/luciole-cuda-base/) | `nvcr.io/nvidia/pytorch:24.10-py3` | amd64 + arm64 | PyTorch/CUDA + pip 包 + 用户 |
+| [`luciole-cuda-base`](src/luciole-cuda-base/) | `nvcr.io/nvidia/pytorch:26.06-py3` | amd64 + arm64 | PyTorch/CUDA + pip 包 + 用户 |
 
 ### 第二层 — 最终镜像
 
 | 镜像 | 基础 | 架构 | 包含内容 |
 |------|------|------|---------|
-| [`luciole-cuda-dev`](src/luciole-cuda-dev/README_zh.md) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake（继承自 base）· clang · devshell |
-| [`luciole-cuda-runtime`](src/luciole-cuda-runtime/) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Humble · cmake（继承自 base） |
+| [`luciole-cuda-dev`](src/luciole-cuda-dev/README_zh.md) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Jazzy · cmake（继承自 base）· clang · devshell |
+| [`luciole-cuda-runtime`](src/luciole-cuda-runtime/) | `luciole-cuda-base` | amd64 + arm64 | ROS 2 Jazzy · cmake（继承自 base） |
 
 **devshell** 包含：zsh · oh-my-zsh · neovim（NvChad）· starship · nvm · bat · fzf · eza · zoxide · pre-commit（预缓存 hooks）
 

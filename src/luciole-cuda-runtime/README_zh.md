@@ -1,6 +1,6 @@
 # luciole-cuda-runtime
 
-包含 ROS 2 Humble 和 CMake 的轻量级 CUDA/PyTorch 运行时容器。不含交互式开发工具、devshell 或 C++ 工具链扩展。适用于具有 NVIDIA GPU 的 amd64 工作站和 arm64（Jetson）板卡上的部署及 CI 流水线。
+包含 ROS 2 Jazzy 和 CMake 的轻量级 CUDA/PyTorch 运行时容器。不含交互式开发工具、devshell 或 C++ 工具链扩展。适用于具有 NVIDIA GPU 的 amd64 工作站和 arm64（Jetson）板卡上的部署及 CI 流水线。
 
 > For English documentation, see [README.md](README.md)
 
@@ -19,7 +19,8 @@ ghcr.io/dkuav/luciole-cuda-runtime:latest
 | 类别 | 详情 |
 |------|------|
 | **基础镜像** | [`ghcr.io/dkuav/luciole-cuda-base`](../luciole-cuda-base/README_zh.md)（系统工具、PyTorch/CUDA、pip 包、用户）|
-| **ROS 2** | Humble `ros-base`（`ros-humble-ros-base`）+ `colcon`、`rosdep`、`rosinstall-generator` |
+| **ROS 2** | Jazzy `ros-base`（`ros-jazzy-ros-base`）+ `colcon`、`rosdep`、`rosinstall-generator` |
+| **SSH** | 继承自 base 的 `openssh-server`，由共享 entrypoint 在启动时拉起 |
 | **镜像加速** | 构建最后一步会将 apt 与 pip 源切换为阿里云，用户 pull 后在国内可快速 apt/pip 安装；构建期仍使用默认源。 |
 
 > **不包含**：clang/LLVM、devshell（zsh、neovim、oh-my-zsh 等）
@@ -36,7 +37,7 @@ ghcr.io/dkuav/luciole-cuda-runtime:latest
 
 | ARG | 默认值 | 说明 |
 |-----|--------|------|
-| `ROS_DISTRO` | `humble` | ROS 2 发行版 |
+| `ROS_DISTRO` | `jazzy` | ROS 2 发行版 |
 | `ROS_TARGET` | `ros-base` | ROS 2 安装目标（`desktop` / `ros-base`）|
 | `USERNAME` | `luciole` | 非 root 用户名 |
 
@@ -67,8 +68,21 @@ docker build -f src/luciole-cuda-runtime/Dockerfile -t luciole-cuda-runtime .
 ROS 2 已安装但**不会**自动加载到 Shell。使用前请手动加载：
 
 ```bash
-source /opt/ros/humble/setup.bash
+source /opt/ros/jazzy/setup.bash
 ```
+
+## Entrypoint、SSH 与 APP_USER
+
+本镜像继承自
+[`luciole-cuda-base`](../luciole-cuda-base/README_zh.md#entrypoint-与-ssh) 的
+共享 entrypoint。启动时会拉起 sshd，随后降权到 `APP_USER=luciole`。可用
+`APP_USER`（例如 `-e APP_USER=root`）覆盖以保持 root。
+
+| 配置项 | 值 |
+|--------|----|
+| 启动后默认用户 | `luciole`（bash）|
+| SSH 端口（镜像内）| `22`（`docker-compose.yml` 映射到宿主机 `2222`）|
+| 口令（root / luciole）| `123456` |
 
 ## 注意事项
 

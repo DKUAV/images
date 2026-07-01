@@ -4,10 +4,17 @@ services:
       context: ../..
       dockerfile: src/luciole-cuda-dev/Dockerfile
     image: ghcr.io/dkuav/luciole-cuda-dev:latest
-    user: luciole
 
+    # NOTE: the image's ENTRYPOINT starts sshd as root, then drops to the dev
+    # user (APP_USER=luciole) via gosu. Do NOT set `user:` here — overriding
+    # it would prevent sshd from starting.
     stdin_open: true
     tty: true
+
+    ports:
+      # SSH exposed by the entrypoint; map to a host port so you can
+      # `ssh -p 2222 luciole@localhost` from the host.
+      - "2222:22"
 
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
@@ -18,3 +25,5 @@ services:
       - WAYLAND_DISPLAY=${WAYLAND_DISPLAY}
       - XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}
       - PULSE_SERVER=${PULSE_SERVER}
+      # Drop to this user on entry; override (e.g. APP_USER=root) to stay root.
+      - APP_USER=luciole

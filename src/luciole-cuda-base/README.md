@@ -18,11 +18,13 @@ ghcr.io/dkuav/luciole-cuda-base:latest
 
 | Category | Details |
 |----------|---------|
-| **Base** | `nvcr.io/nvidia/pytorch:24.10-py3` (Python + PyTorch + CUDA pre-installed) |
+| **Base** | `nvcr.io/nvidia/pytorch:26.06-py3` (Python + PyTorch + CUDA pre-installed) |
 | **System tools** | wget, vim, git, git-lfs, curl, zip/unzip, tmux, screen, htop, tree, parallel, rsync, build-essential, ninja-build, GDB, libssl, iputils, libgflags, libgoogle-glog, GTest / GMock |
 | **Python** | Provided by base image; additional pip packages added during build (uv, pytest suite, FastAPI, pybind11, pandas, numpy, loguru, and more) |
 | **OpenCV** | C++: apt `libopencv-dev` 4.5.4 (FFMPEG + GStreamer). Python: pip `opencv-contrib-python` (bundles its own static FFMPEG). NVIDIA's incomplete OpenCV 4.7.0 from the base image is quarantined under `/usr/local/lib/nvidia-opencv-4.7.0.disabled/` so C++ `find_package(OpenCV)` resolves to the apt build. See [`docs/opencv-status.md`](../../docs/opencv-status.md) |
 | **Build tools** | CMake 4.3.2 (binary release) |
+| **Networking libs** | libdatachannel v0.24.5 (WebRTC data channels), rpclib v2.3.0 (TCP RPC), iceoryx v2.0.8 (zero-copy shared-memory transport) |
+| **SSH** | `openssh-server` pre-configured (pubkey + root login enabled); sshd launched at container runtime by the shared entrypoint |
 | **GUI** | WSLg support (dbus-x11, CJK fonts, Mesa, PulseAudio) |
 | **Mirrors** | This **base** image keeps the default Ubuntu / PyPI sources (build-time inclusively). The downstream Tier 2 finals (`luciole-cuda-dev`, `luciole-cuda-runtime`) flip the persisted sources to Aliyun as their final build step. |
 | **Timezone** | `Asia/Shanghai` (overridable via `TZ`) |
@@ -41,9 +43,47 @@ ghcr.io/dkuav/luciole-cuda-base:latest
 |-----|---------|-------------|
 | `TZ` | `Asia/Shanghai` | Timezone |
 | `CMAKE_VERSION` | `4.3.2` | CMake version to install |
+| `LIBDATACHANNEL_VERSION` | `v0.24.5` | libdatachannel release tag |
+| `RPCLIB_VERSION` | `v2.3.0` | rpclib release tag |
+| `ICEORYX_VERSION` | `v2.0.8` | iceoryx release tag |
 | `USERNAME` | `luciole` | Non-root user name |
 | `USER_UID` | `1000` | User UID |
 | `USER_GID` | `1000` | User GID |
+
+## Entrypoint & SSH
+
+All images in this family inherit a shared entrypoint installed by this base
+image at `/usr/local/bin/docker-entrypoint.sh`. On container start it:
+
+1. **starts sshd** (`service ssh start`) so the container is reachable via SSH
+   right away — host keys and `sshd_config` are baked in at build time by
+   [`ssh.sh`](../_scripts/ssh.sh), but a `docker build` layer cannot run a
+   daemon, so the actual launch must happen at runtime.
+2. **drops privileges** to `$APP_USER` (default unset → stays root) using
+   `gosu` and `exec`s the user command, so signals (`SIGTERM`, …) propagate
+   correctly and `docker stop` is prompt.
+
+The base image sets `APP_USER=""` so it boots as **root** (base is a build-stone,
+not an end-user container — its default user is intentionally root). The Tier 2
+finals (`luciole-cuda-dev`, `luciole-cuda-runtime`) set `ENV APP_USER=luciole` to
+land in the dev account. Override at runtime with `-e APP_USER=…`.
+
+### Connecting via SSH
+
+Expose the port and use the `luciole` / `root` accounts (password `123456`, or
+better, drop your public key into `~/.ssh/authorized_keys`):
+
+```bash
+docker run -d --gpus all -p 2222:22 ghcr.io/dkuav/luciole-cuda-dev:latest
+ssh -p 2222 luciole@localhost
+```
+
+| Setting | Value |
+|---------|-------|
+| Hostkey | generated at build time by `ssh-keygen -A` (baked into the image) |
+| Password (root / luciole) | `123456` (change at runtime by `chpasswd`) |
+| `PubkeyAuthentication` | `yes` |
+| `PermitRootLogin` | `yes` |
 
 ## Quick Start
 
@@ -68,9 +108,9 @@ docker build -f src/luciole-cuda-base/Dockerfile -t luciole-cuda-base .
 ## Notes
 
 - This is a **Tier 1 base image**. Published to GHCR and used as `FROM ghcr.io/dkuav/luciole-cuda-base:latest` in [`luciole-cuda-dev`](../luciole-cuda-dev/README.md) and [`luciole-cuda-runtime`](../luciole-cuda-runtime/README.md).
-- Python installation is skipped (`python-install.sh`) because `pytorch:24.10-py3` already ships Python.
+- Python installation is skipped (`python-install.sh`) because `pytorch:26.06-py3` already ships Python.
 - CMake is pre-installed here so both Tier 2 images share one source of truth for the build-tool version.
 - No ROS 2, clang, or devshell — those are added in the Tier 2 final images.
-- **OpenCV replacement**: NVIDIA's `pytorch:24.10-py3` ships a custom-built OpenCV 4.7.0 under `/usr/local/lib` with all video decoders (FFMPEG, GStreamer) disabled. `opencv.sh` quarantines it and installs apt's `libopencv-dev` 4.5.4 with full backends for C++ (`find_package(OpenCV)`). Python `import cv2` keeps using the pip `opencv-contrib-python` wheel, which bundles its own FFMPEG and is independent of the C++ OpenCV. See [`docs/opencv-status.md`](../../docs/opencv-status.md) for the full analysis.
-- **ld.so.cache registration / HPC-X symbol fixup**: NVIDIA's NGC pytorch:24.10-py3 (arm64) ships HPC-X v2.20 with UCX 1.17 + UCC 1.4 — but UCC 1.4 references `ucs_config_doc_nop`, a symbol only present in UCX 1.18+. As a result `import torch` fails on arm64 base with `undefined symbol: ucs_config_doc_nop` whenever the dynamic linker finds HPC-X's libucc via `hpcx.conf`. The Dockerfile's final step strips `/opt/hpcx/{ucc,ucx}/lib` from `hpcx.conf`, registers the remaining vendor `.so` trees into `/etc/ld.so.conf.d/zz-ngc-extra.conf`, and runs `ldconfig`. See [`docs/ld-cache-notes.md`](../../docs/ld-cache-notes.md) for the full diagnosis.
+- **OpenCV replacement**: NVIDIA's `pytorch:26.06-py3` ships a custom-built OpenCV 4.7.0 under `/usr/local/lib` with all video decoders (FFMPEG, GStreamer) disabled. `opencv.sh` quarantines it and installs apt's `libopencv-dev` 4.5.4 with full backends for C++ (`find_package(OpenCV)`). Python `import cv2` keeps using the pip `opencv-contrib-python` wheel, which bundles its own FFMPEG and is independent of the C++ OpenCV. See [`docs/opencv-status.md`](../../docs/opencv-status.md) for the full analysis.
+- **ld.so.cache registration / HPC-X symbol fixup**: NVIDIA's NGC pytorch:26.06-py3 (arm64) ships HPC-X v2.20 with UCX 1.17 + UCC 1.4 — but UCC 1.4 references `ucs_config_doc_nop`, a symbol only present in UCX 1.18+. As a result `import torch` fails on arm64 base with `undefined symbol: ucs_config_doc_nop` whenever the dynamic linker finds HPC-X's libucc via `hpcx.conf`. The Dockerfile's final step strips `/opt/hpcx/{ucc,ucx}/lib` from `hpcx.conf`, registers the remaining vendor `.so` trees into `/etc/ld.so.conf.d/zz-ngc-extra.conf`, and runs `ldconfig`. See [`docs/ld-cache-notes.md`](../../docs/ld-cache-notes.md) for the full diagnosis.
 - If the requested UID/GID is already occupied in the base image, the old user is removed automatically.

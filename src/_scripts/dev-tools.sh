@@ -19,6 +19,12 @@ apt-get -y install build-essential ninja-build gdb systemd-coredump \
     cmake parallel libssl-dev \
     libgflags-dev libgoogle-glog-dev libgtest-dev libgmock-dev
 
+# --- SSH / OpenSSL / privilege drop ---
+# openssh-server  → remote shell access (sshd launched at runtime by the entrypoint)
+# gosu            → clean, signal-friendly privilege drop in the entrypoint
+#                   (preferred over `su`; ships natively via apt on amd64+arm64)
+apt-get -y install --no-install-recommends openssl openssh-server gosu
+
 # --- Networking / fs ---
 apt-get -y install iputils-ping nfs-common acl landscape-common
 

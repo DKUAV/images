@@ -39,7 +39,7 @@ Numbered shell scripts that encapsulate all reusable installation logic:
 | `system.sh` | Apt upgrade, timezone, locale — minimal system bootstrap | All base images |
 | `dev-tools.sh` | Developer CLI toolset (editors, VCS, build, debug, ffmpeg) — run right after `system.sh` | All base images |
 | `wslg.sh` | GUI / WSLg deps (D-Bus, CJK fonts, Mesa, PulseAudio) — run after `dev-tools.sh` | All base images |
-| `python-install.sh` | Python 3.10 from apt + pip bootstrap | Currently unused (pytorch:24.10-py3 already ships Python); kept for future CPU-only bases |
+| `python-install.sh` | Python 3.10 from apt + pip bootstrap | Currently unused (pytorch:26.06-py3 already ships Python); kept for future CPU-only bases |
 | `pip-packages.sh` | pip packages, uv | All base images |
 | `opencv.sh` | Replace NVIDIA's incomplete OpenCV 4.7.0 (no FFMPEG / GStreamer) with apt's `libopencv-dev` 4.5.4; quarantine the original under `/usr/local/lib/nvidia-opencv-4.7.0.disabled/` | `luciole-cuda-base` |
 | `ros2.sh` | ROS 2 (reads `$ROS_DISTRO`, `$ROS_TARGET`) | All final images |
@@ -58,7 +58,7 @@ Each Dockerfile does `COPY src/_scripts/ /tmp/scripts/ && chmod +x /tmp/scripts/
 
 | Directory | Base FROM | Description |
 |-----------|-----------|-------------|
-| `src/luciole-cuda-base` | `nvcr.io/nvidia/pytorch:24.10-py3` | PyTorch/CUDA + pip packages + user (amd64, arm64) |
+| `src/luciole-cuda-base` | `nvcr.io/nvidia/pytorch:26.06-py3` | PyTorch/CUDA + pip packages + user (amd64, arm64) |
 
 ### Tier 2 — Final Images (depend on Tier 1 base images)
 
