@@ -186,11 +186,10 @@ echo y | $HOME/.local/bin/sheldon init --shell zsh
 $HOME/.local/bin/sheldon add omz-lib \
     --github ohmyzsh/ohmyzsh \
     --dir lib \
-    --use history.zsh key-bindings.zsh clipboard.zsh completion.zsh directories.zsh
+    --use history.zsh key-bindings.zsh clipboard.zsh completion.zsh directories.zsh git.zsh
 $HOME/.local/bin/sheldon add omz-git \
     --github ohmyzsh/ohmyzsh \
     --dir plugins/git \
-    --use git.plugin.zsh
 $HOME/.local/bin/sheldon add zsh-autosuggestions \
     --github zsh-users/zsh-autosuggestions
 $HOME/.local/bin/sheldon add zsh-completions \
