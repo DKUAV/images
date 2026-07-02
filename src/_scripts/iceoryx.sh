@@ -16,7 +16,7 @@ cd iceoryx
 git checkout ${ICEORYX_VERSION_VAL}
 cmake -Bbuild -Hiceoryx_meta
 
-cmake --build build
+cmake --build build -j"$(nproc)"
 cmake --build build --target install
 
 rm -rf /var/lib/apt/lists/*

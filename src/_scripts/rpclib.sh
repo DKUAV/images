@@ -11,6 +11,11 @@ git clone https://github.com/rpclib/rpclib.git
 cd rpclib
 git checkout ${RPCLIB_VERSION_VAL}
 git submodule update --init --recursive --depth 1
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DRPCLIB_CXX_STANDARD=14
-cmake --build build
+
+cmake -B build \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+  -DRPCLIB_CXX_STANDARD=14
+
+cmake --build build -j"$(nproc)"
 cmake --install build
