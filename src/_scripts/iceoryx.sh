@@ -10,13 +10,14 @@ apt-get update
 apt-get -y upgrade
 apt-get install -y libacl1-dev libncurses5-dev
 
-git clone https://github.com/eclipse-iceoryx/iceoryx.git
+cd /tmp
+
+git clone --depth 1 --branch ${ICEORYX_VERSION_VAL} https://github.com/eclipse-iceoryx/iceoryx.git
 
 cd iceoryx
-git checkout ${ICEORYX_VERSION_VAL}
-cmake -Bbuild -Hiceoryx_meta
 
+cmake -B build -S iceoryx_meta -DBUILD_SHARED_LIBS=ON
 cmake --build build -j"$(nproc)"
-cmake --build build --target install
+sudo cmake --build build --target install
 
 rm -rf /var/lib/apt/lists/*

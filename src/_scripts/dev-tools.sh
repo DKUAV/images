@@ -40,4 +40,7 @@ ln -sf "$(which batcat)" /usr/local/bin/bat
 # --- Media (lightweight CLI utility; commonly used inside dev shells) ---
 apt-get -y install ffmpeg
 
+# --- OpenCV (for computer vision / image processing) ---
+apt-get -y install libopencv-dev
+
 rm -rf /var/lib/apt/lists/*

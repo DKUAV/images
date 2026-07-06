@@ -6,10 +6,11 @@ set -euo pipefail
 
 RPCLIB_VERSION_VAL=${RPCLIB_VERSION:-v2.3.0}
 
+cd /tmp
 
-git clone https://github.com/rpclib/rpclib.git
+git clone --depth 1 --branch ${RPCLIB_VERSION_VAL} https://github.com/rpclib/rpclib.git
 cd rpclib
-git checkout ${RPCLIB_VERSION_VAL}
+
 git submodule update --init --recursive --depth 1
 
 cmake -B build \

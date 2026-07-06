@@ -210,6 +210,7 @@ curl -fsSL https://raw.githubusercontent.com/pranshuparmar/witr/main/install.sh 
 # ─── Atuin ────────────────────────────────────────────────────────────────────
 
 curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh -s -- --non-interactive
+sed -i 's/eval "$(atuin init zsh)"/eval "$(atuin init zsh --disable-up-arrow)"/' "$HOME/.zshrc"
 
 # ─── Apt Cache Clean ──────────────────────────────────────────────────────────
 
