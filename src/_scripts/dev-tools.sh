@@ -14,6 +14,12 @@ apt-get update
 apt-get -y install vim git curl zip unzip trash-cli git-lfs rsync tree \
     tmux screen cloc man htop ripgrep sudo
 
+# Pin the alternatives `editor` to vim: sudo's env_reset drops EDITOR/VISUAL,
+# and sensible-editor then falls back to /usr/bin/editor.
+if [ -x /usr/bin/vim.basic ]; then
+    update-alternatives --set editor /usr/bin/vim.basic
+fi
+
 # --- Build / debug ---
 apt-get -y install build-essential ninja-build gdb systemd-coredump \
     cmake parallel libssl-dev \

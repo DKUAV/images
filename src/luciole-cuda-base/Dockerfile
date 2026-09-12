@@ -11,6 +11,11 @@ ENV LANGUAGE="en_US:en"
 ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/lib"
 ENV QT_X11_NO_MITSHM=1
 
+# Default editor — set in base so both Tier 2 finals inherit it; the
+# update-alternatives pin in dev-tools.sh covers sudo env_reset contexts.
+ENV EDITOR=vim
+ENV VISUAL=vim
+
 ARG TZ=Asia/Shanghai
 
 COPY src/_scripts/ /tmp/scripts/
