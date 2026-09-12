@@ -42,6 +42,11 @@ base_main() {
     assert_cmd "fd symlink present"  fd --version
     assert_cmd "bat symlink present" bat --version
 
+    header "Default editor"
+    assert_cmd_contains "EDITOR defaults to vim" "vim" printenv EDITOR
+    assert_cmd_contains "VISUAL defaults to vim" "vim" printenv VISUAL
+    assert_cmd_contains "editor alternative is vim" "vim" readlink -f /usr/bin/editor
+
     header "CMake binary (installed in base)"
     assert_cmd_contains "cmake runs" "cmake version" cmake --version
 
