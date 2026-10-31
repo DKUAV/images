@@ -1,0 +1,34 @@
+schema_version: 1
+name: luciole-cuda-base
+description: Shared NVIDIA PyTorch/CUDA base with tools, libraries and user account.
+dockerfile: src/luciole-cuda-base/Dockerfile
+context: .
+platforms: [linux/amd64, linux/arm64]
+base:
+  image: nvcr.io/nvidia/pytorch:26.06-py3
+  digest: null
+build_args:
+  TZ: Asia/Shanghai
+  CMAKE_VERSION: 4.3.2
+  LIBDATACHANNEL_VERSION: v0.24.5
+  RPCLIB_VERSION: v2.3.0
+  ICEORYX_VERSION: v2.0.8
+  USERNAME: luciole
+  USER_UID: 1000
+  USER_GID: 1000
+inputs:
+  - src/_scripts/system.sh
+  - src/_scripts/dev-tools.sh
+  - src/_scripts/wslg.sh
+  - src/_scripts/pip-packages.sh
+  - src/_scripts/cmake.sh
+  - src/_scripts/libdatachannel.sh
+  - src/_scripts/rpclib.sh
+  - src/_scripts/iceoryx.sh
+  - src/_scripts/ssh.sh
+  - src/_scripts/user.sh
+  - src/_assets/docker-entrypoint.sh
+smoke:
+  script: src/_tests/smoke-base.sh
+  inputs: [src/_tests/_lib.sh]
+  policy: advisory

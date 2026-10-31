@@ -3,7 +3,8 @@
 #              + system tools + pip packages + cmake + user
 # Published as ghcr.io/dkuav/luciole-cuda-base
 
-FROM nvcr.io/nvidia/pytorch:26.06-py3
+ARG BASE_IMAGE=nvcr.io/nvidia/pytorch:26.06-py3
+FROM ${BASE_IMAGE}
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG="en_US.UTF-8"
@@ -18,42 +19,46 @@ ENV VISUAL=vim
 
 ARG TZ=Asia/Shanghai
 
-COPY src/_scripts/ /tmp/scripts/
-COPY src/_assets/ /tmp/assets/
-RUN chmod +x /tmp/scripts/*.sh /tmp/assets/*.sh
-
+COPY --chmod=0755 src/_scripts/system.sh /tmp/scripts/system.sh
 RUN /tmp/scripts/system.sh
-# Replace NVIDIA's incomplete OpenCV 4.7.0 (no FFMPEG / GStreamer backends)
-# with apt's libopencv-dev 4.5.4 (full video I/O) and install clean python cv2.
-# RUN /tmp/scripts/opencv.sh
+# OpenCV replacement remains disabled; dev-tools installs apt libopencv-dev.
+COPY --chmod=0755 src/_scripts/dev-tools.sh /tmp/scripts/dev-tools.sh
 RUN /tmp/scripts/dev-tools.sh
+COPY --chmod=0755 src/_scripts/wslg.sh /tmp/scripts/wslg.sh
 RUN /tmp/scripts/wslg.sh
 # Skip python-install.sh: Python is already provided by the base image
+COPY --chmod=0755 src/_scripts/pip-packages.sh /tmp/scripts/pip-packages.sh
 RUN /tmp/scripts/pip-packages.sh
 
 # CMake binary release — shared by both Tier 2 dev and runtime images
 ARG CMAKE_VERSION=4.3.2
+COPY --chmod=0755 src/_scripts/cmake.sh /tmp/scripts/cmake.sh
 RUN /tmp/scripts/cmake.sh
 
 # libdatachannel for WebRTC data channels
 ARG LIBDATACHANNEL_VERSION=v0.24.5
+COPY --chmod=0755 src/_scripts/libdatachannel.sh /tmp/scripts/libdatachannel.sh
 RUN /tmp/scripts/libdatachannel.sh
 
 # rpclib for RPC over AirSim
 ARG RPCLIB_VERSION=v2.3.0
+COPY --chmod=0755 src/_scripts/rpclib.sh /tmp/scripts/rpclib.sh
 RUN /tmp/scripts/rpclib.sh
 
 # iceoryx for shared memory transport
 ARG ICEORYX_VERSION=v2.0.8
+COPY --chmod=0755 src/_scripts/iceoryx.sh /tmp/scripts/iceoryx.sh
 RUN /tmp/scripts/iceoryx.sh
 
 # SSH server for remote access (build-time config only; sshd is started at
 # runtime by docker-entrypoint.sh).
-RUN /tmp/scripts/ssh.sh
-
 ARG USERNAME=luciole
 ARG USER_UID=1000
 ARG USER_GID=${USER_UID}
+COPY --chmod=0755 src/_scripts/ssh.sh /tmp/scripts/ssh.sh
+RUN /tmp/scripts/ssh.sh
+
+COPY --chmod=0755 src/_scripts/user.sh /tmp/scripts/user.sh
 RUN /tmp/scripts/user.sh
 
 # Install the shared entrypoint (used by every Tier 2 final too). The
@@ -61,9 +66,9 @@ RUN /tmp/scripts/user.sh
 # NOT take responsibility for privilege drop — that's the image's `USER`
 # directive's job (see dev/runtime Dockerfiles). Lives outside /tmp so it
 # survives the cleanup below.
-RUN install -D -m 0755 /tmp/assets/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY --chmod=0755 src/_assets/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
-RUN rm -rf /tmp/scripts /tmp/assets
+RUN rm -rf /tmp/scripts
 
 ENV XDG_RUNTIME_DIR=/run/user/${USER_UID}
 # Base intentionally has NO trailing `USER` directive — its default user is

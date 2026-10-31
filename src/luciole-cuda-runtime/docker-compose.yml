@@ -5,9 +5,8 @@ services:
       dockerfile: src/luciole-cuda-runtime/Dockerfile
     image: ghcr.io/dkuav/luciole-cuda-runtime:latest
 
-    # NOTE: the image's ENTRYPOINT starts sshd as root, then drops to the
-    # runtime user (APP_USER=luciole) via gosu. Do NOT set `user:` here —
-    # overriding it would prevent sshd from starting.
+    # Dockerfile USER selects luciole; the entrypoint starts sshd through sudo.
+    # APP_USER is descriptive metadata and does not change the runtime identity.
     stdin_open: true
     tty: true
 
@@ -17,5 +16,5 @@ services:
       - "2222:22"
 
     environment:
-      # Drop to this user on entry; override (e.g. APP_USER=root) to stay root.
+      # Descriptive metadata; use docker's --user to select another identity.
       - APP_USER=luciole

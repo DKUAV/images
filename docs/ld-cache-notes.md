@@ -1,5 +1,7 @@
 # ld.so.cache Notes — CUDA / PyTorch / HPC-X dlopen errors
 
+> **Historical diagnostic record:** The original analysis below describes specific past builds, not verified versions or fixes in current images. Current behavior is defined by Dockerfiles, image.yml and actual smoke results. OpenCV replacement is currently disabled and base has no HPC-X fixup step. See [build-architecture.md](build-architecture.md) for the current build architecture.
+
 > Status: **landed in PR #24** · Owner: DKUAV Images
 >
 > 📌 Records the root cause, the asymmetric behaviour across arches, and the

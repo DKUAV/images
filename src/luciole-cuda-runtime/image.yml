@@ -1,0 +1,19 @@
+schema_version: 1
+name: luciole-cuda-runtime
+description: CUDA runtime image with ROS 2 and inherited build tools.
+dockerfile: src/luciole-cuda-runtime/Dockerfile
+context: .
+platforms: [linux/amd64, linux/arm64]
+base:
+  dependency: luciole-cuda-base
+build_args:
+  ROS_DISTRO: jazzy
+  ROS_TARGET: ros-base
+  USERNAME: luciole
+inputs:
+  - src/_scripts/ros2.sh
+  - src/_scripts/finalize-mirror.sh
+smoke:
+  script: src/_tests/smoke-runtime.sh
+  inputs: [src/_tests/_lib.sh]
+  policy: required

@@ -1,5 +1,7 @@
 # OpenCV Status & Self-Built Version Analysis
 
+> **Historical diagnostic record:** The original analysis below describes specific past builds, not verified versions or fixes in current images. Current behavior is defined by Dockerfiles, image.yml and actual smoke results. OpenCV replacement is currently disabled and base has no HPC-X fixup step. See [build-architecture.md](build-architecture.md) for the current build architecture.
+
 > Status: **Plan A landed** · Branch: `xrc/fix_opencv` · Owner: DKUAV Images
 >
 > 📌 **Architecture note**: This analysis was written when the repository

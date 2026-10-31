@@ -1,5 +1,7 @@
 # ld.so.cache 备忘录 — CUDA / PyTorch / HPC-X 的 dlopen 报错
 
+> **历史诊断记录**：下文保留特定旧构建的原始分析，不代表当前镜像已具备相同版本或修复。当前行为以 Dockerfile、image.yml 和实际烟测为准；OpenCV 替换当前未启用，base 没有 HPC-X 修复步骤。当前架构见 [build-architecture_zh.md](build-architecture_zh.md)。
+
 > 状态：**已在 PR #24 落地** · 所有者：DKUAV Images
 >
 > 📌 记录根因、跨架构的不对称表现，以及在 amd64 与 arm64 下让 `import torch`

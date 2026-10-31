@@ -1,5 +1,7 @@
 # OpenCV 现状与自编译版本问题分析
 
+> **历史诊断记录**：下文保留特定旧构建的原始分析，不代表当前镜像已具备相同版本或修复。当前行为以 Dockerfile、image.yml 和实际烟测为准；OpenCV 替换当前未启用，base 没有 HPC-X 修复步骤。当前架构见 [build-architecture_zh.md](build-architecture_zh.md)。
+
 > Status: **方案 A 已落地** · Branch: `xrc/fix_opencv` · Owner: DKUAV Images
 >
 > 📌 **架构说明**：本文写作时仓库还同时发布 3 个 base 家族
