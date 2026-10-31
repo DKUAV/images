@@ -22,6 +22,8 @@ README 和 Compose 变更不选择镜像。镜像工具、schema、工作流、P
 
 Runner 矩阵由计划生成：`linux/amd64` 使用 `ubuntu-24.04`，`linux/arm64` 使用 `ubuntu-24.04-arm`。每个任务只生成本机平台，不配置 QEMU。
 
+每个任务构建整个选中依赖图，并将镜像导入本地用于烟测。原生工作流在创建 Buildx 前删除 runner 上无关的预装 SDK（Android、.NET、Haskell、Swift、Boost 和 CodeQL），清理 apt 下载缓存和预装 Docker 镜像，保留 Python、Node、Docker 与工作区输入。BuildKit 求解器的并行度限制为 1，减少 dev/runtime 分支同时安装软件的占用。清理前后及任务结束时均记录磁盘用量，包括失败情况。磁盘容量必须容纳 NVIDIA 镜像层、BuildKit 缓存和本地烟测镜像；依赖图或上游镜像进一步增大时，仍可能需要更大容量的原生 runner。
+
 Load 模式将镜像导入本地，标签为 `ghcr.io/<owner>/<name>:sha-<7位提交号>`。测试命令将 `src/_tests` 只读挂载到 `/tmp/smoke`，加载 `_lib.sh`，运行声明脚本，并显式设置 `SMOKE_HARD_GATE`。构建依赖目标和发布目标均被测试，保留镜像入口脚本与 Dockerfile 用户。
 
 Base 的断言失败仅报告，dev/runtime 必须通过。Advisory 处理保留在 shell helper 中，因此 Docker 失败或缺失脚本仍导致任务失败。测试工具会尝试所有已加载契约后汇总失败；构建失败和依赖失败始终阻断。
@@ -35,6 +37,8 @@ PR 调用者只有 `contents: read`，仅构建、加载和测试，不登录 GH
 CI 使用 `--github-cache` 和 `docker/bake-action`，由后者提供 GitHub 缓存认证。缓存按镜像和架构隔离；Load 图只读取，发布图可以写入。本地默认不生成 GitHub 缓存设置，无需 Actions 凭据。
 
 原生烟测后，Publish 模式按 digest 导出选中的目标，纯构建祖先仅保留缓存。任务采集实际 Bake 元数据；合并操作在任何标签更新之前，验证完整的镜像/平台集合、提交号、owner 与 digest 格式。任一任务失败则跳过合并；其他任务可能已上传未打标签的 digest，但不会推进公开标签。
+
+发布元数据包含整个依赖图的 provenance，通过 Node 标准输入写入文件后再收集 digest。工作流使用 `toJSON` 将 action 输出编码为 JavaScript 字符串字面量，并放在带引号的 heredoc 中。不要将完整元数据放入环境变量或命令行参数：其大小可能超过 Linux 启动进程时的限制。
 
 先创建全部 SHA manifest，再更新便捷标签。Main 发布 `main`、`latest`、`sha-<7位提交号>`；`v*` 事件全量构建，发布版本和 SHA 标签。手动触发选择一个或全部镜像，其他分支只发布 SHA 标签。发布任务共用并发组。多个标签的仓库更新是顺序操作，不具备事务性；仓库错误会停止后续更新并使 CI 失败。
 

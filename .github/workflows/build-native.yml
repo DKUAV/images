@@ -42,7 +42,26 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: build-plan
+      - name: Free disk space for CUDA builds
+        shell: bash
+        run: |
+          df -h /
+          # Installation happens inside the images. These hosted-runner SDKs
+          # are unused; retain Python, Node, Docker and the checked-out inputs.
+          sudo rm -rf -- /usr/share/dotnet /usr/local/lib/android \
+            /usr/local/.ghcup /opt/ghc /usr/share/swift \
+            /usr/local/share/boost /opt/hostedtoolcache/CodeQL
+          sudo apt-get clean
+          # Run before creating the builder so its image/cache is preserved.
+          docker image prune --all --force
+          df -h /
       - uses: docker/setup-buildx-action@v3
+        with:
+          # One worker now builds the entire dependency graph. Limit concurrent
+          # installation steps in the large dev/runtime branches.
+          buildkitd-config-inline: |
+            [worker.oci]
+              max-parallelism = 1
       - name: Render current commit for tests
         run: |
           python -m tools.images bake --plan build-plan.json \
@@ -81,10 +100,15 @@ jobs:
           files: docker-bake.publish.json
       - name: Collect publication digests
         if: inputs.publish
-        env:
-          BUILD_METADATA: ${{ steps.publish.outputs.metadata }}
         run: |
-          printf '%s\n' "$BUILD_METADATA" > build-metadata.json
+          # Provenance for the whole graph can exceed Linux's per-variable
+          # exec limit. Serialize it into this script, then write via stdin.
+          # toJSON supplies a JS string literal; the quoted heredoc prevents
+          # shell expansion of metadata contents.
+          node <<'WRITE_BUILD_METADATA'
+          const fs = require('node:fs');
+          fs.writeFileSync('build-metadata.json', ${{ toJSON(steps.publish.outputs.metadata) }});
+          WRITE_BUILD_METADATA
           python -m tools.images collect --plan build-plan.json \
             --owner "$IMAGE_OWNER" --revision "$IMAGE_REVISION" \
             --platform "$IMAGE_PLATFORM" --metadata build-metadata.json \
@@ -95,6 +119,12 @@ jobs:
           name: digests-${{ inputs.platform_id }}
           path: digests/*.json
           if-no-files-found: error
+      - name: Report disk usage
+        if: always()
+        shell: bash
+        run: |
+          df -h /
+          docker system df
       - name: Save generated configuration and metadata
         uses: actions/upload-artifact@v4
         if: always()

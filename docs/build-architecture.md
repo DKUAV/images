@@ -22,6 +22,8 @@ README and Compose changes do not select images. Changes to the image tooling, s
 
 The runner matrix is derived from the plan: `linux/amd64` uses `ubuntu-24.04`; `linux/arm64` uses `ubuntu-24.04-arm`. Each worker renders only its native platform. QEMU is not configured.
 
+Each worker builds the entire selected dependency graph and loads its images for smoke tests. Before creating Buildx, the native workflow removes unused hosted-runner SDKs (Android, .NET, Haskell, Swift, Boost and CodeQL), clears apt downloads and prunes preloaded Docker images. Python, Node, Docker and checkout inputs are retained. BuildKit solver parallelism is limited to one to reduce concurrent installation work in the dev/runtime branches. Disk usage is logged before/after cleanup and at job completion, including failures. Capacity must cover the NVIDIA layers, BuildKit cache and loaded test images; larger graphs or upstream images may still require a larger native runner.
+
 Load mode exports local images at `ghcr.io/<owner>/<name>:sha-<7-character-sha>`. The test command mounts `src/_tests` read-only at `/tmp/smoke`, sources `_lib.sh`, runs the declared script and passes `SMOKE_HARD_GATE` explicitly. It tests dependency-only targets as well as publish targets, preserving the image entrypoint and Dockerfile user.
 
 Base uses advisory assertions; dev/runtime require success. Advisory handling stays in the shell helper, so a Docker failure or a missing script still fails the worker. The test runner attempts all loaded contracts before returning an aggregate failure. Build failures and dependency failures remain fatal.
@@ -35,6 +37,8 @@ PR callers grant only `contents: read`. They build/load/test without GHCR login,
 CI uses `--github-cache` with `docker/bake-action`, which provides GitHub cache authentication. Cache scopes include image and architecture. Load graphs only import caches; publishing graphs may export them. Local graphs omit GitHub cache settings by default and need no Actions credentials.
 
 After native smoke tests, publish mode exports selected targets by digest; build-only ancestors remain cache-only. Workers collect the actual Bake digest metadata. Merge validates the complete expected image/platform set, revision, owner and digest format before any tag update. If any worker fails, merge is skipped. One worker may have uploaded untagged digests, but public tags are not advanced.
+
+Publication metadata, including provenance for the entire graph, is written to a file through Node's standard input before digest collection. The workflow uses `toJSON` to encode the action output as a JavaScript string literal inside a quoted heredoc. Do not put the full metadata in an environment variable or command-line argument: it can exceed Linux process-start limits.
 
 All SHA manifests are created before convenience tags advance. Main publishes `main`, `latest` and `sha-<7-character-sha>`; `v*` events build all images and publish the version and SHA tags. Manual dispatch selects one/all images; other branches receive SHA tags only. Publishers share a concurrency group. Registry updates across multiple image tags are sequential, not transactional; a registry error stops remaining updates and fails CI.
 

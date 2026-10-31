@@ -79,6 +79,7 @@ graph LR
 ```
 
 - PRs build affected images and dependencies on native amd64/arm64 runners, without registry login, pushes or cache writes. Documentation-only PRs run static validation and skip builds.
+- Each native worker frees unused hosted-runner SDKs and preloaded Docker images before creating Buildx, limits BuildKit to one concurrent build step, and reports disk usage even on failure. The NVIDIA base, build cache and locally loaded smoke-test images all need disk space.
 - Pushes to main publish affected images; `v*` tag pushes build all images. Manual dispatch selects one image or all images, with all declared platforms.
 - Main publishes `latest`, `main`, and `sha-<7-character-sha>`. Version-tag events publish the version tag and SHA tag. Manual runs on other branches publish only SHA tags.
 - base assertion failures are reported; dev/runtime assertion failures block publication. Build, Docker execution and missing-script errors always fail. Final tags advance only after every native worker succeeds and all expected digests exist.

@@ -29,9 +29,11 @@
 - Plan changes through actual copied inputs and smoke dependencies, then propagate to downstream consumers. README and Compose changes do not trigger image builds; tooling/schema/workflow changes do.
 - PR jobs have contents:read only, never log in to GHCR, and never push images or caches. Publishing jobs have contents:read and packages:write.
 - The reusable native workflow builds, loads and tests a same-commit graph before pushing selected images by digest. All native workers must succeed before merging public manifests.
+- Native workers must free unused hosted-runner SDKs and preloaded Docker images before creating Buildx, retain host Python/Node/Docker, limit BuildKit solver parallelism to one, and report disk usage even on failure. Account for both BuildKit cache and locally loaded smoke-test images when changing the graph.
 - Every smoke script lives in `src/_tests`, uses `_lib.sh`, and is explicitly declared in the manifest. Base is advisory; dev/runtime are required. Missing scripts/build/container failures are always fatal. Pass SMOKE_HARD_GATE explicitly.
 - Preserve the separate manual linker-diagnostic workflow and historical evidence; existing upstream issues are outside this migration.
 - Generated plans, Bake configurations and digest metadata are CI artifacts, not checked-in sources.
+- Transfer full Bake metadata through files/stdin, never environment variables or command-line arguments; whole-graph provenance can exceed Linux exec limits. Encode embedded action output with `toJSON` inside a quoted heredoc.
 
 ## Documentation sync
 

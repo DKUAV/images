@@ -405,6 +405,56 @@ def test_collect_only_published_images(repository):
     assert [item["name"] for item in json.loads(args.output.read_text())["digests"]] == ["dev"]
 
 
+def test_collect_large_workflow_metadata(repository):
+    """Transfer large provenance and shell metacharacters without exec-size limits."""
+    bash = shutil.which("bash")
+    if bash is None or shutil.which("node") is None:
+        pytest.skip("Bash and Node are required for the workflow metadata transfer")
+    workflow = yaml.safe_load((ROOT / ".github/workflows/build-native.yml").read_text())
+    step = next(
+        step
+        for step in workflow["jobs"]["build"]["steps"]
+        if step.get("name") == "Collect publication digests"
+    )
+    # Linux limits each argument/environment string to about 128 KiB. Exercise
+    # the real workflow with larger data and attempted shell/JS interpolation.
+    metadata = json.dumps(
+        {
+            "dev": {
+                "containerimage.digest": "sha256:" + "b" * 64,
+                "buildx.build.provenance": {
+                    "payload": "x" * (256 * 1024)
+                    + "\nWRITE_BUILD_METADATA\n$(touch injected) `touch injected` "
+                    + '");require("node:fs").writeFileSync("injected", "x");//'
+                },
+            }
+        },
+        indent=2,
+    )
+    script = step["run"].split("python -m tools.images collect", 1)[0]
+    script = script.replace("${{ toJSON(steps.publish.outputs.metadata) }}", json.dumps(metadata))
+    subprocess.run(
+        [bash, "--noprofile", "--norc", "-e"],
+        input=script,
+        text=True,
+        cwd=repository.root,
+        capture_output=True,
+        check=True,
+    )
+    metadata_path = repository.root / "build-metadata.json"
+    assert metadata_path.read_text() == metadata
+    assert not (repository.root / "injected").exists()
+    args = argparse.Namespace(
+        metadata=metadata_path,
+        output=repository.root / "digests.json",
+        platform="linux/arm64",
+        owner="dkuav",
+        revision=REVISION,
+    )
+    collect(args, repository.plan({"dev"}))
+    assert json.loads(args.output.read_text())["digests"][0]["digest"] == "sha256:" + "b" * 64
+
+
 def test_missing_publish_metadata(repository):
     """A missing exporter digest prevents the native worker from succeeding."""
     metadata = repository.root / "metadata.json"
