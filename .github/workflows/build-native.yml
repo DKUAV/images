@@ -33,6 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          submodules: recursive
           ref: ${{ inputs.revision }}
       - uses: actions/setup-python@v5
         with:

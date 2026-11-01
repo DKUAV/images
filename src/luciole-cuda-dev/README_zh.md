@@ -85,7 +85,7 @@ ssh -p 2222 luciole@localhost
 
 运行上述示例前，请在宿主机创建非空的 `$HOME/.config/luciole/ssh-password` 密码文件并限制其读取权限。默认 `SSH_MODE=password` 会启动 sshd，但 `luciole` 初始锁定。密码登录需挂载非空密码文件并设置 `SSH_PASSWORD_FILE`；公钥登录需挂载非空的 `/home/luciole/.ssh/authorized_keys` 并设置 `SSH_MODE=key-only`。不使用 SSH 时设为 `disabled`。默认 `DEFAULT_USER=luciole` 时禁止 root SSH 登录；host key 在容器启动时确保存在。仅向可信接口映射 22 端口。Compose 映射宿主机 2222 端口，但不提供凭据。
 
-SSH 使用显式选择的 `DEFAULT_USER`：选择 `root` 后，公钥模式要求非空的 `/root/.ssh/authorized_keys`；root 密码登录必须挂载非空的 `SSH_PASSWORD_FILE`。root SSH 具有完整容器权限。运行时修改 `DEFAULT_USER` 只选择 SSH 账户，不改变 Dockerfile 命令用户。
+SSH 使用显式选择的 `DEFAULT_USER`：选择 `root` 后，公钥模式默认要求非空的 `/root/.ssh/authorized_keys`；root 密码登录必须挂载非空的 `SSH_PASSWORD_FILE`。root SSH 具有完整容器权限。运行时修改 `DEFAULT_USER` 只选择 SSH 账户，不改变 Dockerfile 命令用户。
 
 ## ROS 2 与 WSLg
 
@@ -97,4 +97,10 @@ Dev Compose 挂载 `/tmp/.X11-unix`、`/mnt/wslg`，转发 DISPLAY、WAYLAND_DIS
 
 Dockerfile 通过 `--distro` 和 `--target` 显式传递清单的 ROS 配置，通过 `--config` 显式传入 pre-commit 配置；对应安装脚本不再读取配置环境变量。附加用户组由 base 清单的 `USER_GROUPS` 配置，并由本镜像继承。
 
-共享安装脚本按功能归类在 `src/_scripts/` 下；清单声明具体脚本路径。
+共享脚本和资产来自固定提交的 `vendor/image-kit` submodule；Luciole 扩展保留在 `src/_scripts/` 和 `src/_assets/`。清单声明每个复制输入，构建前先执行 `git submodule update --init --recursive`。
+
+共享入口命令安装为 `/usr/local/bin/docker-entrypoint`。公钥模式默认要求非空 `authorized_keys`；显式设置 `SSH_ALLOW_EMPTY_AUTHORIZED_KEYS=true` 时，允许 sshd 先启动，等待后续配置公钥；空文件不允许无密钥登录。
+
+公共工具中的 `gosu` 由 image-kit 安装，`landscape-common` 和构建所需的 `sudo` 由本地 `luciole-dev-tools.sh` 补充；CUDA dev/runtime 从 base 继承。
+
+`load_ros` 由本镜像 Dockerfile 在 devshell 配置后追加到目标用户的 Bash/zsh 配置，使用构建时 `ROS_DISTRO`；共享 devshell 不包含 ROS 逻辑。

@@ -14,7 +14,7 @@ assert_cmd "Bisheng compiler" command -v bisheng
 assert_cmd_contains "locked SSH account" " L " sudo -n passwd --status luciole
 
 header "Development tools"
-for tool in cmake ninja git clangd gdb rg fd bat uv ty black zsh nvim eza starship; do
+for tool in cmake ninja git clangd gdb rg fd bat gosu landscape-sysinfo uv ty zsh nvim eza starship; do
     assert_cmd "${tool} available" bash -c "command -v ${tool}"
 done
 assert_cmd_contains "CMake 4.3.2" "cmake version 4.3.2" cmake --version

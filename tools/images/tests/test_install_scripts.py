@@ -80,7 +80,7 @@ def test_installer_arguments(bash: str, relative: str, option: str) -> None:
     bash, relative, option : str
         Bash executable, installer path and a value-taking option.
     """
-    script = (ROOT / "src/_scripts" / relative).read_text(encoding="utf-8")
+    script = (ROOT / "vendor/image-kit/scripts" / relative).read_text(encoding="utf-8")
     assert run_script(bash, script, ["--help"]).returncode == 0
     for args in (["--unknown"], [option], ["unexpected-positional"]):
         result = run_script(bash, script, args)
@@ -98,7 +98,7 @@ def test_root_groups(bash: str, groups: str, expected: int) -> None:
     expected : int
         Expected exit status.
     """
-    script = (ROOT / "src/_scripts/system/user.sh").read_text(encoding="utf-8")
+    script = (ROOT / "vendor/image-kit/scripts/system/user.sh").read_text(encoding="utf-8")
     result = run_script(bash, script, ["--username", "root", "--groups", groups])
     assert result.returncode == expected, result.stderr
 
@@ -125,7 +125,7 @@ mock_sshd() { printf '%s\n' "$@"; }
 chpasswd() { cat >/dev/null; }; export -f chpasswd
 """
     config = tmp_path / "sshd.conf"
-    installer = (ROOT / "src/_scripts/system/ssh.sh").read_text(encoding="utf-8")
+    installer = (ROOT / "vendor/image-kit/scripts/system/ssh.sh").read_text(encoding="utf-8")
     installer = installer.replace("/etc/ssh/sshd_config.d/99-dev-image.conf", '"${TEST_CONFIG}"')
     # Consume the test output path before the real option parser sees its arguments.
     result = run_script(
@@ -142,7 +142,7 @@ chpasswd() { cat >/dev/null; }; export -f chpasswd
     key.write_text("test public key\n", encoding="utf-8")
     password = tmp_path / "password"
     password.write_text("test password\n", encoding="utf-8")
-    entrypoint = (ROOT / "src/_assets/docker-entrypoint.sh").read_text(encoding="utf-8")
+    entrypoint = (ROOT / "vendor/image-kit/assets/docker-entrypoint.sh").read_text(encoding="utf-8")
     entrypoint = entrypoint.replace("/usr/sbin/sshd", "mock_sshd")
     entrypoint = entrypoint.replace('"${USER_HOME}/.ssh/authorized_keys"', '"${TEST_KEY}"')
     setup = '\nDEFAULT_USER="$1"; SSH_MODE="$2"; TEST_KEY="$3"; SSH_PASSWORD_FILE="$4"\n'
@@ -177,6 +177,15 @@ chpasswd() { cat >/dev/null; }; export -f chpasswd
         assert result.returncode == 64
         assert "requires a non-empty" in result.stderr
         assert "command-executed" not in result.stdout
+        result = run_script(
+            bash,
+            preamble + "\nSSH_ALLOW_EMPTY_AUTHORIZED_KEYS=true\n" + setup + entrypoint,
+            [user, mode, key.as_posix(), password.as_posix(), "echo", "command-executed"],
+        )
+        assert result.returncode == 0, result.stderr
+        assert "SSH awaits a public key" in result.stderr
+        assert "command-executed" in result.stdout
+        assert "PasswordAuthentication=no" in result.stdout
 
 
 @pytest.mark.parametrize("groups", ["", "video,render"])
@@ -196,7 +205,7 @@ apt-get() { :; }; rm() { :; }; mkdir() { :; }; chmod() { :; }; chown() { :; }
 useradd() { printf '%s\n' "$@"; }
 TEST_SUDOERS="$1"; shift
 """
-    script = (ROOT / "src/_scripts/system/user.sh").read_text(encoding="utf-8")
+    script = (ROOT / "vendor/image-kit/scripts/system/user.sh").read_text(encoding="utf-8")
     script = script.replace('/etc/sudoers.d/"${USERNAME_VAL}"', '"${TEST_SUDOERS}"')
     result = run_script(
         bash,
@@ -208,3 +217,51 @@ TEST_SUDOERS="$1"; shift
         assert f"--groups\n{groups}\n" in result.stdout
     else:
         assert "--groups" not in result.stdout
+
+
+def test_local_extensions(bash: str, tmp_path: Path) -> None:
+    """Exercise local apt additions and delegation to the shared CUDA installer.
+
+    Parameters
+    ----------
+    bash : str
+        Bash executable.
+    tmp_path : pathlib.Path
+        Isolated installer and requirements files.
+    """
+    apt = (ROOT / "src/_scripts/dev/luciole-dev-tools.sh").read_text(encoding="utf-8")
+    for args, expected in [(["--help"], 0), (["--unknown"], 64), (["unexpected"], 64)]:
+        assert run_script(bash, apt, args).returncode == expected
+    result = run_script(bash, 'apt-get() { printf "%s\\n" "$@"; }; rm() { :; }\n' + apt, [])
+    assert result.returncode == 0, result.stderr
+    assert "landscape-common\nsudo\n" in result.stdout
+    assert "gosu" not in result.stdout
+
+    requirements = tmp_path / "requirements.txt"
+    requirements.write_text("example-package\n", encoding="utf-8")
+    common = tmp_path / "cuda-pip-packages.sh"
+    common.write_text(
+        (ROOT / "vendor/image-kit/scripts/python/cuda-pip-packages.sh").read_text(encoding="utf-8"),
+        encoding="utf-8",
+        newline="\n",
+    )
+    common.chmod(0o755)
+    wrapper = (ROOT / "src/_scripts/python/luciole-cuda-pip-packages.sh").read_text(
+        encoding="utf-8"
+    )
+    for args in ([], ["--requirements"], ["--requirements", "missing"], ["--unknown"]):
+        assert run_script(bash, wrapper, args).returncode == 64
+    preamble = """
+python3() { printf '%s\\n' "$@"; }; export -f python3
+TEST_INSTALLER_DIR="$1"; shift
+dirname() { printf '%s' "${TEST_INSTALLER_DIR}"; }
+"""
+    result = run_script(
+        bash,
+        preamble + wrapper,
+        [tmp_path.as_posix(), "--requirements", requirements.as_posix()],
+    )
+    assert result.returncode == 0, result.stderr
+    assert "--upgrade\npip\n" in result.stdout
+    assert "--ignore-installed\npsutil\n" in result.stdout
+    assert f"--requirement\n{requirements.as_posix()}\n" in result.stdout

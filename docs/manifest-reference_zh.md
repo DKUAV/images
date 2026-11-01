@@ -67,3 +67,7 @@ python -m tools.images plan --base <commit> --head <commit> --output build-plan.
 CI 额外使用 `collect --metadata <bake-metadata.json> --output <file>` 并传入 plan/owner/revision/platform，采集需要发布的 digest；`merge --digests <directory> --ref <git-ref>` 配合 plan/owner/revision，先检查产物完整性再创建 manifest。`merge --dry-run` 只打印 Docker 命令数组，不修改仓库。Digest 产物 v1 记录 name、platform、digest、owner 和完整提交号。
 
 生成计划与 Bake 配置仅作为本地文件或 CI 产物。Main 使用已有的七位 SHA 标签、`main`、`latest`；版本事件增加 `v*` 标签，不改成新的 `<family>:<variant>` 标签。移除清单不会删除已发布制品。
+
+## 共享组件输入
+
+校验前初始化固定提交的 `vendor/image-kit` submodule。每个复制的组件文件均在 `inputs` 中显式声明；组件输入缺失时会提示 `git submodule update --init --recursive`。`.gitmodules` 或组件提交指针变化时重建所有镜像，因为 Git 报告的是 gitlink 路径，不是组件内部逐个文件。工作区直接修改的共享脚本仍按声明的消费者传播。

@@ -11,12 +11,12 @@ build_args:
   ROS_TARGET: ros-base
   USERNAME: luciole
 inputs:
-  - src/_scripts/integrations/ros2.sh
-  - src/_scripts/dev/clang.sh
-  - src/_scripts/dev/devshell.sh
-  - src/_scripts/dev/precommit.sh
-  - src/_scripts/system/finalize-mirror.sh
-  - src/_assets/.pre-commit-config.yaml
+  - vendor/image-kit/scripts/integrations/ros2.sh
+  - vendor/image-kit/scripts/dev/clang.sh
+  - vendor/image-kit/scripts/dev/devshell.sh
+  - vendor/image-kit/scripts/dev/precommit.sh
+  - vendor/image-kit/scripts/system/finalize-mirror.sh
+  - vendor/image-kit/assets/.pre-commit-config.yaml
 smoke:
   script: src/_tests/smoke-dev.sh
   inputs: [src/_tests/_lib.sh]

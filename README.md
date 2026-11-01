@@ -23,7 +23,7 @@ graph TD
 
 The CUDA base and Ascend image keep upstream package sources. CUDA dev/runtime switch persisted apt and pip sources to Aliyun after all package installation. The runtime image inherits the base toolset; it is not a minimal CUDA runtime image. Ascend uses a tagged external base without a pinned digest; run its separate NPU check on a compatible host.
 
-CUDA and Ascend use the same Python development requirements for tools such as uv, ty and black. Their pip installers retain CUDA-specific vision packages and Ascend vendor constraints separately.
+CUDA and Ascend use the same Python development requirements for tools such as uv, ty and Ruff. Their pip installers retain CUDA-specific vision packages and Ascend vendor constraints separately.
 
 ## Use an image
 
@@ -99,3 +99,15 @@ See [build architecture](docs/build-architecture.md), [manifest reference](docs/
 4. Run `python -m tools.images validate`, `python -m pytest`, and native builds/tests for affected platforms.
 
 Current OpenCV replacement is disabled; existing OpenCV assertions remain in place and may expose upstream differences. Historical [OpenCV analysis](docs/opencv-status.md) and [linker diagnostics](docs/ld-cache-notes.md) retain their original evidence; they do not certify current image behavior.
+
+## Shared component
+
+Initialize `vendor/image-kit` before validation or builds:
+
+```bash
+git submodule update --init --recursive
+```
+
+Fresh clones can use `git clone --recurse-submodules`. Keep the component pinned to a reviewed commit; CI initializes that commit and never follows a moving branch. Shared scripts, entrypoints, pre-commit configuration and Python development requirements come from the component. Luciole adds `landscape-common` and `sudo` locally; `gosu` is shared. CUDA combines the common requirements with `src/_assets/luciole-cuda-requirements.txt`, retaining `numpy<2.0.0` and vision packages. Ruff supplies Python linting and formatting; black is no longer explicitly installed or required.
+
+This repository retains `tools/images`, its manifest schema, dual-platform CUDA builds, smoke gates and existing publication tags. It does not use image-kit's family/variant build engine. Component pin and `.gitmodules` changes rebuild all images. Commit and publish component changes before updating the consumer pin.

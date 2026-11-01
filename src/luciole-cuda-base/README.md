@@ -15,7 +15,7 @@ Main also publishes `main` and `sha-<7-character-sha>`; `v*` events publish the 
 | --- | --- |
 | Base | `nvcr.io/nvidia/pytorch:26.06-py3`, with Python, PyTorch and CUDA supplied upstream |
 | System / build | vim, Git/LFS, tmux, ripgrep, fd, bat, ffmpeg, GCC, Ninja, GDB, CMake 4.3.2 |
-| Python packages | Shared [development requirements](../_assets/python-dev-requirements.txt), including uv, ty and black; CUDA-specific OpenCV and vision packages use [cuda-pip-packages.sh](../_scripts/python/cuda-pip-packages.sh). CUDA retains `numpy<2.0.0`. |
+| Python packages | Shared [development requirements](../../vendor/image-kit/assets/python-dev-requirements.txt), including uv, ty and Ruff; CUDA-specific OpenCV and vision packages use [luciole-cuda-pip-packages.sh](../_scripts/python/luciole-cuda-pip-packages.sh). CUDA retains `numpy<2.0.0`. |
 | Networking libraries | libdatachannel v0.24.5, rpclib v2.3.0, iceoryx v2.0.8 |
 | GUI | WSLg dependencies, D-Bus, CJK fonts, Mesa and PulseAudio |
 | OpenCV | apt `libopencv-dev` plus pip packages; `opencv.sh` is disabled, so NVIDIA OpenCV is not quarantined by this Dockerfile |
@@ -36,6 +36,7 @@ The [manifest](image.yml) supplies these values for standard builds. Dockerfile 
 | --- | --- | --- |
 | `BASE_IMAGE` | `nvcr.io/nvidia/pytorch:26.06-py3` | External base; manifest digest may pin it |
 | `TZ` | `Asia/Shanghai` | Timezone |
+| `SYSTEM_UPGRADE` | `true` | Upgrade installed packages during system initialization |
 | `CMAKE_VERSION` | `4.3.2` | CMake release |
 | `LIBDATACHANNEL_VERSION` | `v0.24.5` | libdatachannel release |
 | `RPCLIB_VERSION` | `v2.3.0` | rpclib release |
@@ -91,7 +92,7 @@ ssh -p 2222 luciole@localhost
 
 Before running this example, create a nonempty `$HOME/.config/luciole/ssh-password` file with restricted permissions. The default `SSH_MODE=password` starts sshd, but `luciole` is initially locked. For password access, mount a nonempty secret file and set `SSH_PASSWORD_FILE` to its container path. For key access, mount a nonempty `/home/luciole/.ssh/authorized_keys` and set `SSH_MODE=key-only`. Set `SSH_MODE=disabled` when SSH is unnecessary. Root SSH login is disabled with the default `DEFAULT_USER=luciole`; host keys are ensured at container startup. Publish port 22 only on a trusted interface. Compose maps host port 2222 without supplying credentials.
 
-SSH follows the explicitly selected `DEFAULT_USER`: selecting `root` permits key-only root access with a nonempty `/root/.ssh/authorized_keys`; root password access requires a nonempty mounted `SSH_PASSWORD_FILE`. Root SSH grants full container privileges. Changing `DEFAULT_USER` at runtime selects the SSH account, not the Dockerfile command user.
+SSH follows the explicitly selected `DEFAULT_USER`: selecting `root` permits key-only root access with a nonempty `/root/.ssh/authorized_keys` by default; root password access requires a nonempty mounted `SSH_PASSWORD_FILE`. Root SSH grants full container privileges. Changing `DEFAULT_USER` at runtime selects the SSH account, not the Dockerfile command user.
 
 ## Known upstream issues
 
@@ -101,6 +102,12 @@ Historical [OpenCV analysis](../../docs/opencv-status.md) and [linker diagnostic
 
 See [build architecture](../../docs/build-architecture.md) and [manifest reference](../../docs/manifest-reference.md) for configuration and release details.
 
-The shared system installer still accepts `--timezone` and `--upgrade` with environment-variable defaults. The libdatachannel, rpclib and iceoryx installers take explicit `--version` arguments from the Dockerfile; their version environment variables are no longer read. `user.sh --groups` receives `USER_GROUPS` from the manifest. Referenced groups must already exist; an empty value adds no supplementary groups, and malformed lists or nonempty groups for root are rejected. Dev/runtime inherit these groups from the base.
+The shared system installer still accepts `--timezone` and `--upgrade` through explicit Dockerfile arguments. The libdatachannel, rpclib and iceoryx installers take explicit `--version` arguments from the Dockerfile; their version environment variables are no longer read. `user.sh --groups` receives `USER_GROUPS` from the manifest. Referenced groups must already exist; an empty value adds no supplementary groups, and malformed lists or nonempty groups for root are rejected. Dev/runtime inherit these groups from the base.
 
-Shared installation scripts are grouped by capability under `src/_scripts/`; manifests declare the exact script paths.
+Shared scripts and assets come from the commit-pinned `vendor/image-kit` submodule; Luciole extensions remain in `src/_scripts/` and `src/_assets/`. Manifests declare every copied input. Initialize the component with `git submodule update --init --recursive` before building.
+
+The shared entrypoint is installed as `/usr/local/bin/docker-entrypoint`. Key-only mode requires nonempty `authorized_keys` by default. Explicit `SSH_ALLOW_EMPTY_AUTHORIZED_KEYS=true` allows sshd to start while waiting for a public key to be configured; an empty file does not enable unauthenticated login.
+
+image-kit installs `gosu`; local `luciole-dev-tools.sh` adds `landscape-common` and build-time `sudo`. CUDA dev/runtime inherit these tools from the base.
+
+`SYSTEM_UPGRADE` defaults to `true` and is explicitly passed from the manifest and Dockerfile to component `system.sh --upgrade`. The local CUDA pip wrapper upgrades pip, then the component unconditionally reinstalls pip-managed psutil and resolves the common development requirements together with Luciole vision extensions.

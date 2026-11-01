@@ -4,7 +4,7 @@
 
 ## 职责
 
-每个现有镜像目录包含一份 `image.yml`，名称继续对应 GHCR 镜像仓库名。清单声明基础镜像、平台、构建参数、复制的共享输入和烟测契约；Dockerfile 负责安装顺序与用户切换；库版本、ROS 选项与 pre-commit 配置通过具名脚本参数显式传递；其他安装脚本保留已有环境变量接口。
+每个现有镜像目录包含一份 `image.yml`，名称继续对应 GHCR 镜像仓库名。清单声明基础镜像、平台、构建参数、复制的共享输入和烟测契约；Dockerfile 负责安装顺序与用户切换；库版本、ROS 选项与 pre-commit 配置通过具名脚本参数显式传递；系统时区与升级策略也显式传参。共享能力与资产来自固定提交的 image-kit submodule，Luciole 扩展留在本仓库。
 
 Python 3.11+ 工具校验契约，生成带版本的 JSON 构建计划和 Buildx Bake 图。已提交的 [schema](../schemas/image.schema.json) 和[清单参考](manifest-reference_zh.md)定义格式。生成 JSON 在本地被忽略，在 CI 中作为产物上传。
 

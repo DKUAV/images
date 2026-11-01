@@ -10,7 +10,12 @@ requires-python = ">=3.11"
 dependencies = ["PyYAML==6.0.3", "jsonschema==4.26.0"]
 
 [project.optional-dependencies]
-dev = ["pytest==8.4.2", "ruff==0.16.8"]
+dev = [
+  "pytest==8.4.2",
+  "ruff==0.16.8",
+  "ty==0.0.95",
+  "types-PyYAML==6.0.12.20260906",
+]
 
 [project.scripts]
 images = "tools.images.cli:main"
@@ -28,3 +33,6 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.ty.environment]
+extra-paths = ["vendor/image-kit/src"]

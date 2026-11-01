@@ -81,11 +81,34 @@ def edit(repository: ImageRepository, name: str, change) -> ImageRepository:
         (["schemas/image.schema.json"], {"base", "dev", "runtime"}),
         ([".github/workflows/build-native.yml"], {"base", "dev", "runtime"}),
         (["tools/images/cli.py"], {"base", "dev", "runtime"}),
+        ([".gitmodules"], {"base", "dev", "runtime"}),
+        (["vendor/image-kit"], {"base", "dev", "runtime"}),
     ],
 )
 def test_change_impact(repository, paths, expected):
     """Track actual build/test inputs without rebuilding for usage docs."""
     assert repository.affected(paths) == expected
+
+
+def test_missing_component_input(repository: ImageRepository) -> None:
+    """Explain how to initialize an absent component input.
+
+    Parameters
+    ----------
+    repository : ImageRepository
+        Isolated consumer fixture.
+
+    Raises
+    ------
+    AssertionError
+        If missing component inputs do not report the initialization command.
+    """
+    with pytest.raises(RepositoryError, match="git submodule update --init --recursive"):
+        edit(
+            repository,
+            "base",
+            lambda raw: raw["inputs"].append("vendor/image-kit/scripts/system/system.sh"),
+        )
 
 
 def test_build_closure_does_not_publish_ancestors(repository):
@@ -409,7 +432,7 @@ def test_collect_large_workflow_metadata(repository):
     """Transfer large provenance and shell metacharacters without exec-size limits."""
     bash = shutil.which("bash")
     if bash is None or shutil.which("node") is None:
-        pytest.skip("Bash and Node are required for the workflow metadata transfer")
+        pytest.skip()
     workflow = yaml.safe_load((ROOT / ".github/workflows/build-native.yml").read_text())
     step = next(
         step
@@ -487,12 +510,16 @@ def test_real_repository_contracts():
     assert ascend["platforms"] == ["linux/arm64"]
     assert "dependency" not in ascend["base"]
     assert ascend["base"]["digest"] is None
-    common_python = "src/_assets/python-dev-requirements.txt"
+    common_python = "vendor/image-kit/assets/python-dev-requirements.txt"
     assert common_python in ascend["inputs"]
     assert common_python in repository.images["luciole-cuda-base"]["inputs"]
     assert repository.affected([common_python]) == set(repository.images)
-    assert repository.affected(["src/_scripts/python/ascend-pip-packages.sh"]) == {"luciole-ascend"}
-    assert repository.affected(["src/_scripts/system/user.sh"]) == set(repository.images)
+    assert repository.affected(["vendor/image-kit/scripts/python/ascend-pip-packages.sh"]) == {
+        "luciole-ascend"
+    }
+    assert repository.affected(["vendor/image-kit/scripts/system/user.sh"]) == set(
+        repository.images
+    )
     plan = repository.plan({"luciole-ascend"})
     assert [item["platform"] for item in plan["build_matrix"]["include"]] == ["linux/arm64"]
     assert [item["name"] for item in plan["targets"]] == ["luciole-ascend"]
@@ -508,7 +535,7 @@ def test_shared_smoke_gate(hard_gate, expected):
     if git_bash.exists():
         bash = str(git_bash)
     if bash is None:
-        pytest.skip("Bash is unavailable")
+        pytest.skip()
     library = (ROOT / "src/_tests/_lib.sh").read_text(encoding="utf-8")
     # Remove only the final environment assertion; the helpers execute unmodified.
     library = library.rsplit("assert_in_container", 1)[0]

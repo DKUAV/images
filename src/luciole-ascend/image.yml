@@ -21,21 +21,22 @@ build_args:
   SSH_MODE: password
   WORKSPACE_DIR: /work
 inputs:
-  - src/_scripts/system/system.sh
-  - src/_scripts/python/python-install.sh
-  - src/_assets/ascend-pip-check.sh
-  - src/_assets/python-dev-requirements.txt
-  - src/_scripts/python/ascend-pip-packages.sh
-  - src/_scripts/dev/dev-tools.sh
-  - src/_scripts/dev/cmake.sh
-  - src/_scripts/system/user.sh
-  - src/_scripts/system/ssh.sh
-  - src/_scripts/system/workspace.sh
-  - src/_scripts/dev/devshell.sh
-  - src/_scripts/integrations/ascend-environment.sh
-  - src/_scripts/system/finalize-mirror.sh
-  - src/_assets/docker-entrypoint.sh
-  - src/_assets/ascend-entrypoint.sh
+  - src/_scripts/dev/luciole-dev-tools.sh
+  - vendor/image-kit/scripts/system/system.sh
+  - vendor/image-kit/scripts/python/python-install.sh
+  - vendor/image-kit/assets/ascend-pip-check.sh
+  - vendor/image-kit/assets/python-dev-requirements.txt
+  - vendor/image-kit/scripts/python/ascend-pip-packages.sh
+  - vendor/image-kit/scripts/dev/dev-tools.sh
+  - vendor/image-kit/scripts/dev/cmake.sh
+  - vendor/image-kit/scripts/system/user.sh
+  - vendor/image-kit/scripts/system/ssh.sh
+  - vendor/image-kit/scripts/system/workspace.sh
+  - vendor/image-kit/scripts/dev/devshell.sh
+  - vendor/image-kit/scripts/integrations/ascend-environment.sh
+  - vendor/image-kit/scripts/system/finalize-mirror.sh
+  - vendor/image-kit/assets/docker-entrypoint.sh
+  - vendor/image-kit/assets/ascend-entrypoint.sh
 smoke:
   script: src/_tests/smoke-ascend.sh
   inputs: [src/_tests/_lib.sh, src/_tests/npu-ascend.sh]

@@ -8,7 +8,7 @@ FROM ${BASE_IMAGE}
 
 ARG ROS_DISTRO=jazzy
 ARG ROS_TARGET=ros-base
-COPY --chmod=0755 src/_scripts/integrations/ros2.sh /tmp/scripts/ros2.sh
+COPY --chmod=0755 vendor/image-kit/scripts/integrations/ros2.sh /tmp/scripts/ros2.sh
 RUN /tmp/scripts/ros2.sh --distro "${ROS_DISTRO}" --target "${ROS_TARGET}"
 
 ARG USERNAME=luciole
@@ -18,7 +18,7 @@ USER root
 # Switch apt + pip sources to Aliyun mirrors as the FINAL step, so users in
 # China get fast installs after pulling. Build itself keeps using upstream
 # sources (this script runs after every apt/pip install in ros2.sh etc.).
-COPY --chmod=0755 src/_scripts/system/finalize-mirror.sh /tmp/scripts/finalize-mirror.sh
+COPY --chmod=0755 vendor/image-kit/scripts/system/finalize-mirror.sh /tmp/scripts/finalize-mirror.sh
 RUN /tmp/scripts/finalize-mirror.sh --mirror aliyun
 
 RUN rm -rf /tmp/scripts

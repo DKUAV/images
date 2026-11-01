@@ -24,7 +24,26 @@ class RepositoryError(ValueError):
 class ManifestLoader(yaml.SafeLoader):
     """Reject duplicate keys instead of silently overriding build configuration."""
 
-    def construct_mapping(self, node: yaml.MappingNode, deep: bool = False) -> dict[str, Any]:
+    def construct_mapping(self, node: yaml.MappingNode, deep: bool = False) -> dict[Any, Any]:
+        """Build a text-key mapping while preserving the YAML loader return contract.
+
+        Parameters
+        ----------
+        node : yaml.MappingNode
+            Mapping node to construct.
+        deep : bool, default=False
+            Whether to construct nested objects immediately.
+
+        Returns
+        -------
+        dict
+            Constructed values with unique string keys.
+
+        Raises
+        ------
+        RepositoryError
+            If a key is not text or appears more than once.
+        """
         mapping: dict[str, Any] = {}
         for key_node, value_node in node.value:
             key = self.construct_object(key_node, deep=deep)
@@ -103,6 +122,11 @@ class ImageRepository:
                 self.path(pattern)
                 matches = list(self.root.glob(pattern))
                 if not matches or any(not p.is_file() for p in matches):
+                    if pattern.startswith("vendor/image-kit/") and not matches:
+                        raise RepositoryError(
+                            f"{name}: missing image-kit input: {pattern}; "
+                            "run git submodule update --init --recursive"
+                        )
                     raise RepositoryError(f"{name}: input must match files: {pattern}")
                 for match in matches:
                     self.path(match.relative_to(self.root).as_posix())
@@ -174,7 +198,8 @@ class ImageRepository:
         """Select changed contracts and their transitive consumers."""
         infrastructure = ("tools/images/", "schemas/", ".github/workflows/")
         if any(
-            path.startswith(infrastructure) or path in {"pyproject.toml", ".dockerignore"}
+            path.startswith(infrastructure)
+            or path in {"pyproject.toml", ".dockerignore", ".gitmodules", "vendor/image-kit"}
             for path in paths
         ):
             return set(self.images)
@@ -221,7 +246,7 @@ class ImageRepository:
                 if platforms[name] - inherited:
                     inherited.update(platforms[name])
                     queue.append(parent)
-        targets = [
+        targets: list[dict[str, Any]] = [
             {
                 "name": name,
                 "platforms": [platform for platform in RUNNERS if platform in platforms[name]],

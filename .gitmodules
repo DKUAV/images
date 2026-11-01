@@ -1,0 +1,3 @@
+[submodule "vendor/image-kit"]
+	path = vendor/image-kit
+	url = https://github.com/ruicx/image-kit.git

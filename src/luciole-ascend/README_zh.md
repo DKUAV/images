@@ -4,7 +4,7 @@
 
 ## 内容与构建
 
-厂商基础镜像提供 Python 3.12、PyTorch 2.14、TorchNPU 2.14 和 CANN。共享脚本安装系统工具、CMake 4.3.2、`luciole` 账号（UID/GID 1000）、SSH 与开发 shell。两类镜像通过各自的 pip 安装脚本使用共用的 `src/_assets/python-dev-requirements.txt`，其中包括 uv、ty 和 black。昇腾脚本依据所有预装包生成的约束保留厂商 Python 环境，并在登录 shell 和入口脚本中恢复 CANN 环境。本镜像不安装 CUDA 专属视觉包、ROS 2 和网络库步骤。
+厂商基础镜像提供 Python 3.12、PyTorch 2.14、TorchNPU 2.14 和 CANN。共享脚本安装系统工具、CMake 4.3.2、`luciole` 账号（UID/GID 1000）、SSH 与开发 shell。两类镜像通过各自的 pip 安装脚本使用共用的 `vendor/image-kit/assets/python-dev-requirements.txt`，其中包括 uv、ty 和 Ruff。昇腾脚本依据所有预装包生成的约束保留厂商 Python 环境，并在登录 shell 和入口脚本中恢复 CANN 环境。本镜像不安装 CUDA 专属视觉包、ROS 2 和网络库步骤。
 
 依赖检查只放行三条精确匹配的厂商诊断：`mindstudio-kl 26.2.0` 对 NumPy 的版本要求，以及 `ms-service-profiler 26.0.0` 缺少两个 OTLP exporter。其他依赖错误会使构建失败；放行不代表相关厂商功能已经验证兼容。镜像保留上游 apt 和 pip 软件源。
 
@@ -33,8 +33,14 @@ docker run --rm -i --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disa
 
 Compose 示例映射 `2222:22`，不提供凭据；运行时提供凭据前账号保持锁定。设备挂载和 runtime 注册由宿主机负责。
 
-SSH 使用显式选择的 `DEFAULT_USER`：选择 `root` 后，公钥模式要求非空的 `/root/.ssh/authorized_keys`；root 密码登录必须挂载非空的 `SSH_PASSWORD_FILE`。root SSH 具有完整容器权限。运行时修改 `DEFAULT_USER` 只选择 SSH 账户，不改变 Dockerfile 命令用户。
+SSH 使用显式选择的 `DEFAULT_USER`：选择 `root` 后，公钥模式默认要求非空的 `/root/.ssh/authorized_keys`；root 密码登录必须挂载非空的 `SSH_PASSWORD_FILE`。root SSH 具有完整容器权限。运行时修改 `DEFAULT_USER` 只选择 SSH 账户，不改变 Dockerfile 命令用户。
 
-共享系统安装脚本支持 `--timezone` 和 `--upgrade`；现有环境变量仍作为默认值。清单构建参数 `DEFAULT_GROUPS` 默认为空，并传给 `user.sh --groups`；可设置为逗号分隔的已有组名以添加附加用户组。格式错误的列表和 root 的非空附加组会被拒绝；默认用户、UID/GID 与 SSH 模式保持不变。
+共享系统安装脚本支持 `--timezone` 和 `--upgrade`；Dockerfile 显式传递这两个参数。清单构建参数 `DEFAULT_GROUPS` 默认为空，并传给 `user.sh --groups`；可设置为逗号分隔的已有组名以添加附加用户组。格式错误的列表和 root 的非空附加组会被拒绝；默认用户、UID/GID 与 SSH 模式保持不变。
 
-共享安装脚本按功能归类在 `src/_scripts/` 下；清单声明具体脚本路径。
+共享脚本和资产来自固定提交的 `vendor/image-kit` submodule；Luciole 扩展保留在 `src/_scripts/` 和 `src/_assets/`。清单声明每个复制输入，构建前先执行 `git submodule update --init --recursive`。
+
+共享入口命令安装为 `/usr/local/bin/docker-entrypoint`。公钥模式默认要求非空 `authorized_keys`；显式设置 `SSH_ALLOW_EMPTY_AUTHORIZED_KEYS=true` 时，允许 sshd 先启动，等待后续配置公钥；空文件不允许无密钥登录。
+
+公共工具中的 `gosu` 由 image-kit 安装，`landscape-common` 和构建所需的 `sudo` 由本地 `luciole-dev-tools.sh` 补充；CUDA dev/runtime 从 base 继承。
+
+`SYSTEM_UPGRADE` 仍为 `false`。Ascend 保留厂商 Python/CANN 约束，不调用 CUDA 的 psutil 和视觉扩展安装步骤。

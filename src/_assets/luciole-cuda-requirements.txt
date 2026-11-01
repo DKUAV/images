@@ -1,0 +1,13 @@
+# Resolve common tools and Luciole vision dependencies together.
+-r python-dev-requirements.txt
+numpy<2.0.0
+opencv-contrib-python
+scikit-image
+h5py
+onnxruntime
+onnx-simplifier
+thop
+lap
+motmetrics
+filterpy
+ultralytics

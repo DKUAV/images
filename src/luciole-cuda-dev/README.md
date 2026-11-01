@@ -85,7 +85,7 @@ ssh -p 2222 luciole@localhost
 
 Before running this example, create a nonempty `$HOME/.config/luciole/ssh-password` file with restricted permissions. The default `SSH_MODE=password` starts sshd, but `luciole` is initially locked. For password access, mount a nonempty secret file and set `SSH_PASSWORD_FILE` to its container path. For key access, mount a nonempty `/home/luciole/.ssh/authorized_keys` and set `SSH_MODE=key-only`. Set `SSH_MODE=disabled` when SSH is unnecessary. Root SSH login is disabled with the default `DEFAULT_USER=luciole`; host keys are ensured at container startup. Publish port 22 only on a trusted interface. Compose maps host port 2222 without supplying credentials.
 
-SSH follows the explicitly selected `DEFAULT_USER`: selecting `root` permits key-only root access with a nonempty `/root/.ssh/authorized_keys`; root password access requires a nonempty mounted `SSH_PASSWORD_FILE`. Root SSH grants full container privileges. Changing `DEFAULT_USER` at runtime selects the SSH account, not the Dockerfile command user.
+SSH follows the explicitly selected `DEFAULT_USER`: selecting `root` permits key-only root access with a nonempty `/root/.ssh/authorized_keys` by default; root password access requires a nonempty mounted `SSH_PASSWORD_FILE`. Root SSH grants full container privileges. Changing `DEFAULT_USER` at runtime selects the SSH account, not the Dockerfile command user.
 
 ## ROS 2 and WSLg
 
@@ -97,4 +97,10 @@ See [build architecture](../../docs/build-architecture.md) and [manifest referen
 
 The Dockerfile passes manifest ROS values explicitly through `--distro` and `--target`, and the pre-commit config through `--config`; these installers no longer read their configuration environment variables. Supplementary user groups are configured by `USER_GROUPS` in the base manifest and inherited here.
 
-Shared installation scripts are grouped by capability under `src/_scripts/`; manifests declare the exact script paths.
+Shared scripts and assets come from the commit-pinned `vendor/image-kit` submodule; Luciole extensions remain in `src/_scripts/` and `src/_assets/`. Manifests declare every copied input. Initialize the component with `git submodule update --init --recursive` before building.
+
+The shared entrypoint is installed as `/usr/local/bin/docker-entrypoint`. Key-only mode requires nonempty `authorized_keys` by default. Explicit `SSH_ALLOW_EMPTY_AUTHORIZED_KEYS=true` allows sshd to start while waiting for a public key to be configured; an empty file does not enable unauthenticated login.
+
+image-kit installs `gosu`; local `luciole-dev-tools.sh` adds `landscape-common` and build-time `sudo`. CUDA dev/runtime inherit these tools from the base.
+
+This image Dockerfile appends `load_ros` to the target user's Bash/zsh configuration after devshell setup, using the build-time `ROS_DISTRO`; shared devshell has no ROS-specific logic.

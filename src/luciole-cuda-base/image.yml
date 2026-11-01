@@ -9,6 +9,7 @@ base:
   digest: null
 build_args:
   TZ: Asia/Shanghai
+  SYSTEM_UPGRADE: true
   CMAKE_VERSION: 4.3.2
   LIBDATACHANNEL_VERSION: v0.24.5
   RPCLIB_VERSION: v2.3.0
@@ -18,18 +19,21 @@ build_args:
   USER_GID: 1000
   USER_GROUPS: ""
 inputs:
-  - src/_scripts/system/system.sh
-  - src/_scripts/dev/dev-tools.sh
-  - src/_scripts/integrations/wslg.sh
-  - src/_scripts/python/cuda-pip-packages.sh
-  - src/_assets/python-dev-requirements.txt
-  - src/_scripts/dev/cmake.sh
-  - src/_scripts/libraries/libdatachannel.sh
-  - src/_scripts/libraries/rpclib.sh
-  - src/_scripts/libraries/iceoryx.sh
-  - src/_scripts/system/ssh.sh
-  - src/_scripts/system/user.sh
-  - src/_assets/docker-entrypoint.sh
+  - src/_scripts/dev/luciole-dev-tools.sh
+  - src/_scripts/python/luciole-cuda-pip-packages.sh
+  - src/_assets/luciole-cuda-requirements.txt
+  - vendor/image-kit/scripts/system/system.sh
+  - vendor/image-kit/scripts/dev/dev-tools.sh
+  - vendor/image-kit/scripts/integrations/wslg.sh
+  - vendor/image-kit/scripts/python/cuda-pip-packages.sh
+  - vendor/image-kit/assets/python-dev-requirements.txt
+  - vendor/image-kit/scripts/dev/cmake.sh
+  - vendor/image-kit/scripts/libraries/libdatachannel.sh
+  - vendor/image-kit/scripts/libraries/rpclib.sh
+  - vendor/image-kit/scripts/libraries/iceoryx.sh
+  - vendor/image-kit/scripts/system/ssh.sh
+  - vendor/image-kit/scripts/system/user.sh
+  - vendor/image-kit/assets/docker-entrypoint.sh
 smoke:
   script: src/_tests/smoke-base.sh
   inputs: [src/_tests/_lib.sh]

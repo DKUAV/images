@@ -67,3 +67,7 @@ python -m tools.images plan --base <commit> --head <commit> --output build-plan.
 CI additionally uses `collect --metadata <bake-metadata.json> --output <file>` with plan/owner/revision/platform to collect publishable digests. `merge --digests <directory> --ref <git-ref>` with plan/owner/revision validates artifact completeness before creating manifests. `merge --dry-run` prints Docker command arrays without changing the registry. Digest artifact version 1 records name, platform, digest, owner and full revision.
 
 Generated plans/Bake files are local files or CI artifacts. Main emits the existing seven-character SHA tags, `main` and `latest`; version events add the `v*` tag. These are not new `<family>:<variant>` tags. Retiring a manifest never deletes published registry artifacts.
+
+## Shared component inputs
+
+Initialize the pinned `vendor/image-kit` submodule before validation. List each copied component file explicitly in `inputs`; a missing component input reports `git submodule update --init --recursive`. A change to `.gitmodules` or the component commit pointer rebuilds all images, because Git reports the gitlink path rather than individual changed component files. Shared script files changed directly in a working tree still follow their declared consumers.

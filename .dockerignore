@@ -2,6 +2,9 @@
 .agents
 .codex
 .venv
+.tool-cache
+vendor/image-kit/.venv
+vendor/image-kit/.ruff_cache
 **/__pycache__
 *.egg-info
 .pytest_cache

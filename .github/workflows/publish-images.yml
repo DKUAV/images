@@ -34,6 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          submodules: recursive
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-python@v5
@@ -46,8 +47,11 @@ jobs:
         run: |
           python -m ruff check tools
           python -m ruff format --check tools
+          python -m ty check
           python -m pytest
           python -m tools.images validate
+          bash vendor/image-kit/tests/install-arguments.sh
+          bash vendor/image-kit/tests/ascend-pip-check.sh
       - name: Calculate affected images
         id: plan
         env:
@@ -122,6 +126,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          submodules: recursive
           ref: ${{ needs.plan.outputs.revision }}
       - uses: actions/setup-python@v5
         with:

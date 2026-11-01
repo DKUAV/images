@@ -4,8 +4,9 @@
 
 - Images are published as `ghcr.io/dkuav/<directory-name>`. Keep lowercase hyphenated names.
 - `src/<image>/image.yml` is the source of truth for build configuration, platforms, base dependencies, copied inputs and smoke policy. There is no central dependency map or handwritten image matrix.
-- YAML declares configuration; Dockerfiles declare installation order; `src/_scripts` implements capabilities; `tools/images` validates and plans builds and emits Buildx Bake graphs.
-- Group shared scripts under `system`, `dev`, `python`, `libraries`, and `integrations`; prefix platform-specific scripts with their platform name.
+- YAML declares configuration; Dockerfiles declare installation order; `vendor/image-kit/scripts` implements shared capabilities and `src/_scripts` supplies Luciole extensions; `tools/images` validates and plans builds and emits Buildx Bake graphs.
+- Initialize the commit-pinned public `vendor/image-kit` submodule with `git submodule update --init --recursive` before validation/builds. Shared capabilities and assets belong to the component; Luciole extensions remain local. Keep `tools/images` and the current schema/publication contracts. Publish component changes before committing a consumer pin update. CI must not follow a moving component branch.
+- Group component scripts under `system`, `dev`, `python`, `libraries`, and `integrations`; prefix platform-specific scripts with their platform name.
 - Each manifest describes one published image. Preserve the existing image names and the main/latest/seven-character SHA/version tag conventions.
 - All Dockerfiles use the repository root as build context. Compose uses `context: ../..`.
 - Internal bases use `base.dependency` and same-checkout Bake named contexts. The planner adds build ancestors without selecting them for publication. Child platforms must be supported by their parent.
@@ -15,19 +16,20 @@
 ## Shared scripts and Dockerfiles
 
 - Copy each independently changeable shared file explicitly and declare it in manifest `inputs`. Keep capability `COPY + RUN` pairs adjacent; do not copy entire script/asset directories.
-- Keep common Python development tools in `src/_assets/python-dev-requirements.txt`. CUDA and Ascend consume that file through separate pip installers because CUDA extras and Ascend vendor constraints differ.
+- Keep common Python development tools in `vendor/image-kit/assets/python-dev-requirements.txt`. CUDA and Ascend consume that file through separate pip installers because CUDA extras and Ascend vendor constraints differ.
 - Preserve capability order in CUDA base: system, dev-tools, WSLg, pip, CMake, networking libraries, user and SSH. Python is supplied by NVIDIA. Ascend is a separate ARM64 image built from the vendor TorchNPU base; preserve vendor Python and CANN.
 - `opencv.sh` is currently disabled. Do not claim the NVIDIA OpenCV installation is quarantined or promise a particular apt OpenCV version without verifying a built image.
 - ROS 2 is added in both final images. LLVM, devshell and cached pre-commit hooks are dev-only.
 - Run devshell/precommit as the target user, then return to root for mirror configuration and cleanup. Select correct binaries for amd64/arm64.
 - Run `finalize-mirror.sh` as root after all apt/pip installation. CUDA dev/runtime select Aliyun; Ascend selects upstream.
-- CUDA base defaults to root. Final Dockerfiles set `USER luciole`; the shared entrypoint starts sshd according to `SSH_MODE` then execs the command. The account starts locked, password mode is the default, and root SSH login is disabled by default. Explicit `DEFAULT_USER=root` permits root SSH; root password mode requires a mounted password file and key-only mode requires nonempty authorized keys. APP_USER is CUDA metadata, not privilege control.
+- CUDA base defaults to root. Final Dockerfiles set `USER luciole`; the shared entrypoint starts sshd according to `SSH_MODE` then execs the command. The account starts locked, password mode is the default, and root SSH login is disabled by default. Explicit `DEFAULT_USER=root` permits root SSH; root password mode requires a mounted password file and key-only mode requires nonempty authorized keys unless `SSH_ALLOW_EMPTY_AUTHORIZED_KEYS=true` explicitly allows starting sshd while waiting for keys. APP_USER is CUDA metadata, not privilege control.
 - Do not change software versions, SSH policy or existing smoke assertions merely to make a build refactor pass.
 
 ## CI and verification
 
 - Run `python -m pip install -e '.[dev]'`, `python -m tools.images validate`, `python -m ruff check tools`, `python -m ruff format --check tools`, and `python -m pytest` after changing build tooling or contracts.
 - Build/test affected images on native amd64 and arm64. No QEMU. Use `plan --image <name>` or `plan --all`, then `bake --platform <platform> --mode load`, `docker buildx bake`, and `test` as documented in the root README.
+- Component pin (`vendor/image-kit`) and `.gitmodules` changes rebuild all images; every checkout that validates manifests or builds images initializes submodules recursively.
 - Plan changes through actual copied inputs and smoke dependencies, then propagate to downstream consumers. README and Compose changes do not trigger image builds; tooling/schema/workflow changes do.
 - PR jobs have contents:read only, never log in to GHCR, and never push images or caches. Publishing jobs have contents:read and packages:write.
 - The reusable native workflow builds, loads and tests a same-commit graph before pushing selected images by digest. All native workers must succeed before merging public manifests.

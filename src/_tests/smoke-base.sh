@@ -33,7 +33,7 @@ base_main() {
     #   - apt `ripgrep`  → binary `rg`
     #   - apt `fd-find`  → binary `fd`   (symlinked by dev-tools.sh)
     #   - apt `bat`      → binary `bat`  (symlinked by dev-tools.sh)
-    for tool in git curl wget vim tmux htop rsync rg ffmpeg; do
+    for tool in git curl wget vim tmux htop rsync rg ffmpeg gosu landscape-sysinfo; do
         command -v "$tool" >/dev/null 2>&1 \
             && ok "tool present: $tool" \
             || fail "tool missing: $tool"
@@ -54,7 +54,6 @@ base_main() {
     assert_cmd "python3 entrypoint" python3 --version
     assert_cmd "uv CLI" uv --version
     assert_cmd "ty CLI" ty --version
-    assert_cmd "black CLI" black --version
     assert_import "numpy importable"  numpy
     assert_import "pandas importable" pandas
     assert_import "torch importable"  torch
