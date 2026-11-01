@@ -26,7 +26,7 @@ Main also publishes `main` and `sha-<7-character-sha>`; `v*` events publish the 
 
 The default container user is `root` and the default command is `/bin/bash`. The configured `luciole` account has UID/GID 1000 and passwordless sudo. The base does not override the upstream working directory.
 
-Dockerfile `USER` controls identity, including when ENTRYPOINT is overridden. The shared entrypoint starts sshd according to `SSH_MODE` and then executes the command. Password mode is the default, but `luciole` is initially locked and the image has no password. Root SSH login is disabled. `APP_USER` is metadata; use `docker run --user root` for an explicit root session.
+Dockerfile `USER` controls identity, including when ENTRYPOINT is overridden. The shared entrypoint starts sshd according to `SSH_MODE` and then executes the command. Password mode is the default, but `luciole` is initially locked and the image has no password. Root SSH login is disabled with the default `DEFAULT_USER=luciole`. `APP_USER` is metadata; use `docker run --user root` for an explicit root session.
 
 ## Build arguments
 
@@ -43,6 +43,7 @@ The [manifest](image.yml) supplies these values for standard builds. Dockerfile 
 | `USERNAME` | `luciole` | Configured account; must match internal base |
 | `USER_UID` | `1000` | Account UID |
 | `USER_GID` | `1000` | Account GID; direct builds default to USER_UID |
+| `USER_GROUPS` | Empty | Comma-separated existing supplementary groups; root requires empty |
 
 ## Quick start
 
@@ -88,7 +89,9 @@ docker run -dit --gpus all -p 2222:22 -e SSH_PASSWORD_FILE=/run/secrets/ssh-pass
 ssh -p 2222 luciole@localhost
 ```
 
-Before running this example, create a nonempty `$HOME/.config/luciole/ssh-password` file with restricted permissions. The default `SSH_MODE=password` starts sshd, but `luciole` is initially locked. For password access, mount a nonempty secret file and set `SSH_PASSWORD_FILE` to its container path. For key access, mount a nonempty `/home/luciole/.ssh/authorized_keys` and set `SSH_MODE=key-only`. Set `SSH_MODE=disabled` when SSH is unnecessary. Root SSH login is disabled; host keys are ensured at container startup. Publish port 22 only on a trusted interface. Compose maps host port 2222 without supplying credentials.
+Before running this example, create a nonempty `$HOME/.config/luciole/ssh-password` file with restricted permissions. The default `SSH_MODE=password` starts sshd, but `luciole` is initially locked. For password access, mount a nonempty secret file and set `SSH_PASSWORD_FILE` to its container path. For key access, mount a nonempty `/home/luciole/.ssh/authorized_keys` and set `SSH_MODE=key-only`. Set `SSH_MODE=disabled` when SSH is unnecessary. Root SSH login is disabled with the default `DEFAULT_USER=luciole`; host keys are ensured at container startup. Publish port 22 only on a trusted interface. Compose maps host port 2222 without supplying credentials.
+
+SSH follows the explicitly selected `DEFAULT_USER`: selecting `root` permits key-only root access with a nonempty `/root/.ssh/authorized_keys`; root password access requires a nonempty mounted `SSH_PASSWORD_FILE`. Root SSH grants full container privileges. Changing `DEFAULT_USER` at runtime selects the SSH account, not the Dockerfile command user.
 
 ## Known upstream issues
 
@@ -98,6 +101,6 @@ Historical [OpenCV analysis](../../docs/opencv-status.md) and [linker diagnostic
 
 See [build architecture](../../docs/build-architecture.md) and [manifest reference](../../docs/manifest-reference.md) for configuration and release details.
 
-The shared system installer accepts `--timezone` and `--upgrade`; the libdatachannel, rpclib and iceoryx installers accept `--version`. Existing environment variables remain defaults.
+The shared system installer still accepts `--timezone` and `--upgrade` with environment-variable defaults. The libdatachannel, rpclib and iceoryx installers take explicit `--version` arguments from the Dockerfile; their version environment variables are no longer read. `user.sh --groups` receives `USER_GROUPS` from the manifest. Referenced groups must already exist; an empty value adds no supplementary groups, and malformed lists or nonempty groups for root are rejected. Dev/runtime inherit these groups from the base.
 
 Shared installation scripts are grouped by capability under `src/_scripts/`; manifests declare the exact script paths.

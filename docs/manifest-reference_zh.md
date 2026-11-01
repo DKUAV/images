@@ -44,7 +44,7 @@ base:
 
 目标镜像必须存在，其平台覆盖子镜像平台，且 `USERNAME` 与子镜像一致。拒绝依赖环。Bake 注入 `BASE_IMAGE=internal_base` 和 `contexts.internal_base=target:<dependency>`。`BASE_IMAGE` 与兼容专用的 `BASE_TAG` 为保留参数，不能通过 `build_args` 设置。
 
-Base 清单管理 TZ、CMake/库版本、USERNAME、USER_UID 和 USER_GID；最终镜像清单管理 ROS_DISTRO、ROS_TARGET 和 USERNAME。修改账户名时同时更新 base 与两个最终镜像。拒绝重复 YAML 键，以及 Dockerfile 未声明的构建参数。Dev/runtime 镜像源和 SSH 行为继续由现有脚本负责，不新增镜像源或 SSH 策略接口。
+Base 清单管理 TZ、CMake/库版本、USERNAME、USER_UID、USER_GID 和 USER_GROUPS（逗号分隔的已有附加组，默认为空）；最终镜像清单管理 ROS_DISTRO、ROS_TARGET 和 USERNAME。修改账户名时同时更新 base 与两个最终镜像。拒绝重复 YAML 键，以及 Dockerfile 未声明的构建参数。Dev/runtime 镜像源和 SSH 行为继续由现有脚本负责，不新增镜像源或 SSH 策略接口。
 
 ## 命令与生成格式
 

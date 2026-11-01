@@ -22,7 +22,7 @@ Main also publishes `main` and `sha-<7-character-sha>`; `v*` events publish the 
 
 The default container user is `luciole` and the default command is `/bin/bash`. The configured `luciole` account has UID/GID 1000 and passwordless sudo. The working directory is `/home/luciole`.
 
-Dockerfile `USER` controls identity, including when ENTRYPOINT is overridden. The shared entrypoint starts sshd according to `SSH_MODE` and then executes the command. Password mode is the default, but `luciole` is initially locked and the image has no password. Root SSH login is disabled. `APP_USER` is metadata; use `docker run --user root` for an explicit root session.
+Dockerfile `USER` controls identity, including when ENTRYPOINT is overridden. The shared entrypoint starts sshd according to `SSH_MODE` and then executes the command. Password mode is the default, but `luciole` is initially locked and the image has no password. Root SSH login is disabled with the default `DEFAULT_USER=luciole`. `APP_USER` is metadata; use `docker run --user root` for an explicit root session.
 
 ## Build arguments
 
@@ -80,7 +80,9 @@ docker run -dit --gpus all -p 2222:22 -e SSH_PASSWORD_FILE=/run/secrets/ssh-pass
 ssh -p 2222 luciole@localhost
 ```
 
-Before running this example, create a nonempty `$HOME/.config/luciole/ssh-password` file with restricted permissions. The default `SSH_MODE=password` starts sshd, but `luciole` is initially locked. For password access, mount a nonempty secret file and set `SSH_PASSWORD_FILE` to its container path. For key access, mount a nonempty `/home/luciole/.ssh/authorized_keys` and set `SSH_MODE=key-only`. Set `SSH_MODE=disabled` when SSH is unnecessary. Root SSH login is disabled; host keys are ensured at container startup. Publish port 22 only on a trusted interface. Compose maps host port 2222 without supplying credentials.
+Before running this example, create a nonempty `$HOME/.config/luciole/ssh-password` file with restricted permissions. The default `SSH_MODE=password` starts sshd, but `luciole` is initially locked. For password access, mount a nonempty secret file and set `SSH_PASSWORD_FILE` to its container path. For key access, mount a nonempty `/home/luciole/.ssh/authorized_keys` and set `SSH_MODE=key-only`. Set `SSH_MODE=disabled` when SSH is unnecessary. Root SSH login is disabled with the default `DEFAULT_USER=luciole`; host keys are ensured at container startup. Publish port 22 only on a trusted interface. Compose maps host port 2222 without supplying credentials.
+
+SSH follows the explicitly selected `DEFAULT_USER`: selecting `root` permits key-only root access with a nonempty `/root/.ssh/authorized_keys`; root password access requires a nonempty mounted `SSH_PASSWORD_FILE`. Root SSH grants full container privileges. Changing `DEFAULT_USER` at runtime selects the SSH account, not the Dockerfile command user.
 
 ## ROS 2 setup
 
@@ -88,6 +90,6 @@ Source `source /opt/ros/jazzy/setup.bash` before using ROS. Runtime does not add
 
 See [build architecture](../../docs/build-architecture.md) and [manifest reference](../../docs/manifest-reference.md) for configuration and release details.
 
-The ROS installer accepts `--distro` and `--target`; existing environment variables remain defaults.
+The Dockerfile passes manifest ROS values explicitly through `--distro` and `--target`; the installer no longer reads ROS configuration environment variables. Supplementary user groups are configured by `USER_GROUPS` in the base manifest and inherited here.
 
 Shared installation scripts are grouped by capability under `src/_scripts/`; manifests declare the exact script paths.

@@ -44,7 +44,7 @@ base:
 
 The named image must exist, its platforms must cover the child's platforms, and its `USERNAME` must match the child. Dependency cycles are rejected. Bake injects `BASE_IMAGE=internal_base` and `contexts.internal_base=target:<dependency>`. `BASE_IMAGE` and compatibility-only `BASE_TAG` are reserved and cannot be set through `build_args`.
 
-The base manifest owns TZ, CMake/library versions, USERNAME, USER_UID and USER_GID. Final manifests own ROS_DISTRO, ROS_TARGET and USERNAME. Changing an account name requires changing the base and both finals together. Duplicate YAML keys and build arguments not declared by the Dockerfile are rejected. Dev/runtime mirror behavior and SSH behavior remain in the existing scripts; no new mirror or SSH policy interface is introduced.
+The base manifest owns TZ, CMake/library versions, USERNAME, USER_UID, USER_GID and USER_GROUPS (comma-separated existing supplementary groups; empty by default). Final manifests own ROS_DISTRO, ROS_TARGET and USERNAME. Changing an account name requires changing the base and both finals together. Duplicate YAML keys and build arguments not declared by the Dockerfile are rejected. Dev/runtime mirror behavior and SSH behavior remain in the existing scripts; no new mirror or SSH policy interface is introduced.
 
 ## Commands and generated formats
 

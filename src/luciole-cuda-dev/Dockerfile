@@ -9,7 +9,7 @@ FROM ${BASE_IMAGE}
 ARG ROS_DISTRO=jazzy
 ARG ROS_TARGET=ros-base
 COPY --chmod=0755 src/_scripts/integrations/ros2.sh /tmp/scripts/ros2.sh
-RUN /tmp/scripts/ros2.sh
+RUN /tmp/scripts/ros2.sh --distro "${ROS_DISTRO}" --target "${ROS_TARGET}"
 
 COPY --chmod=0755 src/_scripts/dev/clang.sh /tmp/scripts/clang.sh
 RUN /tmp/scripts/clang.sh
@@ -23,7 +23,7 @@ COPY --chmod=0755 src/_scripts/dev/devshell.sh /tmp/scripts/devshell.sh
 RUN /tmp/scripts/devshell.sh --enabled true
 COPY src/_assets/.pre-commit-config.yaml /tmp/assets/.pre-commit-config.yaml
 COPY --chmod=0755 src/_scripts/dev/precommit.sh /tmp/scripts/precommit.sh
-RUN /tmp/scripts/precommit.sh
+RUN /tmp/scripts/precommit.sh --config /tmp/assets/.pre-commit-config.yaml
 
 USER root
 

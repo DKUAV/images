@@ -39,25 +39,27 @@ RUN /tmp/scripts/cmake.sh
 # libdatachannel for WebRTC data channels
 ARG LIBDATACHANNEL_VERSION=v0.24.5
 COPY --chmod=0755 src/_scripts/libraries/libdatachannel.sh /tmp/scripts/libdatachannel.sh
-RUN /tmp/scripts/libdatachannel.sh
+RUN /tmp/scripts/libdatachannel.sh --version "${LIBDATACHANNEL_VERSION}"
 
 # rpclib for RPC over AirSim
 ARG RPCLIB_VERSION=v2.3.0
 COPY --chmod=0755 src/_scripts/libraries/rpclib.sh /tmp/scripts/rpclib.sh
-RUN /tmp/scripts/rpclib.sh
+RUN /tmp/scripts/rpclib.sh --version "${RPCLIB_VERSION}"
 
 # iceoryx for shared memory transport
 ARG ICEORYX_VERSION=v2.0.8
 COPY --chmod=0755 src/_scripts/libraries/iceoryx.sh /tmp/scripts/iceoryx.sh
-RUN /tmp/scripts/iceoryx.sh
+RUN /tmp/scripts/iceoryx.sh --version "${ICEORYX_VERSION}"
 
 # SSH server for remote access (build-time config only; sshd is started at
 # runtime by docker-entrypoint.sh).
 ARG USERNAME=luciole
 ARG USER_UID=1000
 ARG USER_GID=${USER_UID}
+ARG USER_GROUPS=""
 COPY --chmod=0755 src/_scripts/system/user.sh /tmp/scripts/user.sh
-RUN /tmp/scripts/user.sh --username "${USERNAME}" --uid "${USER_UID}" --gid "${USER_GID}"
+RUN /tmp/scripts/user.sh --username "${USERNAME}" --uid "${USER_UID}" --gid "${USER_GID}" \
+    --groups "${USER_GROUPS}"
 
 COPY --chmod=0755 src/_scripts/system/ssh.sh /tmp/scripts/ssh.sh
 RUN /tmp/scripts/ssh.sh --default-user "${USERNAME}" --mode password

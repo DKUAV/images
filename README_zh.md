@@ -32,7 +32,7 @@ docker pull ghcr.io/dkuav/luciole-cuda-dev:latest
 docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-dev:latest
 ```
 
-CUDA base 默认以 root 运行；CUDA dev/runtime 和昇腾镜像默认为 `luciole`（UID/GID 1000）。共享入口脚本根据 `SSH_MODE` 启动 sshd，再以 Dockerfile 的 `USER` 执行命令。SSH 默认是 password 模式，但 `luciole` 初始锁定，需在运行时提供凭据；禁止 root SSH 登录。`APP_USER` 只是 CUDA 描述性元数据。SSH 和 Compose 示例见各镜像文档。
+CUDA base 默认以 root 运行；CUDA dev/runtime 和昇腾镜像默认为 `luciole`（UID/GID 1000）。共享入口脚本根据 `SSH_MODE` 启动 sshd，再以 Dockerfile 的 `USER` 执行命令。SSH 默认是 password 模式，但 `luciole` 初始锁定，需在运行时提供凭据；默认禁止 root SSH 登录。显式选择 `DEFAULT_USER=root` 可启用 root SSH；root 密码模式必须挂载密码文件，公钥模式必须提供非空公钥文件。`APP_USER` 只是 CUDA 描述性元数据。SSH 和 Compose 示例见各镜像文档。
 
 ## 本地构建与烟测
 

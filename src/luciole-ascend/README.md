@@ -29,10 +29,12 @@ docker run --rm -it --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=dis
 docker run --rm -i --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disabled "$IMAGE" bash -s < src/_tests/npu-ascend.sh
 ```
 
-The default user is `luciole`, the work directory is `/work`, and the default command is Bash; the login shell is zsh. The default SSH mode is `password`, but the account is locked and no password is stored in the image. Set `SSH_MODE=disabled` when SSH is unnecessary. To enable key access, mount a nonempty `/home/luciole/.ssh/authorized_keys` and set `SSH_MODE=key-only`. To enable password access, mount a nonempty secret file and set `SSH_PASSWORD_FILE` to its container path. Publish port 22 only on a trusted interface. Root SSH login is disabled. The shared entrypoint starts sshd according to the mode and executes the command as the Dockerfile user.
+The default user is `luciole`, the work directory is `/work`, and the default command is Bash; the login shell is zsh. The default SSH mode is `password`, but the account is locked and no password is stored in the image. Set `SSH_MODE=disabled` when SSH is unnecessary. To enable key access, mount a nonempty `/home/luciole/.ssh/authorized_keys` and set `SSH_MODE=key-only`. To enable password access, mount a nonempty secret file and set `SSH_PASSWORD_FILE` to its container path. Publish port 22 only on a trusted interface. Root SSH login is disabled with the default `DEFAULT_USER=luciole`. The shared entrypoint starts sshd according to the mode and executes the command as the Dockerfile user.
 
 The Compose example maps port `2222:22`; it does not provide credentials. The account remains locked until credentials are supplied at runtime. Hardware device mounts and runtime registration are host responsibilities.
 
-The shared system installer accepts `--timezone` and `--upgrade`; existing environment variables remain defaults.
+SSH follows the explicitly selected `DEFAULT_USER`: selecting `root` permits key-only root access with a nonempty `/root/.ssh/authorized_keys`; root password access requires a nonempty mounted `SSH_PASSWORD_FILE`. Root SSH grants full container privileges. Changing `DEFAULT_USER` at runtime selects the SSH account, not the Dockerfile command user.
+
+The shared system installer accepts `--timezone` and `--upgrade`; existing environment variables remain defaults. The manifest build argument `DEFAULT_GROUPS` defaults to empty and is passed to `user.sh --groups`. Set it to comma-separated existing group names to add supplementary groups. Malformed lists and nonempty groups for root are rejected; default user, UID/GID and SSH mode are unchanged.
 
 Shared installation scripts are grouped by capability under `src/_scripts/`; manifests declare the exact script paths.

@@ -16,6 +16,7 @@ build_args:
   USERNAME: luciole
   USER_UID: 1000
   USER_GID: 1000
+  USER_GROUPS: ""
 inputs:
   - src/_scripts/system/system.sh
   - src/_scripts/dev/dev-tools.sh

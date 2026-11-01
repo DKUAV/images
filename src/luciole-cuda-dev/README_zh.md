@@ -25,7 +25,7 @@ Main 还发布 `main`、`sha-<7位提交号>`；`v*` 事件发布版本和 SHA �
 
 默认容器用户为 `luciole`，默认命令为 `/bin/zsh`。配置的 `luciole` 账户 UID/GID 为 1000，具有免密 sudo 权限。工作目录为 `/home/luciole`。
 
-身份由 Dockerfile 的 `USER` 决定，即使覆盖 ENTRYPOINT 也保持该身份。共享入口脚本按 `SSH_MODE` 启动 sshd，再执行用户命令。默认是 password 模式，但 `luciole` 初始锁定且镜像内没有密码；禁止 root SSH 登录。`APP_USER` 仅是描述性元数据。需要 root 会话时显式使用 `docker run --user root`。
+身份由 Dockerfile 的 `USER` 决定，即使覆盖 ENTRYPOINT 也保持该身份。共享入口脚本按 `SSH_MODE` 启动 sshd，再执行用户命令。默认是 password 模式，但 `luciole` 初始锁定且镜像内没有密码；默认 `DEFAULT_USER=luciole` 时禁止 root SSH 登录。`APP_USER` 仅是描述性元数据。需要 root 会话时显式使用 `docker run --user root`。
 
 ## 构建参数
 
@@ -83,7 +83,9 @@ docker run -dit --gpus all -p 2222:22 -e SSH_PASSWORD_FILE=/run/secrets/ssh-pass
 ssh -p 2222 luciole@localhost
 ```
 
-运行上述示例前，请在宿主机创建非空的 `$HOME/.config/luciole/ssh-password` 密码文件并限制其读取权限。默认 `SSH_MODE=password` 会启动 sshd，但 `luciole` 初始锁定。密码登录需挂载非空密码文件并设置 `SSH_PASSWORD_FILE`；公钥登录需挂载非空的 `/home/luciole/.ssh/authorized_keys` 并设置 `SSH_MODE=key-only`。不使用 SSH 时设为 `disabled`。禁止 root SSH 登录；host key 在容器启动时确保存在。仅向可信接口映射 22 端口。Compose 映射宿主机 2222 端口，但不提供凭据。
+运行上述示例前，请在宿主机创建非空的 `$HOME/.config/luciole/ssh-password` 密码文件并限制其读取权限。默认 `SSH_MODE=password` 会启动 sshd，但 `luciole` 初始锁定。密码登录需挂载非空密码文件并设置 `SSH_PASSWORD_FILE`；公钥登录需挂载非空的 `/home/luciole/.ssh/authorized_keys` 并设置 `SSH_MODE=key-only`。不使用 SSH 时设为 `disabled`。默认 `DEFAULT_USER=luciole` 时禁止 root SSH 登录；host key 在容器启动时确保存在。仅向可信接口映射 22 端口。Compose 映射宿主机 2222 端口，但不提供凭据。
+
+SSH 使用显式选择的 `DEFAULT_USER`：选择 `root` 后，公钥模式要求非空的 `/root/.ssh/authorized_keys`；root 密码登录必须挂载非空的 `SSH_PASSWORD_FILE`。root SSH 具有完整容器权限。运行时修改 `DEFAULT_USER` 只选择 SSH 账户，不改变 Dockerfile 命令用户。
 
 ## ROS 2 与 WSLg
 
@@ -93,6 +95,6 @@ Dev Compose 挂载 `/tmp/.X11-unix`、`/mnt/wslg`，转发 DISPLAY、WAYLAND_DIS
 
 配置与发布细节见[构建架构](../../docs/build-architecture_zh.md)和[清单参考](../../docs/manifest-reference_zh.md)。
 
-ROS 安装脚本支持 `--distro` 和 `--target`，pre-commit 安装脚本支持 `--config`；现有环境变量仍作为默认值。
+Dockerfile 通过 `--distro` 和 `--target` 显式传递清单的 ROS 配置，通过 `--config` 显式传入 pre-commit 配置；对应安装脚本不再读取配置环境变量。附加用户组由 base 清单的 `USER_GROUPS` 配置，并由本镜像继承。
 
 共享安装脚本按功能归类在 `src/_scripts/` 下；清单声明具体脚本路径。

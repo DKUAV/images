@@ -29,10 +29,12 @@ docker run --rm -it --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=dis
 docker run --rm -i --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disabled "$IMAGE" bash -s < src/_tests/npu-ascend.sh
 ```
 
-默认用户为 `luciole`，工作目录为 `/work`，默认命令是 Bash，登录 shell 为 zsh。SSH 默认模式是 `password`，但账号初始锁定，镜像中没有密码。不需要 SSH 时设置 `SSH_MODE=disabled`。使用公钥时挂载非空的 `/home/luciole/.ssh/authorized_keys` 并设置 `SSH_MODE=key-only`；使用密码时挂载非空的密码密钥文件，并将 `SSH_PASSWORD_FILE` 设为容器内路径。仅向可信接口发布 22 端口；禁止 root SSH 登录。共享入口脚本按模式启动 sshd，再以 Dockerfile 用户执行命令。
+默认用户为 `luciole`，工作目录为 `/work`，默认命令是 Bash，登录 shell 为 zsh。SSH 默认模式是 `password`，但账号初始锁定，镜像中没有密码。不需要 SSH 时设置 `SSH_MODE=disabled`。使用公钥时挂载非空的 `/home/luciole/.ssh/authorized_keys` 并设置 `SSH_MODE=key-only`；使用密码时挂载非空的密码密钥文件，并将 `SSH_PASSWORD_FILE` 设为容器内路径。仅向可信接口发布 22 端口；默认 `DEFAULT_USER=luciole` 时禁止 root SSH 登录。共享入口脚本按模式启动 sshd，再以 Dockerfile 用户执行命令。
 
 Compose 示例映射 `2222:22`，不提供凭据；运行时提供凭据前账号保持锁定。设备挂载和 runtime 注册由宿主机负责。
 
-共享系统安装脚本支持 `--timezone` 和 `--upgrade`；现有环境变量仍作为默认值。
+SSH 使用显式选择的 `DEFAULT_USER`：选择 `root` 后，公钥模式要求非空的 `/root/.ssh/authorized_keys`；root 密码登录必须挂载非空的 `SSH_PASSWORD_FILE`。root SSH 具有完整容器权限。运行时修改 `DEFAULT_USER` 只选择 SSH 账户，不改变 Dockerfile 命令用户。
+
+共享系统安装脚本支持 `--timezone` 和 `--upgrade`；现有环境变量仍作为默认值。清单构建参数 `DEFAULT_GROUPS` 默认为空，并传给 `user.sh --groups`；可设置为逗号分隔的已有组名以添加附加用户组。格式错误的列表和 root 的非空附加组会被拒绝；默认用户、UID/GID 与 SSH 模式保持不变。
 
 共享安装脚本按功能归类在 `src/_scripts/` 下；清单声明具体脚本路径。

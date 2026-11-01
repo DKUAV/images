@@ -1,16 +1,21 @@
 #!/bin/bash
 
-# Install cpptrace from source. Used by both dev and runtime images.
+# Install cpptrace from source. Option: --version (default: v1.0.4).
+# Used by both dev and runtime images.
 
 set -euo pipefail
 
-CPPTRACE_VERSION_VAL=${CPPTRACE_VERSION:-v1.0.4}
-
-# Select the source revision; the environment variable remains the default.
 usage() {
-    echo "Usage: cpptrace.sh [--version <revision>] [-h|--help]"
-    echo "  --version <revision>  Source revision (default: CPPTRACE_VERSION or v1.0.4)"
+    cat <<'EOF'
+Usage: cpptrace.sh [--version <git-tag-or-commit>]
+
+Options:
+  --version <value>  cpptrace git tag or commit (default: v1.0.4)
+  -h, --help         Show this help
+EOF
 }
+
+CPPTRACE_VERSION_VAL="v1.0.4"
 if ! PARSED=$(getopt -o h -l help,version: -n "$(basename "$0")" -- "$@"); then
     usage >&2
     exit 64
@@ -18,9 +23,18 @@ fi
 eval set -- "$PARSED"
 while true; do
     case "$1" in
-        --version) CPPTRACE_VERSION_VAL="$2"; shift 2 ;;
-        -h | --help) usage; exit 0 ;;
-        --) shift; break ;;
+        --version)
+            CPPTRACE_VERSION_VAL="$2"
+            shift 2
+            ;;
+        -h | --help)
+            usage
+            exit 0
+            ;;
+        --)
+            shift
+            break
+            ;;
     esac
 done
 if [ "$#" -ne 0 ]; then

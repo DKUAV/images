@@ -9,7 +9,7 @@ FROM ${BASE_IMAGE}
 ARG ROS_DISTRO=jazzy
 ARG ROS_TARGET=ros-base
 COPY --chmod=0755 src/_scripts/integrations/ros2.sh /tmp/scripts/ros2.sh
-RUN /tmp/scripts/ros2.sh
+RUN /tmp/scripts/ros2.sh --distro "${ROS_DISTRO}" --target "${ROS_TARGET}"
 
 ARG USERNAME=luciole
 

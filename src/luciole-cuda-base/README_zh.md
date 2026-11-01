@@ -26,7 +26,7 @@ Main 还发布 `main`、`sha-<7位提交号>`；`v*` 事件发布版本和 SHA �
 
 默认容器用户为 `root`，默认命令为 `/bin/bash`。配置的 `luciole` 账户 UID/GID 为 1000，具有免密 sudo 权限。Base 不覆盖上游工作目录。
 
-身份由 Dockerfile 的 `USER` 决定，即使覆盖 ENTRYPOINT 也保持该身份。共享入口脚本按 `SSH_MODE` 启动 sshd，再执行用户命令。默认是 password 模式，但 `luciole` 初始锁定且镜像内没有密码；禁止 root SSH 登录。`APP_USER` 仅是描述性元数据。需要 root 会话时显式使用 `docker run --user root`。
+身份由 Dockerfile 的 `USER` 决定，即使覆盖 ENTRYPOINT 也保持该身份。共享入口脚本按 `SSH_MODE` 启动 sshd，再执行用户命令。默认是 password 模式，但 `luciole` 初始锁定且镜像内没有密码；默认 `DEFAULT_USER=luciole` 时禁止 root SSH 登录。`APP_USER` 仅是描述性元数据。需要 root 会话时显式使用 `docker run --user root`。
 
 ## 构建参数
 
@@ -43,6 +43,7 @@ Main 还发布 `main`、`sha-<7位提交号>`；`v*` 事件发布版本和 SHA �
 | `USERNAME` | `luciole` | 配置的账户名，必须与内部基础镜像一致 |
 | `USER_UID` | `1000` | 账户 UID |
 | `USER_GID` | `1000` | 账户 GID；直接构建默认跟随 USER_UID |
+| `USER_GROUPS` | 空 | 逗号分隔的已有附加用户组；root 必须为空 |
 
 ## 快速开始
 
@@ -88,7 +89,9 @@ docker run -dit --gpus all -p 2222:22 -e SSH_PASSWORD_FILE=/run/secrets/ssh-pass
 ssh -p 2222 luciole@localhost
 ```
 
-运行上述示例前，请在宿主机创建非空的 `$HOME/.config/luciole/ssh-password` 密码文件并限制其读取权限。默认 `SSH_MODE=password` 会启动 sshd，但 `luciole` 初始锁定。密码登录需挂载非空密码文件并设置 `SSH_PASSWORD_FILE`；公钥登录需挂载非空的 `/home/luciole/.ssh/authorized_keys` 并设置 `SSH_MODE=key-only`。不使用 SSH 时设为 `disabled`。禁止 root SSH 登录；host key 在容器启动时确保存在。仅向可信接口映射 22 端口。Compose 映射宿主机 2222 端口，但不提供凭据。
+运行上述示例前，请在宿主机创建非空的 `$HOME/.config/luciole/ssh-password` 密码文件并限制其读取权限。默认 `SSH_MODE=password` 会启动 sshd，但 `luciole` 初始锁定。密码登录需挂载非空密码文件并设置 `SSH_PASSWORD_FILE`；公钥登录需挂载非空的 `/home/luciole/.ssh/authorized_keys` 并设置 `SSH_MODE=key-only`。不使用 SSH 时设为 `disabled`。默认 `DEFAULT_USER=luciole` 时禁止 root SSH 登录；host key 在容器启动时确保存在。仅向可信接口映射 22 端口。Compose 映射宿主机 2222 端口，但不提供凭据。
+
+SSH 使用显式选择的 `DEFAULT_USER`：选择 `root` 后，公钥模式要求非空的 `/root/.ssh/authorized_keys`；root 密码登录必须挂载非空的 `SSH_PASSWORD_FILE`。root SSH 具有完整容器权限。运行时修改 `DEFAULT_USER` 只选择 SSH 账户，不改变 Dockerfile 命令用户。
 
 ## 已知上游问题
 
@@ -98,6 +101,6 @@ ssh -p 2222 luciole@localhost
 
 配置与发布细节见[构建架构](../../docs/build-architecture_zh.md)和[清单参考](../../docs/manifest-reference_zh.md)。
 
-共享系统安装脚本支持 `--timezone` 和 `--upgrade`；libdatachannel、rpclib 和 iceoryx 安装脚本支持 `--version`。现有环境变量仍作为默认值。
+共享系统安装脚本仍支持 `--timezone` 和 `--upgrade`，并保留环境变量默认值。libdatachannel、rpclib 和 iceoryx 安装脚本由 Dockerfile 显式传入 `--version`，不再读取版本环境变量。`user.sh --groups` 接收清单的 `USER_GROUPS`。引用的组必须已经存在；空值不添加附加组，格式错误的列表和 root 的非空附加组会被拒绝。Dev/runtime 继承 base 配置的附加组。
 
 共享安装脚本按功能归类在 `src/_scripts/` 下；清单声明具体脚本路径。

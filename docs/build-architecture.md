@@ -4,7 +4,7 @@
 
 ## Responsibilities
 
-Each existing image directory has one `image.yml`; its name remains the GHCR repository name. The manifest declares the base, platforms, build arguments, copied shared inputs and smoke contract. Dockerfiles own installation order and user transitions. Shared scripts retain their existing environment-variable interfaces.
+Each existing image directory has one `image.yml`; its name remains the GHCR repository name. The manifest declares the base, platforms, build arguments, copied shared inputs and smoke contract. Dockerfiles own installation order and user transitions. Library versions, ROS options and pre-commit configuration are passed explicitly through named script arguments. Other installers retain their existing environment-variable interfaces.
 
 Python 3.11+ tooling validates these contracts and produces a versioned JSON build plan and a Buildx Bake graph. The checked-in [schema](../schemas/image.schema.json) and [manifest reference](manifest-reference.md) define the contract. Generated JSON is ignored locally and uploaded as CI artifacts.
 

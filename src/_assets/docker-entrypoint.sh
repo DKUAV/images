@@ -36,11 +36,15 @@ case "${SSH_MODE_VAL}" in
         run_as_root /usr/sbin/sshd \
             -o PasswordAuthentication=no \
             -o KbdInteractiveAuthentication=no \
-            -o PermitRootLogin=no \
+            -o "PermitRootLogin=$([ "${RESOLVED_LOGIN_USER}" = "root" ] && echo prohibit-password || echo no)" \
             -o "AllowUsers=${RESOLVED_LOGIN_USER}"
         ;;
     password)
         # A mounted password file avoids exposing credentials in image layers or arguments.
+        if [ "${RESOLVED_LOGIN_USER}" = "root" ] && [ -z "${SSH_PASSWORD_FILE:-}" ]; then
+            echo "[entrypoint] root password SSH requires SSH_PASSWORD_FILE" >&2
+            exit 64
+        fi
         if [ -n "${SSH_PASSWORD_FILE:-}" ]; then
             if ! run_as_root test -s "${SSH_PASSWORD_FILE}"; then
                 echo "[entrypoint] SSH_PASSWORD_FILE must reference a non-empty file" >&2
@@ -63,7 +67,7 @@ case "${SSH_MODE_VAL}" in
             -o PasswordAuthentication=yes \
             -o KbdInteractiveAuthentication=no \
             -o PermitEmptyPasswords=no \
-            -o PermitRootLogin=no \
+            -o "PermitRootLogin=$([ "${RESOLVED_LOGIN_USER}" = "root" ] && echo yes || echo no)" \
             -o "AllowUsers=${RESOLVED_LOGIN_USER}"
         ;;
     *)

@@ -32,7 +32,7 @@ docker pull ghcr.io/dkuav/luciole-cuda-dev:latest
 docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-dev:latest
 ```
 
-CUDA base defaults to root; CUDA dev/runtime and Ascend default to `luciole` (UID/GID 1000). The shared entrypoint starts sshd according to `SSH_MODE` and executes the command as the Dockerfile's `USER`. Password mode is the default, but `luciole` is locked until credentials are supplied at runtime; root SSH login is disabled. `APP_USER` is CUDA metadata, not an identity switch. See the image guides for SSH and Compose examples.
+CUDA base defaults to root; CUDA dev/runtime and Ascend default to `luciole` (UID/GID 1000). The shared entrypoint starts sshd according to `SSH_MODE` and executes the command as the Dockerfile's `USER`. Password mode is the default, but `luciole` is locked until credentials are supplied at runtime; root SSH login is disabled by default. Explicitly selecting `DEFAULT_USER=root` supports root SSH; root password mode requires a mounted password file, and root key-only mode requires a nonempty authorized-keys file. `APP_USER` is CUDA metadata, not an identity switch. See the image guides for SSH and Compose examples.
 
 ## Local build and smoke tests
 

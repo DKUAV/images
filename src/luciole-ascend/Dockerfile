@@ -6,6 +6,7 @@ FROM ${BASE_IMAGE}
 ARG DEFAULT_USER=luciole
 ARG DEFAULT_UID=1000
 ARG DEFAULT_GID=1000
+ARG DEFAULT_GROUPS=""
 ARG TZ=Asia/Shanghai
 ARG SYSTEM_UPGRADE=false
 ARG CMAKE_VERSION=4.3.2
@@ -37,7 +38,8 @@ RUN /tmp/image-scripts/cmake.sh --version "${CMAKE_VERSION}" --sha256 "${CMAKE_S
 
 COPY --chmod=0755 src/_scripts/system/user.sh /tmp/image-scripts/user.sh
 RUN /tmp/image-scripts/user.sh \
-      --username "${DEFAULT_USER}" --uid "${DEFAULT_UID}" --gid "${DEFAULT_GID}"
+      --username "${DEFAULT_USER}" --uid "${DEFAULT_UID}" --gid "${DEFAULT_GID}" \
+      --groups "${DEFAULT_GROUPS}"
 
 COPY --chmod=0755 src/_scripts/system/ssh.sh /tmp/image-scripts/ssh.sh
 RUN /tmp/image-scripts/ssh.sh --default-user "${DEFAULT_USER}" --mode "${SSH_MODE}"

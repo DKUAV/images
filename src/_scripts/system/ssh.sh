@@ -89,7 +89,17 @@ rm -rf /var/lib/apt/lists/*
 mkdir -p /run/sshd
 chmod 0755 /run/sshd
 
-PERMIT_ROOT_LOGIN="no"
+if [ "${RESOLVED_LOGIN_USER}" = "root" ]; then
+    if [ "${SSH_MODE_VAL}" = "password" ]; then
+        PERMIT_ROOT_LOGIN="yes"
+    elif [ "${SSH_MODE_VAL}" = "key-only" ]; then
+        PERMIT_ROOT_LOGIN="prohibit-password"
+    else
+        PERMIT_ROOT_LOGIN="no"
+    fi
+else
+    PERMIT_ROOT_LOGIN="no"
+fi
 
 cat >/etc/ssh/sshd_config.d/99-dev-image.conf <<EOF
 PubkeyAuthentication yes

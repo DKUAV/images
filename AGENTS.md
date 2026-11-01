@@ -21,7 +21,7 @@
 - ROS 2 is added in both final images. LLVM, devshell and cached pre-commit hooks are dev-only.
 - Run devshell/precommit as the target user, then return to root for mirror configuration and cleanup. Select correct binaries for amd64/arm64.
 - Run `finalize-mirror.sh` as root after all apt/pip installation. CUDA dev/runtime select Aliyun; Ascend selects upstream.
-- CUDA base defaults to root. Final Dockerfiles set `USER luciole`; the shared entrypoint starts sshd according to `SSH_MODE` then execs the command. The account starts locked, password mode is the default, and root SSH login is disabled. APP_USER is CUDA metadata, not privilege control.
+- CUDA base defaults to root. Final Dockerfiles set `USER luciole`; the shared entrypoint starts sshd according to `SSH_MODE` then execs the command. The account starts locked, password mode is the default, and root SSH login is disabled by default. Explicit `DEFAULT_USER=root` permits root SSH; root password mode requires a mounted password file and key-only mode requires nonempty authorized keys. APP_USER is CUDA metadata, not privilege control.
 - Do not change software versions, SSH policy or existing smoke assertions merely to make a build refactor pass.
 
 ## CI and verification
