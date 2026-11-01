@@ -43,3 +43,16 @@
 - Shared-script feature changes require updates to all affected image guides.
 - Keep the root bilingual READMEs and paired docs synchronized with commands, tag behavior, test policy, tools and defaults.
 - Update AGENTS.md when build or maintenance conventions change. Historical diagnostic documents must clearly distinguish past evidence from current guarantees.
+
+## Commit message format
+
+- Format commit subjects as `<Type>: <summary>`, where `Type` is one of `Feat`, `BugFix`, `Refactor`, or `Doc`.
+- Separate the subject from the body with a blank line.
+- Describe changes in the body as a numbered list.
+
+```text
+Refactor: Synchronize shared installers and SSH behavior
+
+1. Align shared scripts and pass installation options explicitly.
+2. Update related configuration, bilingual documentation and tests.
+```

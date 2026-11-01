@@ -4,6 +4,7 @@
 
 # Local tooling and generated build artifacts
 .venv/
+.tool-cache/
 __pycache__/
 *.egg-info/
 .pytest_cache/
