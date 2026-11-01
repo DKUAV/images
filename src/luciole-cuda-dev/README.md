@@ -94,3 +94,5 @@ Dev Compose mounts `/tmp/.X11-unix` and `/mnt/wslg` and forwards DISPLAY, WAYLAN
 See [build architecture](../../docs/build-architecture.md) and [manifest reference](../../docs/manifest-reference.md) for configuration and release details.
 
 The ROS installer accepts `--distro` and `--target`, and the pre-commit installer accepts `--config`; existing environment variables remain defaults.
+
+Shared installation scripts are grouped by capability under `src/_scripts/`; manifests declare the exact script paths.

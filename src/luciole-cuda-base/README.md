@@ -15,7 +15,7 @@ Main also publishes `main` and `sha-<7-character-sha>`; `v*` events publish the 
 | --- | --- |
 | Base | `nvcr.io/nvidia/pytorch:26.06-py3`, with Python, PyTorch and CUDA supplied upstream |
 | System / build | vim, Git/LFS, tmux, ripgrep, fd, bat, ffmpeg, GCC, Ninja, GDB, CMake 4.3.2 |
-| Python packages | Shared [development requirements](../_assets/python-dev-requirements.txt), including uv, ty and black; CUDA-specific OpenCV and vision packages use [pip-packages.sh](../_scripts/pip-packages.sh). CUDA retains `numpy<2.0.0`. |
+| Python packages | Shared [development requirements](../_assets/python-dev-requirements.txt), including uv, ty and black; CUDA-specific OpenCV and vision packages use [cuda-pip-packages.sh](../_scripts/python/cuda-pip-packages.sh). CUDA retains `numpy<2.0.0`. |
 | Networking libraries | libdatachannel v0.24.5, rpclib v2.3.0, iceoryx v2.0.8 |
 | GUI | WSLg dependencies, D-Bus, CJK fonts, Mesa and PulseAudio |
 | OpenCV | apt `libopencv-dev` plus pip packages; `opencv.sh` is disabled, so NVIDIA OpenCV is not quarantined by this Dockerfile |
@@ -99,3 +99,5 @@ Historical [OpenCV analysis](../../docs/opencv-status.md) and [linker diagnostic
 See [build architecture](../../docs/build-architecture.md) and [manifest reference](../../docs/manifest-reference.md) for configuration and release details.
 
 The shared system installer accepts `--timezone` and `--upgrade`; the libdatachannel, rpclib and iceoryx installers accept `--version`. Existing environment variables remain defaults.
+
+Shared installation scripts are grouped by capability under `src/_scripts/`; manifests declare the exact script paths.

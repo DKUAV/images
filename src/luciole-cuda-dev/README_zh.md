@@ -94,3 +94,5 @@ Dev Compose 挂载 `/tmp/.X11-unix`、`/mnt/wslg`，转发 DISPLAY、WAYLAND_DIS
 配置与发布细节见[构建架构](../../docs/build-architecture_zh.md)和[清单参考](../../docs/manifest-reference_zh.md)。
 
 ROS 安装脚本支持 `--distro` 和 `--target`，pre-commit 安装脚本支持 `--config`；现有环境变量仍作为默认值。
+
+共享安装脚本按功能归类在 `src/_scripts/` 下；清单声明具体脚本路径。

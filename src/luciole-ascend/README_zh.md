@@ -34,3 +34,5 @@ docker run --rm -i --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disa
 Compose 示例映射 `2222:22`，不提供凭据；运行时提供凭据前账号保持锁定。设备挂载和 runtime 注册由宿主机负责。
 
 共享系统安装脚本支持 `--timezone` 和 `--upgrade`；现有环境变量仍作为默认值。
+
+共享安装脚本按功能归类在 `src/_scripts/` 下；清单声明具体脚本路径。

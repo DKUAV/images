@@ -19,36 +19,36 @@ ENV VISUAL=vim
 
 ARG TZ=Asia/Shanghai
 
-COPY --chmod=0755 src/_scripts/system.sh /tmp/scripts/system.sh
+COPY --chmod=0755 src/_scripts/system/system.sh /tmp/scripts/system.sh
 RUN /tmp/scripts/system.sh
 # OpenCV replacement remains disabled; dev-tools installs apt libopencv-dev.
-COPY --chmod=0755 src/_scripts/dev-tools.sh /tmp/scripts/dev-tools.sh
+COPY --chmod=0755 src/_scripts/dev/dev-tools.sh /tmp/scripts/dev-tools.sh
 RUN /tmp/scripts/dev-tools.sh
-COPY --chmod=0755 src/_scripts/wslg.sh /tmp/scripts/wslg.sh
+COPY --chmod=0755 src/_scripts/integrations/wslg.sh /tmp/scripts/wslg.sh
 RUN /tmp/scripts/wslg.sh
 # Skip python-install.sh: Python is already provided by the base image
 COPY src/_assets/python-dev-requirements.txt /tmp/scripts/python-dev-requirements.txt
-COPY --chmod=0755 src/_scripts/pip-packages.sh /tmp/scripts/pip-packages.sh
-RUN /tmp/scripts/pip-packages.sh --requirements /tmp/scripts/python-dev-requirements.txt
+COPY --chmod=0755 src/_scripts/python/cuda-pip-packages.sh /tmp/scripts/cuda-pip-packages.sh
+RUN /tmp/scripts/cuda-pip-packages.sh --requirements /tmp/scripts/python-dev-requirements.txt
 
 # CMake binary release — shared by both Tier 2 dev and runtime images
 ARG CMAKE_VERSION=4.3.2
-COPY --chmod=0755 src/_scripts/cmake.sh /tmp/scripts/cmake.sh
+COPY --chmod=0755 src/_scripts/dev/cmake.sh /tmp/scripts/cmake.sh
 RUN /tmp/scripts/cmake.sh
 
 # libdatachannel for WebRTC data channels
 ARG LIBDATACHANNEL_VERSION=v0.24.5
-COPY --chmod=0755 src/_scripts/libdatachannel.sh /tmp/scripts/libdatachannel.sh
+COPY --chmod=0755 src/_scripts/libraries/libdatachannel.sh /tmp/scripts/libdatachannel.sh
 RUN /tmp/scripts/libdatachannel.sh
 
 # rpclib for RPC over AirSim
 ARG RPCLIB_VERSION=v2.3.0
-COPY --chmod=0755 src/_scripts/rpclib.sh /tmp/scripts/rpclib.sh
+COPY --chmod=0755 src/_scripts/libraries/rpclib.sh /tmp/scripts/rpclib.sh
 RUN /tmp/scripts/rpclib.sh
 
 # iceoryx for shared memory transport
 ARG ICEORYX_VERSION=v2.0.8
-COPY --chmod=0755 src/_scripts/iceoryx.sh /tmp/scripts/iceoryx.sh
+COPY --chmod=0755 src/_scripts/libraries/iceoryx.sh /tmp/scripts/iceoryx.sh
 RUN /tmp/scripts/iceoryx.sh
 
 # SSH server for remote access (build-time config only; sshd is started at
@@ -56,10 +56,10 @@ RUN /tmp/scripts/iceoryx.sh
 ARG USERNAME=luciole
 ARG USER_UID=1000
 ARG USER_GID=${USER_UID}
-COPY --chmod=0755 src/_scripts/user.sh /tmp/scripts/user.sh
+COPY --chmod=0755 src/_scripts/system/user.sh /tmp/scripts/user.sh
 RUN /tmp/scripts/user.sh --username "${USERNAME}" --uid "${USER_UID}" --gid "${USER_GID}"
 
-COPY --chmod=0755 src/_scripts/ssh.sh /tmp/scripts/ssh.sh
+COPY --chmod=0755 src/_scripts/system/ssh.sh /tmp/scripts/ssh.sh
 RUN /tmp/scripts/ssh.sh --default-user "${USERNAME}" --mode password
 
 # Install the shared entrypoint (used by every Tier 2 final too). The

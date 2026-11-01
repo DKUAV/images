@@ -5,7 +5,7 @@ set -euo pipefail
 
 usage() {
     cat <<'EOF'
-Usage: pip-packages.sh --requirements <path>
+Usage: cuda-pip-packages.sh --requirements <path>
 
 Options:
   --requirements <path>  Common development requirements file (required)
@@ -36,12 +36,12 @@ while true; do
     esac
 done
 if [ "$#" -ne 0 ]; then
-    echo "pip-packages.sh: unexpected positional arguments: $*" >&2
+    echo "cuda-pip-packages.sh: unexpected positional arguments: $*" >&2
     usage >&2
     exit 64
 fi
 if [ -z "${REQUIREMENTS_FILE}" ] || [ ! -f "${REQUIREMENTS_FILE}" ] || [ ! -r "${REQUIREMENTS_FILE}" ]; then
-    echo "pip-packages.sh: --requirements must name a readable file" >&2
+    echo "cuda-pip-packages.sh: --requirements must name a readable file" >&2
     exit 64
 fi
 

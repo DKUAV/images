@@ -89,3 +89,5 @@ Source `source /opt/ros/jazzy/setup.bash` before using ROS. Runtime does not add
 See [build architecture](../../docs/build-architecture.md) and [manifest reference](../../docs/manifest-reference.md) for configuration and release details.
 
 The ROS installer accepts `--distro` and `--target`; existing environment variables remain defaults.
+
+Shared installation scripts are grouped by capability under `src/_scripts/`; manifests declare the exact script paths.

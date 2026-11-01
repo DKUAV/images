@@ -491,8 +491,8 @@ def test_real_repository_contracts():
     assert common_python in ascend["inputs"]
     assert common_python in repository.images["luciole-cuda-base"]["inputs"]
     assert repository.affected([common_python]) == set(repository.images)
-    assert repository.affected(["src/_scripts/ascend-pip-packages.sh"]) == {"luciole-ascend"}
-    assert repository.affected(["src/_scripts/user.sh"]) == set(repository.images)
+    assert repository.affected(["src/_scripts/python/ascend-pip-packages.sh"]) == {"luciole-ascend"}
+    assert repository.affected(["src/_scripts/system/user.sh"]) == set(repository.images)
     plan = repository.plan({"luciole-ascend"})
     assert [item["platform"] for item in plan["build_matrix"]["include"]] == ["linux/arm64"]
     assert [item["name"] for item in plan["targets"]] == ["luciole-ascend"]

@@ -11,8 +11,8 @@ build_args:
   ROS_TARGET: ros-base
   USERNAME: luciole
 inputs:
-  - src/_scripts/ros2.sh
-  - src/_scripts/finalize-mirror.sh
+  - src/_scripts/integrations/ros2.sh
+  - src/_scripts/system/finalize-mirror.sh
 smoke:
   script: src/_tests/smoke-runtime.sh
   inputs: [src/_tests/_lib.sh]

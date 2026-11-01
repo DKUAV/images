@@ -8,10 +8,10 @@ FROM ${BASE_IMAGE}
 
 ARG ROS_DISTRO=jazzy
 ARG ROS_TARGET=ros-base
-COPY --chmod=0755 src/_scripts/ros2.sh /tmp/scripts/ros2.sh
+COPY --chmod=0755 src/_scripts/integrations/ros2.sh /tmp/scripts/ros2.sh
 RUN /tmp/scripts/ros2.sh
 
-COPY --chmod=0755 src/_scripts/clang.sh /tmp/scripts/clang.sh
+COPY --chmod=0755 src/_scripts/dev/clang.sh /tmp/scripts/clang.sh
 RUN /tmp/scripts/clang.sh
 
 ARG USERNAME=luciole
@@ -19,10 +19,10 @@ USER ${USERNAME}
 WORKDIR /home/${USERNAME}
 
 ENV PATH="/home/${USERNAME}/.local/bin:${PATH}"
-COPY --chmod=0755 src/_scripts/devshell.sh /tmp/scripts/devshell.sh
+COPY --chmod=0755 src/_scripts/dev/devshell.sh /tmp/scripts/devshell.sh
 RUN /tmp/scripts/devshell.sh --enabled true
 COPY src/_assets/.pre-commit-config.yaml /tmp/assets/.pre-commit-config.yaml
-COPY --chmod=0755 src/_scripts/precommit.sh /tmp/scripts/precommit.sh
+COPY --chmod=0755 src/_scripts/dev/precommit.sh /tmp/scripts/precommit.sh
 RUN /tmp/scripts/precommit.sh
 
 USER root
@@ -30,7 +30,7 @@ USER root
 # Switch apt + pip sources to Aliyun mirrors as the FINAL step, so users in
 # China get fast installs after pulling. Build itself keeps using upstream
 # sources (this script runs after every apt/pip install in devshell.sh etc.).
-COPY --chmod=0755 src/_scripts/finalize-mirror.sh /tmp/scripts/finalize-mirror.sh
+COPY --chmod=0755 src/_scripts/system/finalize-mirror.sh /tmp/scripts/finalize-mirror.sh
 RUN /tmp/scripts/finalize-mirror.sh --mirror aliyun
 
 RUN rm -rf /tmp/scripts /tmp/assets

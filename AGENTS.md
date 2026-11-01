@@ -5,6 +5,7 @@
 - Images are published as `ghcr.io/dkuav/<directory-name>`. Keep lowercase hyphenated names.
 - `src/<image>/image.yml` is the source of truth for build configuration, platforms, base dependencies, copied inputs and smoke policy. There is no central dependency map or handwritten image matrix.
 - YAML declares configuration; Dockerfiles declare installation order; `src/_scripts` implements capabilities; `tools/images` validates and plans builds and emits Buildx Bake graphs.
+- Group shared scripts under `system`, `dev`, `python`, `libraries`, and `integrations`; prefix platform-specific scripts with their platform name.
 - Each manifest describes one published image. Preserve the existing image names and the main/latest/seven-character SHA/version tag conventions.
 - All Dockerfiles use the repository root as build context. Compose uses `context: ../..`.
 - Internal bases use `base.dependency` and same-checkout Bake named contexts. The planner adds build ancestors without selecting them for publication. Child platforms must be supported by their parent.

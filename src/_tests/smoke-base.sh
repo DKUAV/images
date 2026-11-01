@@ -4,7 +4,7 @@
 #   - non-root user exists, passwordless sudo
 #   - system tools + CMake binary
 #   - Python entrypoint, PyTorch importable
-#   - pip packages installed by pip-packages.sh import cleanly
+#   - pip packages installed by cuda-pip-packages.sh import cleanly
 #   - OpenCV dual setup:
 #       * C++ find_package(OpenCV) resolves to apt 4.5.4 (NOT NVIDIA's 4.7.0)
 #       * Python cv2 importable (pip wheel)

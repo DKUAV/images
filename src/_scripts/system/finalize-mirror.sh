@@ -6,7 +6,7 @@
 #   - Builds run on GitHub Actions runners (US/EU), where Aliyun mirrors are
 #     often *slower* than the default Ubuntu / PyPI sources. We therefore keep
 #     the default sources during the whole build so every `apt-get update` /
-#     `pip install` in system.sh, ros2.sh, pip-packages.sh, … uses the fastest
+#     `pip install` in system.sh, ros2.sh, cuda-pip-packages.sh, … uses the fastest
 #     upstream available to the builder.
 #   - Only after all package installation is done do we flip the *persisted*
 #     sources to Aliyun, so that end users pulling the image in China get fast

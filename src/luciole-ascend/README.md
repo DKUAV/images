@@ -34,3 +34,5 @@ The default user is `luciole`, the work directory is `/work`, and the default co
 The Compose example maps port `2222:22`; it does not provide credentials. The account remains locked until credentials are supplied at runtime. Hardware device mounts and runtime registration are host responsibilities.
 
 The shared system installer accepts `--timezone` and `--upgrade`; existing environment variables remain defaults.
+
+Shared installation scripts are grouped by capability under `src/_scripts/`; manifests declare the exact script paths.

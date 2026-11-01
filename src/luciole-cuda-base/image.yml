@@ -17,17 +17,17 @@ build_args:
   USER_UID: 1000
   USER_GID: 1000
 inputs:
-  - src/_scripts/system.sh
-  - src/_scripts/dev-tools.sh
-  - src/_scripts/wslg.sh
-  - src/_scripts/pip-packages.sh
+  - src/_scripts/system/system.sh
+  - src/_scripts/dev/dev-tools.sh
+  - src/_scripts/integrations/wslg.sh
+  - src/_scripts/python/cuda-pip-packages.sh
   - src/_assets/python-dev-requirements.txt
-  - src/_scripts/cmake.sh
-  - src/_scripts/libdatachannel.sh
-  - src/_scripts/rpclib.sh
-  - src/_scripts/iceoryx.sh
-  - src/_scripts/ssh.sh
-  - src/_scripts/user.sh
+  - src/_scripts/dev/cmake.sh
+  - src/_scripts/libraries/libdatachannel.sh
+  - src/_scripts/libraries/rpclib.sh
+  - src/_scripts/libraries/iceoryx.sh
+  - src/_scripts/system/ssh.sh
+  - src/_scripts/system/user.sh
   - src/_assets/docker-entrypoint.sh
 smoke:
   script: src/_tests/smoke-base.sh
