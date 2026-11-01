@@ -1,5 +1,6 @@
 #!/bin/bash
-# Switch apt + pip sources to Aliyun mirrors as the FINAL step of image build.
+# Finalize persisted apt and pip sources after all package installation completes.
+# Option: --mirror selects upstream (no changes) or aliyun.
 #
 # Why this is a separate, last step:
 #   - Builds run on GitHub Actions runners (US/EU), where Aliyun mirrors are
@@ -20,6 +21,57 @@
 # Currently called at the very end of every Tier 2 final image (dev + runtime),
 # AFTER all apt/pip installs are finished.
 set -euo pipefail
+
+usage() {
+    cat <<'EOF'
+Usage: finalize-mirror.sh [--mirror <name>]
+
+Options:
+  --mirror <value>  Persisted package mirror: upstream or aliyun (default: upstream)
+  -h, --help        Show this help
+EOF
+}
+
+MIRROR="upstream"
+
+if ! PARSED=$(getopt -o h -l help,mirror: -n "$(basename "$0")" -- "$@"); then
+    usage >&2
+    exit 64
+fi
+eval set -- "$PARSED"
+while true; do
+    case "$1" in
+        --mirror)
+            MIRROR="$2"
+            shift 2
+            ;;
+        -h | --help)
+            usage
+            exit 0
+            ;;
+        --)
+            shift
+            break
+            ;;
+    esac
+done
+if [ "$#" -ne 0 ]; then
+    echo "finalize-mirror.sh: unexpected positional arguments: $*" >&2
+    usage >&2
+    exit 64
+fi
+
+case "${MIRROR}" in
+    upstream)
+        echo "finalize-mirror.sh: keeping upstream package sources"
+        exit 0
+        ;;
+    aliyun) ;;
+    *)
+        echo "finalize-mirror.sh: unsupported mirror '${MIRROR}'" >&2
+        exit 64
+        ;;
+esac
 
 ALIYUN_APT_HOST="mirrors.aliyun.com"
 ALIYUN_PIP_URL="https://mirrors.aliyun.com/pypi/simple/"
@@ -42,10 +94,10 @@ fi
 
 DPKG_ARCH="$(dpkg --print-architecture 2>/dev/null || echo unknown)"
 case "$DPKG_ARCH" in
-    amd64|i386)
+    amd64 | i386)
         APT_ROOT="${ALIYUN_APT_HOST}/ubuntu"
         ;;
-    arm64|armhf|ppc64el|riscv64|s390x)
+    arm64 | armhf | ppc64el | riscv64 | s390x)
         APT_ROOT="${ALIYUN_APT_HOST}/ubuntu-ports"
         ;;
     *)
@@ -68,7 +120,7 @@ classic_file="/etc/apt/sources.list"
 
 write_deb822() {
     # Components present in modern Ubuntu main base image.
-    cat > "$deb822_file" <<EOF
+    cat >"$deb822_file" <<EOF
 Types: deb
 URIs: https://${APT_ROOT}/
 Suites: ${CODENAME} ${CODENAME}-updates ${CODENAME}-backports
@@ -84,7 +136,7 @@ EOF
 }
 
 write_classic() {
-    cat > "$classic_file" <<EOF
+    cat >"$classic_file" <<EOF
 deb https://${APT_ROOT}/ ${CODENAME} main restricted universe multiverse
 deb https://${APT_ROOT}/ ${CODENAME}-updates main restricted universe multiverse
 deb https://${APT_ROOT}/ ${CODENAME}-backports main restricted universe multiverse
@@ -101,7 +153,7 @@ if [ -n "$APT_ROOT" ]; then
         # Ensure no conflicting classic file overrides us.
         if [ -f "$classic_file" ]; then
             cp "$classic_file" "${classic_file}.ubuntu-orig" 2>/dev/null || true
-            : > "$classic_file"
+            : >"$classic_file"
         fi
     elif [ -f "$classic_file" ]; then
         echo "finalize-mirror.sh: rewriting classic source ($classic_file) → Aliyun (${APT_ROOT})"
@@ -136,7 +188,7 @@ fi
 # ─── 2. pip → Aliyun PyPI mirror ──────────────────────────────────────────────
 echo "finalize-mirror.sh: writing /etc/pip.conf → Aliyun PyPI mirror"
 install -d -m 0755 /etc
-cat > /etc/pip.conf <<EOF
+cat >/etc/pip.conf <<EOF
 [global]
 index-url = ${ALIYUN_PIP_URL}
 trusted-host = mirrors.aliyun.com

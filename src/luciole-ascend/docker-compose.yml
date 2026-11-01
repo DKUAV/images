@@ -1,0 +1,12 @@
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: src/luciole-ascend/Dockerfile
+    image: ghcr.io/dkuav/luciole-ascend:latest
+    stdin_open: true
+    tty: true
+    environment:
+      - SSH_MODE=password
+    ports:
+      - "2222:22"

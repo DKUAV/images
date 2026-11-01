@@ -9,7 +9,9 @@ TZ_VAL=${TZ:-Asia/Shanghai}
 chmod 777 /tmp
 
 apt-get update
-apt-get -y upgrade
+if [ "${SYSTEM_UPGRADE:-true}" = "true" ]; then
+    apt-get -y upgrade
+fi
 apt-get -y install tzdata lsb-release wget software-properties-common gnupg locales
 
 ln -snf /usr/share/zoneinfo/${TZ_VAL} /etc/localtime

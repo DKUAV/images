@@ -1,35 +1,76 @@
 #!/bin/bash
-# Container entrypoint shared by every Tier 2 final image (and inherited from
-# the Tier 1 base). Single responsibility: bring sshd up at runtime, then exec
-# the user-supplied command.
-#
-# Privilege model: this entrypoint runs as whatever user the image declared via
-# its trailing `USER` directive.
-#   - Tier 1 base   → no `USER`, so it's root (base is a build-stone, and smoke
-#     tests invoke `bash -lc '...'` overriding CMD; entrypoint is exercised but
-#     irrelevant there).
-#   - Tier 2 finals → `USER <appuser>` (luciole). The entrypoint uses luciole's
-#     passwordless sudo (NOPASSWD:ALL from user.sh) to start sshd, then execs
-#     the user command AS luciole — no gosu needed since PID 1 is already luciole.
-#     Critically, this means overriding ENTRYPOINT with `docker run --entrypoint`
-#     STILL leaves the container running as luciole (root is opt-in via sudo).
-set -eo pipefail
+# Shared container entrypoint. SSH supports disabled, key-only, and password modes.
+# Reads DEFAULT_USER, SSH_MODE, and the optional SSH_PASSWORD_FILE.
+# Passwordless sudo is used only when the image starts as a managed non-root user.
+set -euo pipefail
 
-# Start sshd using sudo (this entrypoint runs as the non-root user thanks to
-# the image's `USER <appuser>` directive). luciole has NOPASSWD:ALL via
-# sudoers, so `sudo -n service ssh start` works without a password. Doing it
-# here (instead of relying on a root entrypoint + gosu) keeps the container's
-# default identity as the non-root user even if someone overrides ENTRYPOINT
-# with `docker run --entrypoint …` — i.e. privilege is the default, root is
-# opt-in via explicit sudo.
-#
-# Idempotent: `/run/sshd` is tmpfs (empty on every boot) so create it first;
-# `service ssh start` is a no-op if sshd is already up.
-sudo -n mkdir -p /run/sshd 2>/dev/null || true
-sudo -n service ssh start >/dev/null 2>&1 \
-    || echo "[entrypoint] WARN: 'sudo service ssh start' failed (already running?)" >&2
+SSH_MODE_VAL="${SSH_MODE:-disabled}"
+DEFAULT_USER_VAL="${DEFAULT_USER:-root}"
 
-# Privilege drop is NOT needed here — the image's `USER <appuser>` directive
-# already makes PID 1 run as the non-root user. Just exec the user command so
-# signals (SIGTERM, …) propagate directly (`docker stop` is prompt).
+run_as_root() {
+    if [ "$(id -u)" -eq 0 ]; then
+        "$@"
+    else
+        sudo -n "$@"
+    fi
+}
+
+RESOLVED_LOGIN_USER="${DEFAULT_USER_VAL}"
+if ! id "${RESOLVED_LOGIN_USER}" >/dev/null 2>&1; then
+    echo "[entrypoint] SSH login user '${RESOLVED_LOGIN_USER}' does not exist" >&2
+    exit 64
+fi
+
+# Start sshd only after validating the explicit mode and mounted public key.
+case "${SSH_MODE_VAL}" in
+    disabled) ;;
+    key-only)
+        USER_HOME="$(getent passwd "${RESOLVED_LOGIN_USER}" | cut -d: -f6)"
+        AUTHORIZED_KEYS="${USER_HOME}/.ssh/authorized_keys"
+        if [ ! -s "${AUTHORIZED_KEYS}" ]; then
+            echo "[entrypoint] SSH_MODE=key-only requires a non-empty ${AUTHORIZED_KEYS}" >&2
+            exit 64
+        fi
+        run_as_root mkdir -p /run/sshd
+        run_as_root ssh-keygen -A >/dev/null
+        run_as_root /usr/sbin/sshd \
+            -o PasswordAuthentication=no \
+            -o KbdInteractiveAuthentication=no \
+            -o PermitRootLogin=no \
+            -o "AllowUsers=${RESOLVED_LOGIN_USER}"
+        ;;
+    password)
+        # A mounted password file avoids exposing credentials in image layers or arguments.
+        if [ -n "${SSH_PASSWORD_FILE:-}" ]; then
+            if ! run_as_root test -s "${SSH_PASSWORD_FILE}"; then
+                echo "[entrypoint] SSH_PASSWORD_FILE must reference a non-empty file" >&2
+                exit 64
+            fi
+            # Expand positional parameters only inside the privileged child shell.
+            # shellcheck disable=SC2016
+            run_as_root /bin/bash -c '
+                password=$(cat "$1")
+                if [ -z "${password}" ]; then
+                    echo "[entrypoint] SSH_PASSWORD_FILE must contain a non-empty password" >&2
+                    exit 64
+                fi
+                printf "%s:%s\n" "$2" "${password}" | chpasswd
+            ' _ "${SSH_PASSWORD_FILE}" "${RESOLVED_LOGIN_USER}"
+        fi
+        run_as_root mkdir -p /run/sshd
+        run_as_root ssh-keygen -A >/dev/null
+        run_as_root /usr/sbin/sshd \
+            -o PasswordAuthentication=yes \
+            -o KbdInteractiveAuthentication=no \
+            -o PermitEmptyPasswords=no \
+            -o PermitRootLogin=no \
+            -o "AllowUsers=${RESOLVED_LOGIN_USER}"
+        ;;
+    *)
+        echo "[entrypoint] unsupported SSH_MODE '${SSH_MODE_VAL}'" >&2
+        exit 64
+        ;;
+esac
+
+# Preserve the user command as PID 1 so signals propagate directly.
 exec "$@"

@@ -482,7 +482,18 @@ def test_real_repository_contracts():
     """Keep production manifests, COPY sources, and bilingual links synchronized."""
     repository = ImageRepository(ROOT).load()
     repository.validate_documentation()
-    assert len(repository.images) == 3
+    assert len(repository.images) == 4
+    ascend = repository.images["luciole-ascend"]
+    assert ascend["platforms"] == ["linux/arm64"]
+    assert "dependency" not in ascend["base"]
+    assert ascend["base"]["digest"] is None
+    assert repository.affected(["src/_scripts/ascend-pip-packages.sh"]) == {"luciole-ascend"}
+    assert repository.affected(["src/_scripts/user.sh"]) == set(repository.images)
+    plan = repository.plan({"luciole-ascend"})
+    assert [item["platform"] for item in plan["build_matrix"]["include"]] == ["linux/arm64"]
+    assert [item["name"] for item in plan["targets"]] == ["luciole-ascend"]
+    bake = repository.bake(plan, "dkuav", REVISION, "linux/arm64", "load", "dkuav/images", False)
+    assert bake["target"]["luciole-ascend"]["args"]["BASE_IMAGE"] == ascend["base"]["image"]
 
 
 @pytest.mark.parametrize("hard_gate,expected", [("0", 0), ("1", 1)])

@@ -26,7 +26,7 @@ Main also publishes `main` and `sha-<7-character-sha>`; `v*` events publish the 
 
 The default container user is `root` and the default command is `/bin/bash`. The configured `luciole` account has UID/GID 1000 and passwordless sudo. The base does not override the upstream working directory.
 
-Dockerfile `USER` controls the identity, including when ENTRYPOINT is overridden. The shared entrypoint uses `sudo -n` to start sshd and then execs the command. `APP_USER` is descriptive metadata, not a privilege switch; use `docker run --user root` for an explicit root session. There is no runtime gosu privilege drop.
+Dockerfile `USER` controls identity, including when ENTRYPOINT is overridden. The shared entrypoint starts sshd according to `SSH_MODE` and then executes the command. Password mode is the default, but `luciole` is initially locked and the image has no password. Root SSH login is disabled. `APP_USER` is metadata; use `docker run --user root` for an explicit root session.
 
 ## Build arguments
 
@@ -83,11 +83,12 @@ Direct final-image Docker/Compose builds use the published base by default. Use 
 ## SSH
 
 ```bash
-docker run -dit --gpus all -p 2222:22 ghcr.io/dkuav/luciole-cuda-base:latest
+docker run -dit --gpus all -p 2222:22 -e SSH_PASSWORD_FILE=/run/secrets/ssh-password \
+  -v "$HOME/.config/luciole/ssh-password:/run/secrets/ssh-password:ro" ghcr.io/dkuav/luciole-cuda-base:latest
 ssh -p 2222 luciole@localhost
 ```
 
-SSH public-key authentication and root login are enabled by the existing setup. The configured `luciole` account password is `123456`; root's password is inherited from upstream and is not set by `user.sh`. Host keys are generated during the build. Compose maps host port 2222; `docker compose run --rm --service-ports app` publishes configured ports.
+Before running this example, create a nonempty `$HOME/.config/luciole/ssh-password` file with restricted permissions. The default `SSH_MODE=password` starts sshd, but `luciole` is initially locked. For password access, mount a nonempty secret file and set `SSH_PASSWORD_FILE` to its container path. For key access, mount a nonempty `/home/luciole/.ssh/authorized_keys` and set `SSH_MODE=key-only`. Set `SSH_MODE=disabled` when SSH is unnecessary. Root SSH login is disabled; host keys are ensured at container startup. Publish port 22 only on a trusted interface. Compose maps host port 2222 without supplying credentials.
 
 ## Known upstream issues
 

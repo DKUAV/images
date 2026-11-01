@@ -16,6 +16,9 @@ set -uo pipefail
 dev_main() {
     header "Inherited base/runtime sanity"
     assert_cmd_contains "non-root user 'luciole'" "luciole" id -un
+    assert_cmd_contains "luciole password locked" " L " sudo -n passwd --status luciole
+    assert_cmd_contains "root SSH login disabled" "PermitRootLogin no" sudo -n cat /etc/ssh/sshd_config.d/99-dev-image.conf
+    assert_cmd_contains "SSH password mode configured" "PasswordAuthentication yes" sudo -n cat /etc/ssh/sshd_config.d/99-dev-image.conf
     assert_cmd_contains "cmake runs" "cmake version" cmake --version
     assert_cmd_contains "ros2 CLI available" "ros2" \
         bash -lc "source /opt/ros/jazzy/setup.bash && ros2 --help"

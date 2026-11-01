@@ -22,7 +22,7 @@ Main 还发布 `main`、`sha-<7位提交号>`；`v*` 事件发布版本和 SHA �
 
 默认容器用户为 `luciole`，默认命令为 `/bin/bash`。配置的 `luciole` 账户 UID/GID 为 1000，具有免密 sudo 权限。工作目录为 `/home/luciole`。
 
-身份由 Dockerfile 的 `USER` 决定，即使覆盖 ENTRYPOINT 也保持该身份。共享入口脚本通过 `sudo -n` 启动 sshd，然后 exec 用户命令。`APP_USER` 是描述性元数据，不控制权限；需要 root 会话时显式使用 `docker run --user root`。运行时不使用 gosu 降权。
+身份由 Dockerfile 的 `USER` 决定，即使覆盖 ENTRYPOINT 也保持该身份。共享入口脚本按 `SSH_MODE` 启动 sshd，再执行用户命令。默认是 password 模式，但 `luciole` 初始锁定且镜像内没有密码；禁止 root SSH 登录。`APP_USER` 仅是描述性元数据。需要 root 会话时显式使用 `docker run --user root`。
 
 ## 构建参数
 
@@ -75,11 +75,12 @@ docker build -f src/luciole-cuda-runtime/Dockerfile -t luciole-cuda-runtime .
 ## SSH
 
 ```bash
-docker run -dit --gpus all -p 2222:22 ghcr.io/dkuav/luciole-cuda-runtime:latest
+docker run -dit --gpus all -p 2222:22 -e SSH_PASSWORD_FILE=/run/secrets/ssh-password \
+  -v "$HOME/.config/luciole/ssh-password:/run/secrets/ssh-password:ro" ghcr.io/dkuav/luciole-cuda-runtime:latest
 ssh -p 2222 luciole@localhost
 ```
 
-现有配置启用 SSH 公钥认证和 root 登录。配置的 `luciole` 账户密码为 `123456`；root 密码继承上游，`user.sh` 不设置它。Host key 在构建时生成。Compose 映射宿主机 2222 端口；`docker compose run --rm --service-ports app` 会发布配置的端口。
+运行上述示例前，请在宿主机创建非空的 `$HOME/.config/luciole/ssh-password` 密码文件并限制其读取权限。默认 `SSH_MODE=password` 会启动 sshd，但 `luciole` 初始锁定。密码登录需挂载非空密码文件并设置 `SSH_PASSWORD_FILE`；公钥登录需挂载非空的 `/home/luciole/.ssh/authorized_keys` 并设置 `SSH_MODE=key-only`。不使用 SSH 时设为 `disabled`。禁止 root SSH 登录；host key 在容器启动时确保存在。仅向可信接口映射 22 端口。Compose 映射宿主机 2222 端口，但不提供凭据。
 
 ## ROS 2 配置
 

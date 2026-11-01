@@ -55,11 +55,11 @@ RUN /tmp/scripts/iceoryx.sh
 ARG USERNAME=luciole
 ARG USER_UID=1000
 ARG USER_GID=${USER_UID}
-COPY --chmod=0755 src/_scripts/ssh.sh /tmp/scripts/ssh.sh
-RUN /tmp/scripts/ssh.sh
-
 COPY --chmod=0755 src/_scripts/user.sh /tmp/scripts/user.sh
-RUN /tmp/scripts/user.sh
+RUN /tmp/scripts/user.sh --username "${USERNAME}" --uid "${USER_UID}" --gid "${USER_GID}"
+
+COPY --chmod=0755 src/_scripts/ssh.sh /tmp/scripts/ssh.sh
+RUN /tmp/scripts/ssh.sh --default-user "${USERNAME}" --mode password
 
 # Install the shared entrypoint (used by every Tier 2 final too). The
 # entrypoint just starts sshd (via sudo) and execs the user command; it does
@@ -71,6 +71,7 @@ COPY --chmod=0755 src/_assets/docker-entrypoint.sh /usr/local/bin/docker-entrypo
 RUN rm -rf /tmp/scripts
 
 ENV XDG_RUNTIME_DIR=/run/user/${USER_UID}
+ENV DEFAULT_USER=${USERNAME} SSH_MODE=password
 # Base intentionally has NO trailing `USER` directive — its default user is
 # root (inherited from the NVIDIA base) because base is a build-stone for
 # Tier 2, not a runtime container for end users. The Tier 2 finals add a

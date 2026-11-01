@@ -20,7 +20,7 @@ WORKDIR /home/${USERNAME}
 
 ENV PATH="/home/${USERNAME}/.local/bin:${PATH}"
 COPY --chmod=0755 src/_scripts/devshell.sh /tmp/scripts/devshell.sh
-RUN /tmp/scripts/devshell.sh
+RUN /tmp/scripts/devshell.sh --enabled true
 COPY src/_assets/.pre-commit-config.yaml /tmp/assets/.pre-commit-config.yaml
 COPY --chmod=0755 src/_scripts/precommit.sh /tmp/scripts/precommit.sh
 RUN /tmp/scripts/precommit.sh
@@ -31,7 +31,7 @@ USER root
 # China get fast installs after pulling. Build itself keeps using upstream
 # sources (this script runs after every apt/pip install in devshell.sh etc.).
 COPY --chmod=0755 src/_scripts/finalize-mirror.sh /tmp/scripts/finalize-mirror.sh
-RUN /tmp/scripts/finalize-mirror.sh
+RUN /tmp/scripts/finalize-mirror.sh --mirror aliyun
 
 RUN rm -rf /tmp/scripts /tmp/assets
 
@@ -44,6 +44,7 @@ RUN ldconfig
 # sudo-sshd design, the entrypoint no longer needs APP_USER itself; we keep the
 # ENV for documentation / tooling that introspects it.
 ENV APP_USER=${USERNAME}
+ENV HOME=/home/${USERNAME}
 # Real `USER` directive below — this is the actual privilege gate. The
 # container boots as luciole; entrypoint uses luciole's passwordless sudo to
 # start sshd, then execs the user's command as luciole. Even if someone runs

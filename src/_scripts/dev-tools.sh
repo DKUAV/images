@@ -21,7 +21,7 @@ if [ -x /usr/bin/vim.basic ]; then
 fi
 
 # --- Build / debug ---
-apt-get -y install build-essential ninja-build gdb systemd-coredump \
+apt-get -y install build-essential ninja-build gdb clangd graphviz less zstd systemd-coredump \
     cmake parallel libssl-dev \
     libgflags-dev libgoogle-glog-dev libgtest-dev libgmock-dev
 

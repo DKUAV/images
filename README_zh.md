@@ -11,6 +11,7 @@ graph TD
   N["NVIDIA PyTorch 26.06-py3"] --> B["luciole-cuda-base"]
   B --> D["luciole-cuda-dev"]
   B --> R["luciole-cuda-runtime"]
+  A["Ascend TorchNPU 2.14.0"] --> NPU["luciole-ascend"]
 ```
 
 | 镜像 | 内容 | 平台 | 烟测策略 |
@@ -18,8 +19,9 @@ graph TD
 | [luciole-cuda-base](src/luciole-cuda-base/README_zh.md) | PyTorch/CUDA、系统与 GUI 工具、Python 包、CMake、网络库、用户和 SSH 配置 | amd64 + arm64 | 仅报告断言失败 |
 | [luciole-cuda-dev](src/luciole-cuda-dev/README_zh.md) | Base + ROS 2 Jazzy、LLVM 21、开发 shell、预缓存 pre-commit hooks | amd64 + arm64 | 必须通过 |
 | [luciole-cuda-runtime](src/luciole-cuda-runtime/README_zh.md) | Base + ROS 2 Jazzy；继承系统开发工具与 CMake | amd64 + arm64 | 必须通过 |
+| [luciole-ascend](src/luciole-ascend/README_zh.md) | 昇腾 910B TorchNPU、CANN 和 ARM64 开发工具 | arm64 | 必须通过 |
 
-Base 保持上游软件源。Dev/runtime 在安装完所有软件包后，将持久化的 apt 和 pip 源切换到 Aliyun。Runtime 继承 base 的工具集，并非精简 CUDA runtime 镜像。
+CUDA base 和昇腾镜像保持上游软件源。CUDA dev/runtime 在安装完所有软件包后，将持久化的 apt 和 pip 源切换到 Aliyun。Runtime 继承 base 的工具集，并非精简 CUDA runtime 镜像。昇腾基础镜像使用版本标签但不固定 digest；NPU 硬件检查需在兼容宿主机单独运行。
 
 ## 使用镜像
 
@@ -28,7 +30,7 @@ docker pull ghcr.io/dkuav/luciole-cuda-dev:latest
 docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-dev:latest
 ```
 
-Base 默认以 root 运行；dev/runtime 默认为 `luciole`（UID/GID 1000）。入口脚本通过 sudo 启动 sshd，然后以 Dockerfile 的 `USER` 执行命令。`APP_USER` 是描述性元数据，不控制身份。需要 root 时使用 `docker run --user root`。SSH 和 Compose 示例见各镜像文档。
+CUDA base 默认以 root 运行；CUDA dev/runtime 和昇腾镜像默认为 `luciole`（UID/GID 1000）。共享入口脚本根据 `SSH_MODE` 启动 sshd，再以 Dockerfile 的 `USER` 执行命令。SSH 默认是 password 模式，但 `luciole` 初始锁定，需在运行时提供凭据；禁止 root SSH 登录。`APP_USER` 只是 CUDA 描述性元数据。SSH 和 Compose 示例见各镜像文档。
 
 ## 本地构建与烟测
 

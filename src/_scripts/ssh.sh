@@ -1,62 +1,117 @@
 #!/bin/bash
-# SSH server bootstrap (BUILD-TIME only).
+# Install and configure the optional SSH server (BUILD-TIME only).
 #
 # Runs during `docker build`. Everything here must be declarative / persisted
 # to disk — a build layer **cannot** actually run a daemon. Starting sshd at
 # runtime is the entrypoint's job (see src/_assets/docker-entrypoint.sh).
 #
 # What this script does:
-#   - Generates host keys if missing (openssh-server's postinst normally does
-#     this, but only when the service manager is available; in a build layer it
-#     is skipped, so we do it explicitly).
-#   - Enables public-key auth and root login for remote dev access.
-#   - Prepares ~/.ssh/authorized_keys for BOTH root and the non-root user, so
-#     ssh keys mounted/baked in at runtime work for either account.
+#   - Installs openssh-server.
+#   - Uses the image's default user as the SSH login account.
+#   - Configures key-only or password authentication for that account.
+#   - Prepares the selected account's authorized_keys mount point.
+# Host keys are generated at runtime only when SSH is enabled.
 #
-# Reads USERNAME (default: luciole), USER_UID, USER_GID.
+# Options: --default-user and --mode.
 set -euo pipefail
 
-USERNAME_VAL=${USERNAME:-luciole}
-USER_UID_VAL=${USER_UID:-1000}
+usage() {
+    cat <<'EOF'
+Usage: ssh.sh [--default-user <name>] [--mode <mode>]
+
+Options:
+  --default-user <value>  Existing image default user (default: root)
+  --mode <value>          SSH policy: disabled, key-only, or password (default: disabled)
+  -h, --help              Show this help
+EOF
+}
+
+DEFAULT_USER_VAL="root"
+SSH_MODE_VAL="disabled"
+
+if ! PARSED=$(getopt -o h -l help,default-user:,mode: -n "$(basename "$0")" -- "$@"); then
+    usage >&2
+    exit 64
+fi
+eval set -- "$PARSED"
+while true; do
+    case "$1" in
+        --default-user)
+            DEFAULT_USER_VAL="$2"
+            shift 2
+            ;;
+        --mode)
+            SSH_MODE_VAL="$2"
+            shift 2
+            ;;
+        -h | --help)
+            usage
+            exit 0
+            ;;
+        --)
+            shift
+            break
+            ;;
+    esac
+done
+if [ "$#" -ne 0 ]; then
+    echo "ssh.sh: unexpected positional arguments: $*" >&2
+    usage >&2
+    exit 64
+fi
+case "${SSH_MODE_VAL}" in
+    disabled | key-only | password) ;;
+    *)
+        echo "ssh.sh: unsupported mode '${SSH_MODE_VAL}'" >&2
+        exit 64
+        ;;
+esac
+if [[ ! "${DEFAULT_USER_VAL}" =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+    echo "ssh.sh: invalid default user '${DEFAULT_USER_VAL}'" >&2
+    exit 64
+fi
+RESOLVED_LOGIN_USER="${DEFAULT_USER_VAL}"
+
+case "$(uname -m)" in
+    x86_64 | aarch64) ;;
+    *)
+        echo "ssh.sh: unsupported architecture; expected x86_64 or aarch64" >&2
+        exit 1
+        ;;
+esac
+
+apt-get update
+DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends openssh-server
+rm -rf /var/lib/apt/lists/*
 
 # /run/sshd is where sshd chroots its priv-separated child at runtime.
 # Create it here so the entrypoint doesn't need root-only mkdir work.
 mkdir -p /run/sshd
 chmod 0755 /run/sshd
 
-# Generate host keys (no-op if already present, e.g. openssh-server postinst
-# ran for this layer).
-ssh-keygen -A >/dev/null 2>&1 || true
+PERMIT_ROOT_LOGIN="no"
 
-# Enable public-key auth and permit root login for remote dev access.
-# Use a marker so re-running the script (idempotent builds) doesn't duplicate.
-if ! grep -q "^PubkeyAuthentication yes"      /etc/ssh/sshd_config; then
-    echo "PubkeyAuthentication yes" >> /etc/ssh/sshd_config
-fi
-if ! grep -q "^PermitRootLogin yes"           /etc/ssh/sshd_config; then
-    echo "PermitRootLogin yes"      >> /etc/ssh/sshd_config
-fi
+cat >/etc/ssh/sshd_config.d/99-dev-image.conf <<EOF
+PubkeyAuthentication yes
+PasswordAuthentication $([ "${SSH_MODE_VAL}" = "password" ] && echo yes || echo no)
+KbdInteractiveAuthentication no
+PermitEmptyPasswords no
+PermitRootLogin ${PERMIT_ROOT_LOGIN}
+AllowUsers ${RESOLVED_LOGIN_USER}
+EOF
 
-# Seed authorized_keys for root.
-mkdir -p /root/.ssh
-touch /root/.ssh/authorized_keys
-chmod 0700 /root/.ssh
-chmod 0600 /root/.ssh/authorized_keys
-
-# Seed authorized_keys for the non-root user (if the account already exists —
-# in the base image ssh.sh runs before user.sh, so the user may not exist yet;
-# in that case user.sh is responsible for the directory).
-if id "${USERNAME_VAL}" >/dev/null 2>&1; then
-    USER_HOME=$(getent passwd "${USERNAME_VAL}" | cut -d: -f6)
-    if [ -n "${USER_HOME}" ]; then
-        mkdir -p "${USER_HOME}/.ssh"
-        touch "${USER_HOME}/.ssh/authorized_keys"
-        chmod 0700 "${USER_HOME}/.ssh"
-        chmod 0600 "${USER_HOME}/.ssh/authorized_keys"
-        chown -R "${USERNAME_VAL}":"$(id -gn "${USERNAME_VAL}")" "${USER_HOME}/.ssh"
-    fi
+# Seed authorized_keys only for the account selected by the SSH policy.
+if ! id "${RESOLVED_LOGIN_USER}" >/dev/null 2>&1; then
+    echo "ssh.sh: login user '${RESOLVED_LOGIN_USER}' does not exist" >&2
+    exit 1
 fi
+USER_HOME="$(getent passwd "${RESOLVED_LOGIN_USER}" | cut -d: -f6)"
+mkdir -p "${USER_HOME}/.ssh"
+touch "${USER_HOME}/.ssh/authorized_keys"
+chmod 0700 "${USER_HOME}/.ssh"
+chmod 0600 "${USER_HOME}/.ssh/authorized_keys"
+chown -R "${RESOLVED_LOGIN_USER}":"$(id -gn "${RESOLVED_LOGIN_USER}")" "${USER_HOME}/.ssh"
 
 # NOTE: do NOT call `service ssh start` / `systemctl start ssh` here — a build
 # layer has no init and the daemon would die the moment the layer commits.
-# Starting sshd is the entrypoint's job at container runtime.
+# Starting sshd is the entrypoint's job at container runtime when explicitly enabled.

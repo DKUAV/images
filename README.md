@@ -11,6 +11,7 @@ graph TD
   N["NVIDIA PyTorch 26.06-py3"] --> B["luciole-cuda-base"]
   B --> D["luciole-cuda-dev"]
   B --> R["luciole-cuda-runtime"]
+  A["Ascend TorchNPU 2.14.0"] --> NPU["luciole-ascend"]
 ```
 
 | Image | Contents | Platforms | Smoke policy |
@@ -18,8 +19,9 @@ graph TD
 | [luciole-cuda-base](src/luciole-cuda-base/README.md) | PyTorch/CUDA, system and GUI tools, Python packages, CMake, networking libraries, user and SSH setup | amd64 + arm64 | Advisory |
 | [luciole-cuda-dev](src/luciole-cuda-dev/README.md) | Base + ROS 2 Jazzy, LLVM 21, developer shell, cached pre-commit hooks | amd64 + arm64 | Required |
 | [luciole-cuda-runtime](src/luciole-cuda-runtime/README.md) | Base + ROS 2 Jazzy; inherits system development tools and CMake | amd64 + arm64 | Required |
+| [luciole-ascend](src/luciole-ascend/README.md) | Ascend 910B TorchNPU, CANN and ARM64 development tools | arm64 | Required |
 
-The base keeps upstream package sources. Dev/runtime switch persisted apt and pip sources to Aliyun after all package installation. The runtime image inherits the base toolset; it is not a minimal CUDA runtime image.
+The CUDA base and Ascend image keep upstream package sources. CUDA dev/runtime switch persisted apt and pip sources to Aliyun after all package installation. The runtime image inherits the base toolset; it is not a minimal CUDA runtime image. Ascend uses a tagged external base without a pinned digest; run its separate NPU check on a compatible host.
 
 ## Use an image
 
@@ -28,7 +30,7 @@ docker pull ghcr.io/dkuav/luciole-cuda-dev:latest
 docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-dev:latest
 ```
 
-Base defaults to root; dev/runtime default to `luciole` (UID/GID 1000). Their entrypoint starts sshd through sudo, then executes the command as the Dockerfile's `USER`. `APP_USER` is metadata and does not select an identity. Use `docker run --user root` when root is needed. See the image guides for SSH and Compose examples.
+CUDA base defaults to root; CUDA dev/runtime and Ascend default to `luciole` (UID/GID 1000). The shared entrypoint starts sshd according to `SSH_MODE` and executes the command as the Dockerfile's `USER`. Password mode is the default, but `luciole` is locked until credentials are supplied at runtime; root SSH login is disabled. `APP_USER` is CUDA metadata, not an identity switch. See the image guides for SSH and Compose examples.
 
 ## Local build and smoke tests
 
