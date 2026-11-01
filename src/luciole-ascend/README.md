@@ -41,6 +41,6 @@ Shared scripts and assets come from the commit-pinned `vendor/image-kit` submodu
 
 The shared entrypoint is installed as `/usr/local/bin/docker-entrypoint`. Key-only mode requires nonempty `authorized_keys` by default. Explicit `SSH_ALLOW_EMPTY_AUTHORIZED_KEYS=true` allows sshd to start while waiting for a public key to be configured; an empty file does not enable unauthenticated login.
 
-image-kit installs `gosu`; local `luciole-dev-tools.sh` adds `landscape-common` and build-time `sudo`. CUDA dev/runtime inherit these tools from the base.
+image-kit installs `gosu` and `sudo`; local `luciole-dev-tools.sh` adds `landscape-common`. CUDA dev/runtime inherit these tools from the base.
 
 `SYSTEM_UPGRADE` remains `false`. Ascend preserves vendor Python/CANN constraints and does not run the CUDA psutil or vision-extension installation.

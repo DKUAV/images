@@ -41,6 +41,6 @@ SSH 使用显式选择的 `DEFAULT_USER`：选择 `root` 后，公钥模式默�
 
 共享入口命令安装为 `/usr/local/bin/docker-entrypoint`。公钥模式默认要求非空 `authorized_keys`；显式设置 `SSH_ALLOW_EMPTY_AUTHORIZED_KEYS=true` 时，允许 sshd 先启动，等待后续配置公钥；空文件不允许无密钥登录。
 
-公共工具中的 `gosu` 由 image-kit 安装，`landscape-common` 和构建所需的 `sudo` 由本地 `luciole-dev-tools.sh` 补充；CUDA dev/runtime 从 base 继承。
+公共工具中的 `gosu` 和 `sudo` 由 image-kit 安装，`landscape-common` 由本地 `luciole-dev-tools.sh` 补充；CUDA dev/runtime 从 base 继承。
 
 `SYSTEM_UPGRADE` 仍为 `false`。Ascend 保留厂商 Python/CANN 约束，不调用 CUDA 的 psutil 和视觉扩展安装步骤。

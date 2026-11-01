@@ -1,6 +1,6 @@
 #!/bin/bash
 # Install Luciole-specific system tools after image-kit's common developer tools.
-# Run as root before libraries that need sudo during their installation.
+# Run as root after the common developer tools.
 set -euo pipefail
 
 usage() {
@@ -26,5 +26,5 @@ fi
 
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get -y install --no-install-recommends \
-    landscape-common sudo
+    landscape-common
 rm -rf /var/lib/apt/lists/*

@@ -108,6 +108,6 @@ Shared scripts and assets come from the commit-pinned `vendor/image-kit` submodu
 
 The shared entrypoint is installed as `/usr/local/bin/docker-entrypoint`. Key-only mode requires nonempty `authorized_keys` by default. Explicit `SSH_ALLOW_EMPTY_AUTHORIZED_KEYS=true` allows sshd to start while waiting for a public key to be configured; an empty file does not enable unauthenticated login.
 
-image-kit installs `gosu`; local `luciole-dev-tools.sh` adds `landscape-common` and build-time `sudo`. CUDA dev/runtime inherit these tools from the base.
+image-kit installs `gosu` and `sudo`; local `luciole-dev-tools.sh` adds `landscape-common`. CUDA dev/runtime inherit these tools from the base.
 
 `SYSTEM_UPGRADE` defaults to `true` and is explicitly passed from the manifest and Dockerfile to component `system.sh --upgrade`. The local CUDA pip wrapper upgrades pip, then the component unconditionally reinstalls pip-managed psutil and resolves the common development requirements together with Luciole vision extensions.

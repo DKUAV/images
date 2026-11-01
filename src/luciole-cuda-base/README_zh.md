@@ -108,6 +108,6 @@ SSH 使用显式选择的 `DEFAULT_USER`：选择 `root` 后，公钥模式默�
 
 共享入口命令安装为 `/usr/local/bin/docker-entrypoint`。公钥模式默认要求非空 `authorized_keys`；显式设置 `SSH_ALLOW_EMPTY_AUTHORIZED_KEYS=true` 时，允许 sshd 先启动，等待后续配置公钥；空文件不允许无密钥登录。
 
-公共工具中的 `gosu` 由 image-kit 安装，`landscape-common` 和构建所需的 `sudo` 由本地 `luciole-dev-tools.sh` 补充；CUDA dev/runtime 从 base 继承。
+公共工具中的 `gosu` 和 `sudo` 由 image-kit 安装，`landscape-common` 由本地 `luciole-dev-tools.sh` 补充；CUDA dev/runtime 从 base 继承。
 
 `SYSTEM_UPGRADE` 默认为 `true`，由清单与 Dockerfile 显式传给组件 `system.sh --upgrade`。本地 CUDA pip 包装脚本先升级 pip，再由组件无条件重新安装 pip 管理的 psutil，并统一解析公共开发依赖及 Luciole 视觉扩展。

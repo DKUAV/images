@@ -234,7 +234,8 @@ def test_local_extensions(bash: str, tmp_path: Path) -> None:
         assert run_script(bash, apt, args).returncode == expected
     result = run_script(bash, 'apt-get() { printf "%s\\n" "$@"; }; rm() { :; }\n' + apt, [])
     assert result.returncode == 0, result.stderr
-    assert "landscape-common\nsudo\n" in result.stdout
+    assert "landscape-common\n" in result.stdout
+    assert "sudo" not in result.stdout
     assert "gosu" not in result.stdout
 
     requirements = tmp_path / "requirements.txt"

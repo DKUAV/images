@@ -108,6 +108,6 @@ graph LR
 git submodule update --init --recursive
 ```
 
-首次克隆可使用 `git clone --recurse-submodules`。组件固定到审阅过的提交，CI 初始化该提交，不自动跟踪分支。共享脚本、入口、pre-commit 配置和 Python 开发依赖来自组件。本仓库额外安装 `landscape-common` 和 `sudo`；`gosu` 由组件提供。CUDA 将公共 requirements 与 `src/_assets/luciole-cuda-requirements.txt` 一起解析，保留 `numpy<2.0.0` 和视觉包。Python 检查与格式化使用 Ruff，不再显式安装或要求 black。
+首次克隆可使用 `git clone --recurse-submodules`。组件固定到审阅过的提交，CI 初始化该提交，不自动跟踪分支。共享脚本、入口、pre-commit 配置和 Python 开发依赖来自组件。本仓库额外安装 `landscape-common`；`gosu` 和 `sudo` 由组件提供。CUDA 将公共 requirements 与 `src/_assets/luciole-cuda-requirements.txt` 一起解析，保留 `numpy<2.0.0` 和视觉包。Python 检查与格式化使用 Ruff，不再显式安装或要求 black。
 
 本仓库保留 `tools/images`、现有清单 schema、CUDA 双架构构建、烟测门禁和发布标签，不使用 image-kit 的 family/variant 构建引擎。组件指针和 `.gitmodules` 变化触发全部镜像重建。组件改动需先提交并发布，再更新消费仓库指针。
