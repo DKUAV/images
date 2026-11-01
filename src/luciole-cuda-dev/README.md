@@ -18,7 +18,7 @@ Main also publishes `main` and `sha-<7-character-sha>`; `v*` events publish the 
 | Mirrors | Aliyun apt/pip sources applied after all package installation; builds use upstream sources |
 | SSH / GUI | SSH server and WSLg dependencies inherited from base |
 | LLVM | LLVM 21: clang-format, clang-tidy and lldb |
-| Developer shell | zsh, oh-my-zsh, NvChad/neovim, starship, nvm, fzf, eza, zoxide, Atuin and Witr |
+| Developer shell | zsh, oh-my-zsh, NvChad/neovim with the shared ty Python LSP, starship, nvm, fzf, eza, zoxide, Atuin and Witr |
 | Pre-commit | Hook environments pre-cached from the shared config |
 
 ## User and entrypoint
@@ -92,3 +92,5 @@ ROS is not sourced automatically. Run `load_ros` in zsh to source `/opt/ros/jazz
 Dev Compose mounts `/tmp/.X11-unix` and `/mnt/wslg` and forwards DISPLAY, WAYLAND_DISPLAY, XDG_RUNTIME_DIR and PULSE_SERVER. These paths require a compatible host environment.
 
 See [build architecture](../../docs/build-architecture.md) and [manifest reference](../../docs/manifest-reference.md) for configuration and release details.
+
+The ROS installer accepts `--distro` and `--target`, and the pre-commit installer accepts `--config`; existing environment variables remain defaults.

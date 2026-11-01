@@ -22,6 +22,7 @@ plottable
 matplotlib
 openpyxl
 flake8
+black
 ruff
 ty
 mypy

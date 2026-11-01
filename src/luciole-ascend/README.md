@@ -4,7 +4,7 @@ This ARM64 image builds on `ascendai/torch-npu:2.14.0-cann9.2.0-910b-ubuntu22.04
 
 ## Contents and build
 
-The vendor base supplies Python 3.12, PyTorch 2.14, TorchNPU 2.14 and CANN. Shared scripts install system tools, CMake 4.3.2, the `luciole` account (UID/GID 1000), SSH and the development shell. Ascend-specific scripts preserve the vendor Python environment, install the packages in `src/_assets/python-dev-requirements.txt` under constraints generated from every preinstalled package, and restore CANN in login shells and the entrypoint. CUDA-specific pip, ROS 2 and networking library steps are not included.
+The vendor base supplies Python 3.12, PyTorch 2.14, TorchNPU 2.14 and CANN. Shared scripts install system tools, CMake 4.3.2, the `luciole` account (UID/GID 1000), SSH and the development shell. Both image families install the shared `src/_assets/python-dev-requirements.txt`, including uv, ty and black, through separate pip scripts. Ascend's script preserves the vendor Python environment with constraints generated from every preinstalled package and restores CANN in login shells and the entrypoint. CUDA-specific vision packages, ROS 2 and networking library steps are not included.
 
 The package check permits only three exact known vendor diagnostics: the `mindstudio-kl 26.2.0` NumPy bound and the two missing `ms-service-profiler 26.0.0` OTLP exporters. Other dependency errors fail the build. This does not establish compatibility for the affected vendor features. The image keeps upstream apt and pip sources.
 
@@ -32,3 +32,5 @@ docker run --rm -i --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disa
 The default user is `luciole`, the work directory is `/work`, and the default command is Bash; the login shell is zsh. The default SSH mode is `password`, but the account is locked and no password is stored in the image. Set `SSH_MODE=disabled` when SSH is unnecessary. To enable key access, mount a nonempty `/home/luciole/.ssh/authorized_keys` and set `SSH_MODE=key-only`. To enable password access, mount a nonempty secret file and set `SSH_PASSWORD_FILE` to its container path. Publish port 22 only on a trusted interface. Root SSH login is disabled. The shared entrypoint starts sshd according to the mode and executes the command as the Dockerfile user.
 
 The Compose example maps port `2222:22`; it does not provide credentials. The account remains locked until credentials are supplied at runtime. Hardware device mounts and runtime registration are host responsibilities.
+
+The shared system installer accepts `--timezone` and `--upgrade`; existing environment variables remain defaults.

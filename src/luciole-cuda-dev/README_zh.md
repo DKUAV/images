@@ -18,7 +18,7 @@ Main 还发布 `main`、`sha-<7位提交号>`；`v*` 事件发布版本和 SHA �
 | 软件源 | 所有软件安装完成后切换至 Aliyun apt/pip 源；构建过程使用上游源 |
 | SSH / GUI | 从 base 继承 SSH 服务端和 WSLg 依赖 |
 | LLVM | LLVM 21：clang-format、clang-tidy 和 lldb |
-| 开发 shell | zsh、oh-my-zsh、NvChad/neovim、starship、nvm、fzf、eza、zoxide、Atuin 和 Witr |
+| 开发 shell | zsh、oh-my-zsh、启用共用 ty Python LSP 的 NvChad/neovim、starship、nvm、fzf、eza、zoxide、Atuin 和 Witr |
 | Pre-commit | 按共享配置预缓存 hook 环境 |
 
 ## 用户与入口脚本
@@ -92,3 +92,5 @@ ROS 不自动加载。在 zsh 中运行 `load_ros` 加载 `/opt/ros/jazzy/setup.
 Dev Compose 挂载 `/tmp/.X11-unix`、`/mnt/wslg`，转发 DISPLAY、WAYLAND_DISPLAY、XDG_RUNTIME_DIR、PULSE_SERVER，需要宿主机支持这些路径。
 
 配置与发布细节见[构建架构](../../docs/build-architecture_zh.md)和[清单参考](../../docs/manifest-reference_zh.md)。
+
+ROS 安装脚本支持 `--distro` 和 `--target`，pre-commit 安装脚本支持 `--config`；现有环境变量仍作为默认值。

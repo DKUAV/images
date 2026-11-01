@@ -21,6 +21,7 @@ inputs:
   - src/_scripts/dev-tools.sh
   - src/_scripts/wslg.sh
   - src/_scripts/pip-packages.sh
+  - src/_assets/python-dev-requirements.txt
   - src/_scripts/cmake.sh
   - src/_scripts/libdatachannel.sh
   - src/_scripts/rpclib.sh

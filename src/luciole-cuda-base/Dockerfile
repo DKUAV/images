@@ -27,8 +27,9 @@ RUN /tmp/scripts/dev-tools.sh
 COPY --chmod=0755 src/_scripts/wslg.sh /tmp/scripts/wslg.sh
 RUN /tmp/scripts/wslg.sh
 # Skip python-install.sh: Python is already provided by the base image
+COPY src/_assets/python-dev-requirements.txt /tmp/scripts/python-dev-requirements.txt
 COPY --chmod=0755 src/_scripts/pip-packages.sh /tmp/scripts/pip-packages.sh
-RUN /tmp/scripts/pip-packages.sh
+RUN /tmp/scripts/pip-packages.sh --requirements /tmp/scripts/python-dev-requirements.txt
 
 # CMake binary release — shared by both Tier 2 dev and runtime images
 ARG CMAKE_VERSION=4.3.2

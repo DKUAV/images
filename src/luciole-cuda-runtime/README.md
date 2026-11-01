@@ -87,3 +87,5 @@ Before running this example, create a nonempty `$HOME/.config/luciole/ssh-passwo
 Source `source /opt/ros/jazzy/setup.bash` before using ROS. Runtime does not add devshell, the `load_ros` alias or LLVM; its default command remains Bash.
 
 See [build architecture](../../docs/build-architecture.md) and [manifest reference](../../docs/manifest-reference.md) for configuration and release details.
+
+The ROS installer accepts `--distro` and `--target`; existing environment variables remain defaults.

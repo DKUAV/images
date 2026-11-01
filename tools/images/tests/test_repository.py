@@ -487,6 +487,10 @@ def test_real_repository_contracts():
     assert ascend["platforms"] == ["linux/arm64"]
     assert "dependency" not in ascend["base"]
     assert ascend["base"]["digest"] is None
+    common_python = "src/_assets/python-dev-requirements.txt"
+    assert common_python in ascend["inputs"]
+    assert common_python in repository.images["luciole-cuda-base"]["inputs"]
+    assert repository.affected([common_python]) == set(repository.images)
     assert repository.affected(["src/_scripts/ascend-pip-packages.sh"]) == {"luciole-ascend"}
     assert repository.affected(["src/_scripts/user.sh"]) == set(repository.images)
     plan = repository.plan({"luciole-ascend"})

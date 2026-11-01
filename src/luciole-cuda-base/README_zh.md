@@ -15,7 +15,7 @@ Main 还发布 `main`、`sha-<7位提交号>`；`v*` 事件发布版本和 SHA �
 | --- | --- |
 | 基础 | `nvcr.io/nvidia/pytorch:26.06-py3`，Python、PyTorch 和 CUDA 由上游提供 |
 | 系统 / 构建 | vim、Git/LFS、tmux、ripgrep、fd、bat、ffmpeg、GCC、Ninja、GDB、CMake 4.3.2 |
-| Python 包 | uv、pytest 工具、FastAPI、pybind11、pandas、numpy、loguru 和 OpenCV wheels；见 [pip-packages.sh](../_scripts/pip-packages.sh) |
+| Python 包 | 共用[开发依赖清单](../_assets/python-dev-requirements.txt)，包括 uv、ty 和 black；CUDA 专属 OpenCV 与视觉包由 [pip-packages.sh](../_scripts/pip-packages.sh) 安装。CUDA 保留 `numpy<2.0.0`。 |
 | 网络库 | libdatachannel v0.24.5、rpclib v2.3.0、iceoryx v2.0.8 |
 | GUI | WSLg 依赖、D-Bus、CJK 字体、Mesa 和 PulseAudio |
 | OpenCV | apt `libopencv-dev` 与 pip 包；`opencv.sh` 未启用，当前 Dockerfile 不隔离 NVIDIA OpenCV |
@@ -97,3 +97,5 @@ ssh -p 2222 luciole@localhost
 历史 [OpenCV 分析](../../docs/opencv-status_zh.md)和[链接器诊断](../../docs/ld-cache-notes_zh.md)包含特定旧构建的证据。当前 base Dockerfile 没有 HPC-X 修复步骤。手动诊断工作流继续保留，本次构建迁移不解决上游兼容问题。
 
 配置与发布细节见[构建架构](../../docs/build-architecture_zh.md)和[清单参考](../../docs/manifest-reference_zh.md)。
+
+共享系统安装脚本支持 `--timezone` 和 `--upgrade`；libdatachannel、rpclib 和 iceoryx 安装脚本支持 `--version`。现有环境变量仍作为默认值。

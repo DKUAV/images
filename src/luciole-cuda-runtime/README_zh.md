@@ -87,3 +87,5 @@ ssh -p 2222 luciole@localhost
 使用 ROS 前执行 `source /opt/ros/jazzy/setup.bash`。Runtime 不添加 devshell、`load_ros` 别名或 LLVM，默认命令保持 Bash。
 
 配置与发布细节见[构建架构](../../docs/build-architecture_zh.md)和[清单参考](../../docs/manifest-reference_zh.md)。
+
+ROS 安装脚本支持 `--distro` 和 `--target`；现有环境变量仍作为默认值。

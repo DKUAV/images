@@ -6,6 +6,36 @@ set -euo pipefail
 
 PRECOMMIT_CONFIG="${PRECOMMIT_CONFIG:-/tmp/assets/.pre-commit-config.yaml}"
 
+usage() {
+    cat <<'EOF'
+Usage: precommit.sh [--config <path>]
+
+Options:
+  --config <path>  Hook configuration (default: PRECOMMIT_CONFIG or /tmp/assets/.pre-commit-config.yaml)
+  -h, --help       Show this help
+EOF
+}
+
+if ! PARSED=$(getopt -o h -l help,config: -n "$(basename "$0")" -- "$@"); then
+    usage >&2
+    exit 64
+fi
+eval set -- "$PARSED"
+while true; do
+    case "$1" in
+        --config) PRECOMMIT_CONFIG="$2"; shift 2 ;;
+        -h | --help) usage; exit 0 ;;
+        --) shift; break ;;
+    esac
+done
+if [ "$#" -ne 0 ]; then
+    echo "precommit.sh: unexpected positional arguments: $*" >&2
+    usage >&2
+    exit 64
+fi
+
+# Install hooks in a temporary repository while retaining the user's cache.
+
 TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 

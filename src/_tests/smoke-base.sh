@@ -52,6 +52,9 @@ base_main() {
 
     header "Python & PyTorch"
     assert_cmd "python3 entrypoint" python3 --version
+    assert_cmd "uv CLI" uv --version
+    assert_cmd "ty CLI" ty --version
+    assert_cmd "black CLI" black --version
     assert_import "numpy importable"  numpy
     assert_import "pandas importable" pandas
     assert_import "torch importable"  torch

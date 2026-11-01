@@ -5,6 +5,38 @@ set -euo pipefail
 ROS_DISTRO_VAL=${ROS_DISTRO:-jazzy}
 ROS_TARGET_VAL=${ROS_TARGET:-ros-base}
 
+usage() {
+    cat <<'EOF'
+Usage: ros2.sh [--distro <name>] [--target <name>]
+
+Options:
+  --distro <name>  ROS distribution (default: ROS_DISTRO or jazzy)
+  --target <name>  Installation target (default: ROS_TARGET or ros-base)
+  -h, --help       Show this help
+EOF
+}
+
+if ! PARSED=$(getopt -o h -l help,distro:,target: -n "$(basename "$0")" -- "$@"); then
+    usage >&2
+    exit 64
+fi
+eval set -- "$PARSED"
+while true; do
+    case "$1" in
+        --distro) ROS_DISTRO_VAL="$2"; shift 2 ;;
+        --target) ROS_TARGET_VAL="$2"; shift 2 ;;
+        -h | --help) usage; exit 0 ;;
+        --) shift; break ;;
+    esac
+done
+if [ "$#" -ne 0 ]; then
+    echo "ros2.sh: unexpected positional arguments: $*" >&2
+    usage >&2
+    exit 64
+fi
+
+# Register the ROS apt repository before installing the requested packages.
+
 apt-get update
 apt-get -y install software-properties-common curl
 add-apt-repository universe
