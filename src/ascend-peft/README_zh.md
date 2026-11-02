@@ -6,6 +6,8 @@
 
 镜像通过本镜像的 [requirements.txt](requirements.txt) 添加 `accelerate`、`huggingface-hub`、`peft`、`transformers`、`torchvision`、`graphviz>=0.20` 和 `torchview>=0.2.7`。
 
+TorchVision 使用官方 ARM64 CPU wheel `0.29.2+cpu`，通过 URL 和 SHA256 固定。PyPI 的 `0.29.2` ARM64 wheel 链接了父镜像 CPU Torch/TorchNPU 栈中不存在的 CUDA 库。CPU wheel 支持 Torch 2.14.0，并提供冒烟测试检查的 CPU NMS 算子；这不代表已验证 NPU NMS 支持。
+
 共享 Ascend 应用安装器依据父镜像记录的 `/opt/image-python/base-constraints.txt` 解析依赖，并运行 `ascend-pip-check`。依赖不兼容时构建失败，不会替换父镜像中受约束的 Torch/TorchNPU 包。包元数据检查沿用父镜像精确匹配的已知厂商例外，不代表 NPU 训练兼容性已经验证。镜像保持上游软件源。
 
 镜像从父镜像的共享开发工具继承 Graphviz 的 `dot` 命令，Python 绑定支持 SVG 渲染，torchview 提供模型结构图。必过烟测会复跑父镜像的开发工具和 SSH 检查，将 Torch/TorchNPU 已安装版本与父级约束比较，检查应用包元数据，导入 TorchVision 并执行 CPU NMS，检查 pip 和 setuptools 一致性，在开启和关闭构建隔离时分别以 editable 模式安装临时 setuptools 项目，渲染 Graphviz SVG，并通过 torchview 绘制一个小型 CPU 模型。Editable 检查会从源码目录外导入模块，并验证源码修改能够生效。隔离构建需要访问配置的软件包索引以获取构建依赖。这些检查无需 NPU；独立的[硬件检查](../_tests/npu-ascend.sh)需在兼容的 NPU 宿主机上运行。
