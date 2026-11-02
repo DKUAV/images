@@ -1,113 +1,110 @@
 # luciole-cuda-dev
 
-Full CUDA/PyTorch development container with ROS 2 Jazzy, a complete C++ / Python toolchain, and a comfortable interactive shell. Designed for day-to-day development on amd64 workstations and arm64 (Jetson) boards with NVIDIA GPU support.
+Development image extending base with ROS 2 Jazzy, LLVM 21, an interactive developer shell and cached pre-commit environments.
 
-> 中文文档请见 [README_zh.md](README_zh.md)
+> 中文文档：[README_zh.md](README_zh.md)
 
-## Registry
+## Registry and platforms
 
-```
-ghcr.io/dkuav/luciole-cuda-dev:latest
-```
+`ghcr.io/dkuav/luciole-cuda-dev:pytorch26.06-py3` — `linux/amd64` and `linux/arm64`.
+Main advances the explicit variant channel. Build tags include variant, SHA12 and run ID/attempt; formal versions promote verified builds without rebuilding.
 
-## Architecture
-
-`amd64` + `arm64`
-
-## What's Inside
+## Contents
 
 | Category | Details |
-|----------|---------|
-| **Base** | [`ghcr.io/dkuav/luciole-cuda-base`](../luciole-cuda-base/README.md) (system tools, PyTorch/CUDA, pip packages, CMake, user) |
-| **ROS 2** | Jazzy `ros-base` (`ros-jazzy-ros-base`) + `colcon`, `rosdep`, `rosinstall-generator` |
-| **C++ toolchain** | LLVM 21 — `clang-format`, `clang-tidy`, `lldb` |
-| **Dev shell** | zsh + oh-my-zsh + neovim + starship + nvm + bat + fzf + eza + zoxide + more |
-| **Pre-commit** | pre-commit with pre-cached hook environments (ruff, trailing-whitespace, etc.) |
-| **SSH** | `openssh-server` (inherited from base) launched at boot by the shared entrypoint; connect on the mapped port |
-| **Mirrors** | As the final build step, apt + pip sources are flipped to Aliyun so Chinese users get fast installs after pulling. The build itself uses the default sources. |
+| --- | --- |
+| Base | [luciole-cuda-base](../luciole-cuda-base/README.md): PyTorch/CUDA, tools, pip packages, CMake, networking libraries and user |
+| ROS 2 | Jazzy `ros-base`, colcon, rosdep and rosinstall-generator |
+| Mirrors | Aliyun apt/pip sources applied after all package installation; builds use upstream sources |
+| SSH / GUI | SSH server and WSLg dependencies inherited from base |
+| LLVM | LLVM 21: clang-format, clang-tidy and lldb |
+| Developer shell | zsh, oh-my-zsh, NvChad/neovim with the shared ty Python LSP, starship, nvm, fzf, eza, zoxide, Atuin and Witr |
+| Pre-commit | Hook environments pre-cached from the shared config |
 
-## Default User
+## User and entrypoint
 
-| Setting | Value |
-|---------|-------|
-| Username | `luciole` |
-| UID / GID | `1000` / `1000` |
-| Shell | `/bin/zsh` |
-| sudo | passwordless |
+The default container user is `luciole` and the default command is `/bin/zsh`. The configured `luciole` account has UID/GID 1000 and passwordless sudo. The working directory is `/home/luciole`.
 
-## Build Arguments
+Dockerfile `USER` controls identity, including when ENTRYPOINT is overridden. The shared entrypoint starts sshd according to `SSH_MODE` and then executes the command. Password mode is the default, but `luciole` is initially locked and the image has no password. Root SSH login is disabled with the default `DEFAULT_USER=luciole`. `APP_USER` is metadata; use `docker run --user root` for an explicit root session.
 
-| ARG | Default | Description |
-|-----|---------|-------------|
-| `ROS_DISTRO` | `jazzy` | ROS 2 distribution |
-| `ROS_TARGET` | `ros-base` | ROS 2 install target (`desktop` / `ros-base`) |
-| `USERNAME` | `luciole` | Non-root user name |
+## Build arguments
 
-## Quick Start
+The [manifest](image.yml) supplies these values for standard builds. Dockerfile defaults remain available for direct builds. Update both when changing defaults.
 
-### Pull from Registry
+| Argument | Default | Meaning |
+| --- | --- | --- |
+| `BASE_IMAGE` | `ghcr.io/dkuav/luciole-cuda-base:${BASE_TAG}` | Direct-build fallback; Bake supplies the same-checkout base context |
+| `BASE_TAG` | `pytorch26.06-py3` | Compatibility argument for direct Docker/Compose builds |
+| `ROS_DISTRO` | `jazzy` | ROS distribution |
+| `ROS_TARGET` | `ros-base` | ROS installation target |
+| `USERNAME` | `luciole` | Configured account; must match internal base |
+
+## Quick start
 
 ```bash
-docker pull ghcr.io/dkuav/luciole-cuda-dev:latest
-docker run -it --rm --gpus all ghcr.io/dkuav/luciole-cuda-dev:latest
+docker pull ghcr.io/dkuav/luciole-cuda-dev:pytorch26.06-py3
+docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-dev:pytorch26.06-py3
 ```
 
-### Local Build
+## Manifest build and tests
+
+Install tooling as described in the [root guide](../../README.md#local-build-and-smoke-tests). Use the native `linux/arm64` platform on ARM64 hosts.
+
+```bash
+# Run from the repository root after installing the tooling.
+python -m image_kit plan --target luciole-cuda-dev/pytorch26.06-py3 --output build-plan.json
+revision=$(git rev-parse HEAD)
+python -m image_kit bake --plan build-plan.json --owner dkuav \
+  --repository dkuav/images --revision "$revision" --platform linux/amd64 \
+  --mode load --output docker-bake.load.json
+docker buildx bake --file docker-bake.load.json
+python -m image_kit test --plan build-plan.json --owner dkuav \
+  --revision "$revision" --platform linux/amd64
+```
+
+The Bake path builds the current checkout's dependencies. Only the explicitly selected image is marked for publication. Required: assertion failures block publication. Docker/build/missing-script errors always fail, including for advisory images.
+
+## Compose and direct builds
 
 ```bash
 cd src/luciole-cuda-dev
 docker compose build
-```
-
-Or from the repo root:
-
-```bash
+# From the repository root:
 docker build -f src/luciole-cuda-dev/Dockerfile -t luciole-cuda-dev .
 ```
 
-### Start with WSLg GUI Support
+Direct final-image Docker/Compose builds use the published base by default. Use Bake to validate same-checkout dependencies. Base Compose is build-only; dev/runtime Compose configure interactive terminals and map SSH `2222:22`.
+
+## SSH
 
 ```bash
-cd src/luciole-cuda-dev
-docker compose run --rm app
-```
-
-The `docker-compose.yml` mounts `/tmp/.X11-unix` and `/mnt/wslg`, and forwards `DISPLAY`, `WAYLAND_DISPLAY`, `XDG_RUNTIME_DIR`, and `PULSE_SERVER` so GUI applications work inside the container under WSLg.
-
-## ROS 2 Setup
-
-ROS 2 is installed but **not sourced** automatically in the shell to avoid conflicts. Use the provided alias to source the workspace:
-
-```bash
-load_ros          # sources /opt/ros/jazzy/setup.zsh
-```
-
-You can add `load_ros` to your `~/.zshrc` if you want it sourced on every shell start.
-
-## Entrypoint, SSH & APP_USER
-
-This image inherits the shared entrypoint from
-[`luciole-cuda-base`](../luciole-cuda-base/README.md#entrypoint--ssh).
-On boot it starts sshd and then drops to `APP_USER=luciole`, so an interactive
-`docker run -it` lands directly in a `luciole` zsh. Override
-`APP_USER` (e.g. `-e APP_USER=root`) to stay root.
-
-| Setting | Value |
-|---------|-------|
-| Default user on boot | `luciole` (zsh) |
-| SSH port (in image) | `22` (`docker-compose.yml` maps it to host `2222`) |
-| Password (root / luciole) | `123456` |
-
-Quick test via SSH:
-
-```bash
-docker run -d --gpus all -p 2222:22 ghcr.io/dkuav/luciole-cuda-dev:latest
+docker run -dit --gpus all -p 2222:22 -e SSH_PASSWORD_FILE=/run/secrets/ssh-password \
+  -v "$HOME/.config/luciole/ssh-password:/run/secrets/ssh-password:ro" ghcr.io/dkuav/luciole-cuda-dev:pytorch26.06-py3
 ssh -p 2222 luciole@localhost
 ```
 
-## Notes
+Before running this example, create a nonempty `$HOME/.config/luciole/ssh-password` file with restricted permissions. The default `SSH_MODE=password` starts sshd, but `luciole` is initially locked. For password access, mount a nonempty secret file and set `SSH_PASSWORD_FILE` to its container path. For key access, mount a nonempty `/home/luciole/.ssh/authorized_keys` and set `SSH_MODE=key-only`. Set `SSH_MODE=disabled` when SSH is unnecessary. Root SSH login is disabled with the default `DEFAULT_USER=luciole`; host keys are ensured at container startup. Publish port 22 only on a trusted interface. Compose maps host port 2222 without supplying credentials.
 
-- This is a **Tier 2 final image** that depends on `luciole-cuda-base`.
-- Supports both `amd64` (x86_64 workstations) and `arm64` (NVIDIA Jetson).
-- neovim, nvm, and oh-my-zsh are installed into the `luciole` user's home directory by `devshell.sh`.
-- The default working directory in the container is `/home/luciole`.
+SSH follows the explicitly selected `DEFAULT_USER`: selecting `root` permits key-only root access with a nonempty `/root/.ssh/authorized_keys` by default; root password access requires a nonempty mounted `SSH_PASSWORD_FILE`. Root SSH grants full container privileges. Changing `DEFAULT_USER` at runtime selects the SSH account, not the Dockerfile command user.
+
+## ROS 2 and WSLg
+
+ROS is not sourced automatically. Run `load_ros` in zsh to source `/opt/ros/jazzy/setup.zsh`, or source the setup file manually. Devshell tools are installed/configured for `luciole`.
+
+Dev Compose mounts `/tmp/.X11-unix` and `/mnt/wslg` and forwards DISPLAY, WAYLAND_DISPLAY, XDG_RUNTIME_DIR and PULSE_SERVER. These paths require a compatible host environment.
+
+See [build architecture](../../docs/build-architecture.md) and [manifest reference](../../docs/manifest-reference.md) for configuration and release details.
+
+The Dockerfile passes manifest ROS values explicitly through `--distro` and `--target`, and the pre-commit config through `--config`; these installers no longer read their configuration environment variables. Supplementary user groups are configured by `USER_GROUPS` in the base manifest and inherited here.
+
+Shared scripts and assets come from the commit-pinned `vendor/image-kit` submodule; Luciole extensions remain in `src/_scripts/` and `src/_assets/`. Manifests declare every copied input. Initialize the component with `git submodule update --init --recursive` before building.
+
+The shared entrypoint is installed as `/usr/local/bin/docker-entrypoint`. Key-only mode requires nonempty `authorized_keys` by default. Explicit `SSH_ALLOW_EMPTY_AUTHORIZED_KEYS=true` allows sshd to start while waiting for a public key to be configured; an empty file does not enable unauthenticated login.
+
+image-kit installs `gosu` and `sudo`; local `luciole-dev-tools.sh` adds `landscape-common`. CUDA dev/runtime inherit these tools from the base.
+
+This image Dockerfile appends `load_ros` to the target user's Bash/zsh configuration after devshell setup, using the build-time `ROS_DISTRO`; shared devshell has no ROS-specific logic.
+
+The manifest explicitly declares the shared smoke helper with `variants[].tests[].library`; the pinned image-kit package runs the build and smoke contract.
+
+Publication uses YAML `name` independently of the directory and explicit variant channels. Verified build tags are `<variant>-<sha12>-<run-id>-<attempt>`; formal `<variant>-vMAJOR.MINOR.PATCH` tags promote an existing successful main publication receipt. All required native workers must pass before public tags advance. Historical tags remain available.

@@ -2,17 +2,16 @@
 # Tier 2 final: CUDA/PyTorch dev environment with ROS2, devtools and full devshell
 # FROM: ghcr.io/dkuav/luciole-cuda-base (pytorch:26.06-py3 + system + pip + cmake + user)
 
-ARG BASE_TAG=latest
-FROM ghcr.io/dkuav/luciole-cuda-base:${BASE_TAG}
-
-COPY src/_scripts/ /tmp/scripts/
-COPY src/_assets/ /tmp/assets/
-RUN chmod +x /tmp/scripts/*.sh
+ARG BASE_TAG=pytorch26.06-py3
+ARG BASE_IMAGE=ghcr.io/dkuav/luciole-cuda-base:${BASE_TAG}
+FROM ${BASE_IMAGE}
 
 ARG ROS_DISTRO=jazzy
 ARG ROS_TARGET=ros-base
-RUN /tmp/scripts/ros2.sh
+COPY --chmod=0755 vendor/image-kit/scripts/integrations/ros2.sh /tmp/scripts/ros2.sh
+RUN /tmp/scripts/ros2.sh --distro "${ROS_DISTRO}" --target "${ROS_TARGET}"
 
+COPY --chmod=0755 vendor/image-kit/scripts/dev/clang.sh /tmp/scripts/clang.sh
 RUN /tmp/scripts/clang.sh
 
 ARG USERNAME=luciole
@@ -20,15 +19,21 @@ USER ${USERNAME}
 WORKDIR /home/${USERNAME}
 
 ENV PATH="/home/${USERNAME}/.local/bin:${PATH}"
-RUN /tmp/scripts/devshell.sh
-RUN /tmp/scripts/precommit.sh
+COPY --chmod=0755 vendor/image-kit/scripts/dev/devshell.sh /tmp/scripts/devshell.sh
+RUN /tmp/scripts/devshell.sh --enabled true
+RUN printf 'alias load_ros="source /opt/ros/%s/setup.zsh"\n' "${ROS_DISTRO}" >> "/home/${USERNAME}/.zshrc" \
+    && printf 'alias load_ros="source /opt/ros/%s/setup.bash"\n' "${ROS_DISTRO}" >> "/home/${USERNAME}/.bashrc"
+COPY vendor/image-kit/assets/.pre-commit-config.yaml /tmp/assets/.pre-commit-config.yaml
+COPY --chmod=0755 vendor/image-kit/scripts/dev/precommit.sh /tmp/scripts/precommit.sh
+RUN /tmp/scripts/precommit.sh --config /tmp/assets/.pre-commit-config.yaml
 
 USER root
 
 # Switch apt + pip sources to Aliyun mirrors as the FINAL step, so users in
 # China get fast installs after pulling. Build itself keeps using upstream
 # sources (this script runs after every apt/pip install in devshell.sh etc.).
-RUN /tmp/scripts/finalize-mirror.sh
+COPY --chmod=0755 vendor/image-kit/scripts/system/finalize-mirror.sh /tmp/scripts/finalize-mirror.sh
+RUN /tmp/scripts/finalize-mirror.sh --mirror aliyun
 
 RUN rm -rf /tmp/scripts /tmp/assets
 
@@ -41,6 +46,7 @@ RUN ldconfig
 # sudo-sshd design, the entrypoint no longer needs APP_USER itself; we keep the
 # ENV for documentation / tooling that introspects it.
 ENV APP_USER=${USERNAME}
+ENV HOME=/home/${USERNAME}
 # Real `USER` directive below — this is the actual privilege gate. The
 # container boots as luciole; entrypoint uses luciole's passwordless sudo to
 # start sshd, then execs the user's command as luciole. Even if someone runs

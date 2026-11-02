@@ -17,6 +17,9 @@ runtime_main() {
     assert_cmd "python3 entrypoint" python3 --version
     assert_cmd_contains "cmake runs" "cmake version" cmake --version
     assert_cmd_contains "non-root user 'luciole'" "luciole" id -un
+    assert_cmd_contains "luciole password locked" " L " sudo -n passwd --status luciole
+    assert_cmd_contains "root SSH login disabled" "PermitRootLogin no" sudo -n cat /etc/ssh/sshd_config.d/99-dev-image.conf
+    assert_cmd_contains "SSH password mode configured" "PasswordAuthentication yes" sudo -n cat /etc/ssh/sshd_config.d/99-dev-image.conf
 
     header "ROS 2 Jazzy (ros-base)"
     # /opt/ros/<distro>/setup.bash must exist before ROS binaries are on PATH.

@@ -105,11 +105,12 @@ smoke_summary() {
     echo "${BOLD}Summary: ${pass_count} passed, ${fail_count} failed${RESET}"
     if [ "$fail_count" -gt 0 ]; then
         echo "${RED}SMOKE TEST FAILED (${fail_count} assertion(s))${RESET}" >&2
-        echo "${BOLD}Current policy: advisory (does NOT fail the pipeline).${RESET}" >&2
-        echo "${BOLD}Set SMOKE_HARD_GATE=1 to make this a hard gate.${RESET}" >&2
         if [ "${SMOKE_HARD_GATE:-0}" = "1" ]; then
+            echo "${BOLD}Current policy: required (fails the pipeline).${RESET}" >&2
             exit 1
         fi
+        echo "${BOLD}Current policy: advisory (does NOT fail the pipeline).${RESET}" >&2
+        echo "${BOLD}Set SMOKE_HARD_GATE=1 to make this a hard gate.${RESET}" >&2
         # Advisory mode: still exit 0 so the job (and the whole pipeline) is green.
         return 0
     fi

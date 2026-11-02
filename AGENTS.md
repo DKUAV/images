@@ -1,146 +1,83 @@
 # DKUAV Images — Agent Instructions
 
-This repository manages Docker images for the DKUAV project. Images are published to GitHub Container Registry (`ghcr.io/dkuav/<image>`).
+## Build contracts
 
-## Repository Layout
+- Images are published as `ghcr.io/dkuav/<YAML-name>`. Keep lowercase hyphenated names.
+- `src/<image>/image.yml` is the source of truth for build configuration, platforms, base dependencies, copied inputs and smoke policy. There is no central dependency map or handwritten image matrix.
+- YAML declares configuration; Dockerfiles declare installation order; `vendor/image-kit/scripts` implements shared capabilities and `src/_scripts` supplies Luciole extensions; `image-kit` validates and plans builds and emits Buildx Bake graphs; `tools/` retains consumer policy checks and compatibility imports.
+- Initialize the commit-pinned public `vendor/image-kit` submodule with `git submodule update --init --recursive` before validation/builds. Cross-repository reusable capabilities and assets belong to the component; Luciole extensions remain local. Use image-kit 0.2 schema/plan v2 and one shared CLI. YAML names are unique publication/dependency identifiers and need not match directory names. Keep account, Dockerfile and documentation checks in `tools/check_repository.py`. Publish component changes before committing a consumer pin update. CI must not follow a moving component branch.
+- Group component scripts under `system`, `dev`, `python`, `libraries`, and `integrations`; prefix platform-specific scripts with their platform name.
+- Each manifest declares a published name and explicit variants. Preserve package names; publish variant channels, `<variant>-<sha12>-<run-id>-<attempt>` build tags and receipt-promoted `<variant>-vMAJOR.MINOR.PATCH` releases. Do not maintain old global aliases or delete historical tags.
+- All Dockerfiles use the repository root as build context. CUDA Compose builds use `context: ../..`; Ascend Compose only runs published images, with builds handled by manifest/Bake.
+- Internal bases use `base.target` and `base.context` and same-checkout Bake named contexts. The planner adds build ancestors without selecting them for publication. Child platforms must be supported by their parent.
+- External bases need an explicit version tag and an explicit digest value or null. CUDA uses `nvcr.io/nvidia/pytorch:26.06-py3`; Ascend uses `ascendai/torch-npu:2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12` with a null digest.
+- `BASE_IMAGE` is injected by the build tool. Direct Docker/Compose builds retain Dockerfile defaults and final-image `BASE_TAG` compatibility; these use the published base by default.
 
-```
-src/
-  _scripts/               # Shared installation scripts
-  _assets/                # Shared assets (e.g. pre-commit config)
-  _tests/                 # Smoke tests run after CI merge (smoke-<image>.sh + _lib.sh)
-  image-deps.json         # CI dependency + arch-override map
-  <image-name>/           # One subdirectory per image
-    Dockerfile            # Required (CI uses this to detect image directories)
-    docker-compose.yml    # Optional, for local build/run
-    README.md             # Optional, image documentation
-    README_zh.md          # Optional, image documentation (Chinese)
-.github/workflows/
-  publish-images.yml      # CI: detect changes → multi-arch build → merge manifest → smoke test
-```
+## Shared scripts and Dockerfiles
 
-## Image Naming Convention
+- Choose ownership before adding dependencies: cross-repository reusable installers and resources belong to image-kit; Luciole-shared scripts and assets belong to `src/_scripts/<category>/` and `src/_assets/`; single-image requirements, scripts and configuration belong to `src/<image>/`.
+- Separate installation mechanisms from dependency selection. Reuse existing installers with image-local requirements; a package being publicly available does not make it part of the shared default toolset. Share dependency lists only when consumers need the same set, retaining separate CUDA/Ascend installers where required.
+- Adding packages does not require a new script. Prefer a requirements edit or a short direct Dockerfile command; use capability-named scripts without sequence numbers for substantial installation logic or conditional behavior. Promote scripts only for actual reuse and keep business dependencies out of common bases unless all inheriting images need them.
+- Follow `.agents/skills/add-install-step/SKILL.md` for dependency additions. Preserve Ascend vendor constraints, place frequently changed image-specific layers after stable prerequisites where possible, and keep final mirror configuration and cleanup last among installation steps.
+- Copy each independently changeable shared file explicitly and declare it in manifest `inputs`. Keep capability `COPY + RUN` pairs adjacent; do not copy entire script/asset directories.
+- Keep common Python development tools in `vendor/image-kit/assets/python-dev-requirements.txt`. CUDA and Ascend consume that file through separate pip installers because CUDA extras and Ascend vendor constraints differ.
+- Preserve capability order in CUDA base: system, dev-tools, WSLg, pip, CMake, networking libraries, user and SSH. Python is supplied by NVIDIA. Ascend is a separate ARM64 image built from the vendor TorchNPU base; preserve vendor Python and CANN.
+- `opencv.sh` is currently disabled. Do not claim the NVIDIA OpenCV installation is quarantined or promise a particular apt OpenCV version without verifying a built image.
+- CUDA base OpenCV smoke verifies an apt-owned CMake configuration and compiles/runs a probe with matching CMake, header and runtime versions; do not hardcode a historical Ubuntu package version. Keep Python cv2 import separate and retain advisory policy.
+- ROS 2 is added in both final images. LLVM, devshell and cached pre-commit hooks are dev-only.
+- Run devshell/precommit as the target user, then return to root for mirror configuration and cleanup. Select correct binaries for amd64/arm64.
+- Run `finalize-mirror.sh` as root after all apt/pip installation. CUDA dev/runtime select Aliyun; Ascend selects upstream.
+- CUDA base and Ascend default to root. CUDA final Dockerfiles set `USER luciole`; the shared entrypoint starts sshd according to `SSH_MODE` then execs the command. Managed non-root accounts start locked. CUDA defaults to password SSH; Ascend defaults to key-only SSH with nonempty authorized keys. CUDA final images prohibit root SSH by default; Ascend explicitly selects root. Root password mode requires a mounted password file and key-only mode requires nonempty authorized keys unless `SSH_ALLOW_EMPTY_AUTHORIZED_KEYS=true` explicitly allows starting sshd while waiting for keys. APP_USER is CUDA metadata, not privilege control.
+- Do not change software versions, SSH policy or existing smoke assertions merely to make a build refactor pass.
 
-`src/<image-name>` → `ghcr.io/dkuav/<image-name>`
+## CI and verification
 
-- Directory name becomes the image name. **Do not** use uppercase letters or spaces.
-- Example: `src/luciole-cuda-dev` → `ghcr.io/dkuav/luciole-cuda-dev`
+- Use Ruff with an 88-character line length and double quotes. Preserve the Python 3.11 target and the existing lint rules; use ty with its default configuration.
+- Use `uv run --no-sync pre-commit install` to enable repository hooks and `uv run --no-sync pre-commit run --all-files` to check all tracked files. Ruff and ty hooks use the locked dev environment. Consumer hooks skip `vendor/`; run the component hooks separately.
 
-## Build Context
+- Keep `uv.lock` synchronized with project and local component dependencies. CI uses `uv sync --locked`; never use a moving component branch or bypass stale lockfiles.
 
-All Dockerfiles use the **repository root** (`.`) as the Docker build context so that `COPY src/_scripts/` works. `docker-compose.yml` files therefore set `context: ../..` and `dockerfile: src/<image-name>/Dockerfile`.
+- Run `uv sync --locked --extra dev`, activate `.venv`, then run `python -m tools.check_repository`, `python -m tools.images validate`, `python -m ruff check tools`, `python -m ruff format --check tools`, `python -m pytest`, and `python -m pytest vendor/image-kit/tests` after changing build tooling or contracts.
+- Build/test affected images on native amd64 and arm64. No QEMU. Use `plan --target <name>/<variant>` or `plan --all`, then `bake --platform <platform> --mode load`, `docker buildx bake`, and `test` as documented in the root README.
+- Component pin (`vendor/image-kit`) and `.gitmodules` changes rebuild all images; every checkout that validates manifests or builds images initializes submodules recursively.
+- Plan changes through actual copied inputs and smoke dependencies, then propagate to downstream consumers. README and Compose changes do not trigger image builds; tooling/schema/workflow changes do.
+- PR jobs have contents:read only, never log in to GHCR, and never push images or caches. Publishing jobs have contents:read and packages:write.
+- The reusable native workflow builds, loads and tests a same-commit graph before pushing selected images by digest. All native workers must succeed before merging public manifests.
+- After digest export, run `test --metadata` to pull the immutable published images and repeat the native smoke tests before `collect`. Publication can re-solve layers; cache reuse does not prove that the export matches the first tested image. Retain the collection config-digest comparison.
+- Native workers must free unused hosted-runner SDKs and preloaded Docker images before creating Buildx, retain host Python/Node/Docker, limit BuildKit solver parallelism to one, and report disk usage even on failure. Account for both BuildKit cache and locally loaded smoke-test images when changing the graph.
+- Every smoke script lives in `src/_tests`, uses `_lib.sh`, and explicitly declares `variants[].tests[].library`, `variants[].tests[].script` and its inputs in the manifest. CUDA base is advisory; CUDA dev/runtime and Ascend are required. Ascend hardware checks are separate and must run on a compatible NPU host. Missing scripts/build/container failures are always fatal. Pass SMOKE_HARD_GATE explicitly.
+- Preserve the separate manual linker-diagnostic workflow and historical evidence; existing upstream issues are outside this migration.
+- Generated plans, Bake configurations and digest metadata are CI artifacts, not checked-in sources.
+- Transfer full Bake metadata through files/stdin, never environment variables or command-line arguments; whole-graph provenance can exceed Linux exec limits. Encode embedded action output with `toJSON` inside a quoted heredoc.
 
-## Shared Scripts (`src/_scripts/`)
+## Documentation sync
 
-Numbered shell scripts that encapsulate all reusable installation logic:
+- After modifying a Dockerfile, manifest or Compose file, update its image README.md and README_zh.md together. Both must cross-link.
+- Shared-script feature changes require updates to all affected image guides.
+- Keep root and image `README.md` / `README_zh.md` pairs synchronized and cross-linked. Write all documents under `docs/` in English only; do not require or add translated docs. Keep commands, tag behavior, test policy, tools and defaults accurate in both README languages.
+- Update AGENTS.md when build or maintenance conventions change. Historical diagnostic documents must clearly distinguish past evidence from current guarantees.
 
-| Script | Purpose | Used by |
-|--------|---------|---------|
-| `system.sh` | Apt upgrade, timezone, locale — minimal system bootstrap | All base images |
-| `dev-tools.sh` | Developer CLI toolset (editors, VCS, build, debug, ffmpeg) — run right after `system.sh` | All base images |
-| `wslg.sh` | GUI / WSLg deps (D-Bus, CJK fonts, Mesa, PulseAudio) — run after `dev-tools.sh` | All base images |
-| `python-install.sh` | Python 3.10 from apt + pip bootstrap | Currently unused (pytorch:26.06-py3 already ships Python); kept for future CPU-only bases |
-| `pip-packages.sh` | pip packages, uv | All base images |
-| `opencv.sh` | Replace NVIDIA's incomplete OpenCV 4.7.0 (no FFMPEG / GStreamer) with apt's `libopencv-dev` 4.5.4; quarantine the original under `/usr/local/lib/nvidia-opencv-4.7.0.disabled/` | `luciole-cuda-base` |
-| `ros2.sh` | ROS 2 (reads `$ROS_DISTRO`, `$ROS_TARGET`) | All final images |
-| `cmake.sh` | Newer CMake binary release (reads `$CMAKE_VERSION`) | `luciole-cuda-base` (inherited by every Tier 2 final) |
-| `clang.sh` | LLVM 21 (clang-format, clang-tidy, lldb) | Dev final images only |
-| `user.sh` | Non-root user + sudo (reads `$USERNAME`, `$USER_UID`) | All base images |
-| `devshell.sh` | zsh, oh-my-zsh, neovim, starship, nvm, … | Dev final images only — **must run as target user** |
-| `precommit.sh` | Pre-cache pre-commit hook environments from `_assets/.pre-commit-config.yaml` | Dev final images only — **must run as target user** |
-| `finalize-mirror.sh` | As the **final step**, rewrite apt + pip sources to Aliyun mirrors so users in China get fast installs post-pull. Build itself still uses upstream sources. **Must run as root, after every apt/pip install is finished.** | All Tier 2 final images |
+## Commit message format
 
-Each Dockerfile does `COPY src/_scripts/ /tmp/scripts/ && chmod +x /tmp/scripts/*.sh`, runs the required scripts, then `RUN rm -rf /tmp/scripts`. Dev images also `COPY src/_assets/ /tmp/assets/` for `precommit.sh`.
+- Format commit subjects as `<Type>: <summary>`, where `Type` is one of `Feat`, `BugFix`, `Refactor`, or `Doc`.
+- Separate the subject from the body with a blank line.
+- Describe changes in the body as a numbered list.
 
-## Two-Tier Image Architecture
+```text
+Refactor: Synchronize shared installers and SSH behavior
 
-### Tier 1 — Base Images (published to GHCR, used as FROM in Tier 2)
-
-| Directory | Base FROM | Description |
-|-----------|-----------|-------------|
-| `src/luciole-cuda-base` | `nvcr.io/nvidia/pytorch:26.06-py3` | PyTorch/CUDA + pip packages + user (amd64, arm64) |
-
-### Tier 2 — Final Images (depend on Tier 1 base images)
-
-| Directory | FROM (Tier 1) | Arch | Description |
-|-----------|---------------|------|-------------|
-| `src/luciole-cuda-dev` | `luciole-cuda-base` | amd64, arm64 | CUDA dev: ROS 2 + devtools + devshell |
-| `src/luciole-cuda-runtime` | `luciole-cuda-base` | amd64, arm64 | CUDA runtime: ROS 2 + cmake only |
-
-## `src/image-deps.json`
-
-Drives CI change detection and dependency propagation:
-
-```json
-{
-  "base_images": ["luciole-cuda-base"],
-  "dependencies": {
-    "luciole-cuda-dev":      ["luciole-cuda-base"],
-    "luciole-cuda-runtime":  ["luciole-cuda-base"]
-  },
-  "arch_overrides": {
-    "luciole-cuda-base":     ["amd64", "arm64"],
-    "luciole-cuda-dev":      ["amd64", "arm64"],
-    "luciole-cuda-runtime":  ["amd64", "arm64"]
-  }
-}
+1. Align shared scripts and pass installation options explicitly.
+2. Update related configuration, bilingual documentation and tests.
 ```
 
-## Local Build
+## Unified v2 publication
 
-Run from the image directory:
+Use one worker per dependency component and native platform, pass `--component` to worker
+commands and qualify artifacts with `worker_id` and run attempt. Keep the full plan for merge.
+Ascend defaults to root with HOME=/root to read the vendor CANN environment; omit UID/GID/groups
+from its manifest. Its Bash smoke override restores the installed environment and explicitly
+checks the real entrypoint and credential-gated root SSH. CUDA account policy is unchanged.
+Ascend Compose mounts the existing host `SSH_CONFIG_DIR` read-only at `/root/.ssh`; retain
+nonempty authorized-key validation and root ownership with directory/file modes 0700/0600.
 
-```bash
-cd src/<image-name>
-docker compose build          # using docker-compose.yml (context is repo root)
-# or directly from repo root
-docker build -f src/<image-name>/Dockerfile -t <image-name> .
-```
-
-## CI/CD Behavior
-
-- **Trigger**: push to `main` (changes under `src/**` or `.github/workflows/publish-images.yml`), or manual `workflow_dispatch` (builds all images).
-- **Change detection**: reads `image-deps.json`. If `src/_scripts/**` or `src/_assets/**` changed → rebuilds ALL images. If a base image changed → rebuilds that base + all its dependent final images. If a final image changed → rebuilds that final only. `workflow_dispatch` builds everything.
-- **Multi-arch**: `amd64` (`ubuntu-24.04`) and `arm64` (`ubuntu-24.04-arm` native runner, **no QEMU**) are built separately, pushed by digest, then merged into a single multi-arch manifest. `arch_overrides` limits certain images to arm64 only.
-- **Two-tier CI jobs**:
-  1. `detect-changes` — computes tier1, tier2, and smoke-test matrices
-  2. `build-push-tier1` — builds base images (skipped if no base changes)
-  3. `merge-tier1` — merges multi-arch manifests for base images
-  4. `build-push-tier2` — builds final images (runs after merge-tier1, or if tier1 was skipped)
-  5. `merge-tier2` — merges multi-arch manifests for final images
-  6. `smoke-test` — pulls each built image at its `sha-<git-sha>` tag on a **native arch runner** and runs `src/_tests/smoke-<image>.sh`; any assertion failure fails the whole pipeline
-- **Smoke tests (gate)**: `src/_tests/smoke-<image>.sh` is the per-image contract check (OpenCV `find_package` resolves to apt, `ros2` installable, dev shell tools present, mirror applied in Tier 2, etc.). Shared helpers live in `src/_tests/_lib.sh`. The job runs only for images that were *actually built* this run (skipped when nothing changed). It is a **hard gate**: a failed smoke test marks the workflow failed.
-  - To smoke-test locally: `docker run --rm -v "$PWD/src/_tests:/tmp/smoke:ro" <image> bash -lc '. /tmp/smoke/_lib.sh; source /tmp/smoke/smoke-<image>.sh'`
-- **Image tags**: `latest` (main branch), `main`, `sha-<git-sha>`.
-- **Registry**: `ghcr.io/dkuav/<image-name>`, authenticated via `GITHUB_TOKEN` — no extra secrets required.
-
-## Adding a New Image
-
-1. Decide tier: Tier 1 (new base) or Tier 2 (new final that builds on an existing base).
-2. Create a new directory under `src/` following the pattern `<project>-<purpose>` (lowercase, hyphen-separated).
-3. Add `Dockerfile` (required), `docker-compose.yml` (recommended), `README.md` and `README_zh.md` (both recommended).
-4. Update `src/image-deps.json`: add the image to `base_images` (Tier 1) or `dependencies` (Tier 2), and `arch_overrides` if not building all architectures.
-5. CI will automatically detect and build the directory on the next push.
-
-## Notes
-
-- **Mirrors strategy**: during the build every script (`system.sh`, `ros2.sh`, `pip-packages.sh`, …) uses the upstream Ubuntu / PyPI sources, because GitHub Actions runners are usually closer to those than to Chinese mirrors. `finalize-mirror.sh` then flips the *persisted* apt + pip sources to Aliyun **as the very last step** of each Tier 2 final image, so end users in China get fast `apt` / `pip` out of the box without that mirror ever slowing down a build.
-- Default timezone is `Asia/Shanghai`; override via `ARG TZ`.
-- `devshell.sh` installs user-home dotfiles (oh-my-zsh, neovim, nvm). It **must** run as the target user (`USER ${USERNAME}` before the `RUN` step in the Dockerfile), followed by `USER root` for cleanup.
-- neovim is installed from a binary tarball; when adding an arm64-compatible script update, select the correct arch binary (`nvim-linux-x86_64` vs `nvim-linux-arm64`).
-- Each image directory should include both `README.md` (English) and `README_zh.md` (Chinese). The two files must cross-link to each other.
-
-## Documentation Sync
-
-**After modifying any file in an image directory, always check and update the corresponding documentation.**
-
-| Changed file | Documentation to update |
-|---|---|
-| `Dockerfile` | `README.md` and `README_zh.md` — update affected sections (tools list, build args, notes, etc.) |
-| `docker-compose.yml` | `README.md` and `README_zh.md` — update Quick Start / 快速开始 examples |
-| `src/_scripts/*.sh` | Update any image READMEs that reference the affected script's features |
-| `README.md` | Keep `README_zh.md` in sync (same structure and content, Chinese translation) |
-| `README_zh.md` | Keep `README.md` in sync (same structure and content, English) |
-
-Both `README.md` and `README_zh.md` must always reflect the current state of `Dockerfile` and `docker-compose.yml`.
-
+Use the shared v2 plan and derived native worker matrix. Validate/build/test before digest publication; merge checks all required workers and the full identity before updating tags. Formal versions promote a verified main receipt without rebuilding or creating Git tags. Keep component publication before consumer pin commits. Docs are English-only; README pairs remain bilingual.

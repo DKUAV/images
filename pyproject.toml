@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools==84.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dkuav-images"
+version = "0.1.0"
+description = "Manifest-driven DKUAV container builds"
+requires-python = ">=3.11"
+
+dependencies = [
+    "image-kit==0.2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "image-kit[dev]==0.2.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["tools*"]
+
+[tool.uv.sources]
+image-kit = { path = "vendor/image-kit", editable = true }
+
+[tool.image-kit]
+registry = "ghcr.io"
+source-repository = "DKUAV/images"
+rebuild-inputs = [".gitmodules", "vendor/image-kit", "tools/**"]
+shell-inputs = ["vendor/image-kit/tests/*.sh"]
+
+[tool.pytest.ini_options]
+addopts = "-p no:cacheprovider --basetemp=.pytest-tmp-default"
+testpaths = ["tools/images/tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.format]
+quote-style = "double"

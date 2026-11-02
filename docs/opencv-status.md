@@ -1,5 +1,13 @@
 # OpenCV Status & Self-Built Version Analysis
 
+> **Historical diagnostic record:** The original analysis below describes specific past builds, not verified versions or fixes in current images. Current behavior is defined by Dockerfiles, image.yml and actual smoke results. OpenCV replacement is currently disabled and base has no HPC-X fixup step. See [build-architecture.md](build-architecture.md) for the current build architecture.
+
+> **2026-11-02 CI evidence:** Run `41406480866` at revision `64fa89fe1324` reported
+> CMake OpenCV `4.6.0` on amd64, failing the historical `4.5.x` advisory assertion.
+> The current smoke probe instead requires an apt-owned CMake configuration and matching
+> CMake, header and linked runtime versions, with a compiled C++ executable. This change
+> does not enable `opencv.sh`, change installed versions or verify video decoding backends.
+
 > Status: **Plan A landed** · Branch: `xrc/fix_opencv` · Owner: DKUAV Images
 >
 > 📌 **Architecture note**: This analysis was written when the repository
@@ -19,7 +27,6 @@
 > needs to be called from `luciole-cuda-base`. §4 / §5 / §6 below have been
 > rewritten accordingly.
 >
-> 中文版：[opencv-status_zh.md](./opencv-status_zh.md)
 
 This document records the current state of OpenCV installations across the
 Luciole image family, with focus on the root cause, impact and candidate

@@ -16,6 +16,9 @@ set -uo pipefail
 dev_main() {
     header "Inherited base/runtime sanity"
     assert_cmd_contains "non-root user 'luciole'" "luciole" id -un
+    assert_cmd_contains "luciole password locked" " L " sudo -n passwd --status luciole
+    assert_cmd_contains "root SSH login disabled" "PermitRootLogin no" sudo -n cat /etc/ssh/sshd_config.d/99-dev-image.conf
+    assert_cmd_contains "SSH password mode configured" "PasswordAuthentication yes" sudo -n cat /etc/ssh/sshd_config.d/99-dev-image.conf
     assert_cmd_contains "cmake runs" "cmake version" cmake --version
     assert_cmd_contains "ros2 CLI available" "ros2" \
         bash -lc "source /opt/ros/jazzy/setup.bash && ros2 --help"
@@ -28,6 +31,8 @@ dev_main() {
             && ok "tool present: $tool" \
             || fail "tool missing: $tool"
     done
+    assert_cmd "uv CLI" uv --version
+    assert_cmd "ty CLI" ty --version
     # fzf is git-cloned to ~/.fzf/bin/fzf by devshell.sh, which only adds it to
     # PATH via .bashrc/.zshrc (NOT .profile). A non-interactive `bash -lc` smoke
     # shell therefore won't see it on PATH — verify the binary exists directly.

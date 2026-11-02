@@ -1,117 +1,117 @@
 # luciole-cuda-base
 
-CUDA/PyTorch base image for the DKUAV / Luciole project. Built on NVIDIA's official PyTorch image, this layer adds system tools, pip packages, and a pre-configured non-root user for all CUDA-family Tier 2 images. Targets both amd64 (x86_64 workstations) and arm64 (NVIDIA Jetson).
+Shared NVIDIA PyTorch/CUDA base with system tools, GUI dependencies, Python packages, CMake, networking libraries and a configured user account.
 
-> 中文文档请见 [README_zh.md](README_zh.md)
+> 中文文档：[README_zh.md](README_zh.md)
 
-## Registry
+## Registry and platforms
 
-```
-ghcr.io/dkuav/luciole-cuda-base:latest
-```
+`ghcr.io/dkuav/luciole-cuda-base:pytorch26.06-py3` — `linux/amd64` and `linux/arm64`.
+Main advances the explicit variant channel. Build tags include variant, SHA12 and run ID/attempt; formal versions promote verified builds without rebuilding.
 
-## Architecture
-
-`amd64` + `arm64`
-
-## What's Inside
+## Contents
 
 | Category | Details |
-|----------|---------|
-| **Base** | `nvcr.io/nvidia/pytorch:26.06-py3` (Python + PyTorch + CUDA pre-installed) |
-| **System tools** | wget, vim, git, git-lfs, curl, zip/unzip, tmux, screen, htop, tree, parallel, rsync, build-essential, ninja-build, GDB, libssl, iputils, libgflags, libgoogle-glog, GTest / GMock |
-| **Python** | Provided by base image; additional pip packages added during build (uv, pytest suite, FastAPI, pybind11, pandas, numpy, loguru, and more) |
-| **OpenCV** | C++: apt `libopencv-dev` 4.5.4 (FFMPEG + GStreamer). Python: pip `opencv-contrib-python` (bundles its own static FFMPEG). NVIDIA's incomplete OpenCV 4.7.0 from the base image is quarantined under `/usr/local/lib/nvidia-opencv-4.7.0.disabled/` so C++ `find_package(OpenCV)` resolves to the apt build. See [`docs/opencv-status.md`](../../docs/opencv-status.md) |
-| **Build tools** | CMake 4.3.2 (binary release) |
-| **Networking libs** | libdatachannel v0.24.5 (WebRTC data channels), rpclib v2.3.0 (TCP RPC), iceoryx v2.0.8 (zero-copy shared-memory transport) |
-| **SSH** | `openssh-server` pre-configured (pubkey + root login enabled); sshd launched at container runtime by the shared entrypoint |
-| **GUI** | WSLg support (dbus-x11, CJK fonts, Mesa, PulseAudio) |
-| **Mirrors** | This **base** image keeps the default Ubuntu / PyPI sources (build-time inclusively). The downstream Tier 2 finals (`luciole-cuda-dev`, `luciole-cuda-runtime`) flip the persisted sources to Aliyun as their final build step. |
-| **Timezone** | `Asia/Shanghai` (overridable via `TZ`) |
+| --- | --- |
+| Base | `nvcr.io/nvidia/pytorch:26.06-py3`, with Python, PyTorch and CUDA supplied upstream |
+| System / build | vim, Git/LFS, tmux, ripgrep, fd, bat, ffmpeg, GCC, Ninja, GDB, CMake 4.3.2 |
+| Python packages | Shared [development requirements](../../vendor/image-kit/assets/python-dev-requirements.txt), including uv, ty and Ruff; CUDA-specific OpenCV and vision packages use [luciole-cuda-pip-packages.sh](../_scripts/python/luciole-cuda-pip-packages.sh). CUDA retains `numpy<2.0.0`. |
+| Networking libraries | libdatachannel v0.24.5, rpclib v2.3.0, iceoryx v2.0.8 |
+| GUI | WSLg dependencies, D-Bus, CJK fonts, Mesa and PulseAudio |
+| OpenCV | apt `libopencv-dev` plus pip packages; `opencv.sh` is disabled, so NVIDIA OpenCV is not quarantined by this Dockerfile |
+| Mirrors | Upstream Ubuntu / PyPI sources; final images switch to Aliyun |
+| Editor / timezone | `EDITOR=vim`, `VISUAL=vim`, default `Asia/Shanghai` |
 
-## Default User
+## User and entrypoint
 
-| Setting | Value |
-|---------|-------|
-| Username | `luciole` |
-| UID / GID | `1000` / `1000` |
-| sudo | passwordless |
+The default container user is `root` and the default command is `/bin/bash`. The configured `luciole` account has UID/GID 1000 and passwordless sudo. The base does not override the upstream working directory.
 
-## Build Arguments
+Dockerfile `USER` controls identity, including when ENTRYPOINT is overridden. The shared entrypoint starts sshd according to `SSH_MODE` and then executes the command. Password mode is the default, but `luciole` is initially locked and the image has no password. Root SSH login is disabled with the default `DEFAULT_USER=luciole`. `APP_USER` is metadata; use `docker run --user root` for an explicit root session.
 
-| ARG | Default | Description |
-|-----|---------|-------------|
+## Build arguments
+
+The [manifest](image.yml) supplies these values for standard builds. Dockerfile defaults remain available for direct builds. Update both when changing defaults.
+
+| Argument | Default | Meaning |
+| --- | --- | --- |
+| `BASE_IMAGE` | `nvcr.io/nvidia/pytorch:26.06-py3` | External base; manifest digest may pin it |
 | `TZ` | `Asia/Shanghai` | Timezone |
-| `CMAKE_VERSION` | `4.3.2` | CMake version to install |
-| `LIBDATACHANNEL_VERSION` | `v0.24.5` | libdatachannel release tag |
-| `RPCLIB_VERSION` | `v2.3.0` | rpclib release tag |
-| `ICEORYX_VERSION` | `v2.0.8` | iceoryx release tag |
-| `USERNAME` | `luciole` | Non-root user name |
-| `USER_UID` | `1000` | User UID |
-| `USER_GID` | `1000` | User GID |
+| `SYSTEM_UPGRADE` | `true` | Upgrade installed packages during system initialization |
+| `CMAKE_VERSION` | `4.3.2` | CMake release |
+| `LIBDATACHANNEL_VERSION` | `v0.24.5` | libdatachannel release |
+| `RPCLIB_VERSION` | `v2.3.0` | rpclib release |
+| `ICEORYX_VERSION` | `v2.0.8` | iceoryx release |
+| `USERNAME` | `luciole` | Configured account; must match internal base |
+| `USER_UID` | `1000` | Account UID |
+| `USER_GID` | `1000` | Account GID; direct builds default to USER_UID |
+| `USER_GROUPS` | Empty | Comma-separated existing supplementary groups; root requires empty |
 
-## Entrypoint & SSH
-
-All images in this family inherit a shared entrypoint installed by this base
-image at `/usr/local/bin/docker-entrypoint.sh`. On container start it:
-
-1. **starts sshd** (`service ssh start`) so the container is reachable via SSH
-   right away — host keys and `sshd_config` are baked in at build time by
-   [`ssh.sh`](../_scripts/ssh.sh), but a `docker build` layer cannot run a
-   daemon, so the actual launch must happen at runtime.
-2. **drops privileges** to `$APP_USER` (default unset → stays root) using
-   `gosu` and `exec`s the user command, so signals (`SIGTERM`, …) propagate
-   correctly and `docker stop` is prompt.
-
-The base image sets `APP_USER=""` so it boots as **root** (base is a build-stone,
-not an end-user container — its default user is intentionally root). The Tier 2
-finals (`luciole-cuda-dev`, `luciole-cuda-runtime`) set `ENV APP_USER=luciole` to
-land in the dev account. Override at runtime with `-e APP_USER=…`.
-
-### Connecting via SSH
-
-Expose the port and use the `luciole` / `root` accounts (password `123456`, or
-better, drop your public key into `~/.ssh/authorized_keys`):
+## Quick start
 
 ```bash
-docker run -d --gpus all -p 2222:22 ghcr.io/dkuav/luciole-cuda-dev:latest
-ssh -p 2222 luciole@localhost
+docker pull ghcr.io/dkuav/luciole-cuda-base:pytorch26.06-py3
+docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-base:pytorch26.06-py3
 ```
 
-| Setting | Value |
-|---------|-------|
-| Hostkey | generated at build time by `ssh-keygen -A` (baked into the image) |
-| Password (root / luciole) | `123456` (change at runtime by `chpasswd`) |
-| `PubkeyAuthentication` | `yes` |
-| `PermitRootLogin` | `yes` |
+## Manifest build and tests
 
-## Quick Start
+Install tooling as described in the [root guide](../../README.md#local-build-and-smoke-tests). Use the native `linux/arm64` platform on ARM64 hosts.
 
 ```bash
-docker pull ghcr.io/dkuav/luciole-cuda-base:latest
-docker run -it --rm --gpus all ghcr.io/dkuav/luciole-cuda-base:latest bash
+# Run from the repository root after installing the tooling.
+python -m image_kit plan --target luciole-cuda-base/pytorch26.06-py3 --output build-plan.json
+revision=$(git rev-parse HEAD)
+python -m image_kit bake --plan build-plan.json --owner dkuav \
+  --repository dkuav/images --revision "$revision" --platform linux/amd64 \
+  --mode load --output docker-bake.load.json
+docker buildx bake --file docker-bake.load.json
+python -m image_kit test --plan build-plan.json --owner dkuav \
+  --revision "$revision" --platform linux/amd64
 ```
 
-### Local Build
+The Bake path builds the current checkout's dependencies. Only the explicitly selected image is marked for publication. Advisory: assertion failures are reported without blocking publication. Docker/build/missing-script errors always fail, including for advisory images.
+
+## Compose and direct builds
 
 ```bash
 cd src/luciole-cuda-base
 docker compose build
-```
-
-Or from the repo root:
-
-```bash
+# From the repository root:
 docker build -f src/luciole-cuda-base/Dockerfile -t luciole-cuda-base .
 ```
 
-## Notes
+Direct final-image Docker/Compose builds use the published base by default. Use Bake to validate same-checkout dependencies. Base Compose is build-only; dev/runtime Compose configure interactive terminals and map SSH `2222:22`.
 
-- This is a **Tier 1 base image**. Published to GHCR and used as `FROM ghcr.io/dkuav/luciole-cuda-base:latest` in [`luciole-cuda-dev`](../luciole-cuda-dev/README.md) and [`luciole-cuda-runtime`](../luciole-cuda-runtime/README.md).
-- Python installation is skipped (`python-install.sh`) because `pytorch:26.06-py3` already ships Python.
-- CMake is pre-installed here so both Tier 2 images share one source of truth for the build-tool version.
-- No ROS 2, clang, or devshell — those are added in the Tier 2 final images.
-- **OpenCV replacement**: NVIDIA's `pytorch:26.06-py3` ships a custom-built OpenCV 4.7.0 under `/usr/local/lib` with all video decoders (FFMPEG, GStreamer) disabled. `opencv.sh` quarantines it and installs apt's `libopencv-dev` 4.5.4 with full backends for C++ (`find_package(OpenCV)`). Python `import cv2` keeps using the pip `opencv-contrib-python` wheel, which bundles its own FFMPEG and is independent of the C++ OpenCV. See [`docs/opencv-status.md`](../../docs/opencv-status.md) for the full analysis.
-- **ld.so.cache registration / HPC-X symbol fixup**: NVIDIA's NGC pytorch:26.06-py3 (arm64) ships HPC-X v2.20 with UCX 1.17 + UCC 1.4 — but UCC 1.4 references `ucs_config_doc_nop`, a symbol only present in UCX 1.18+. As a result `import torch` fails on arm64 base with `undefined symbol: ucs_config_doc_nop` whenever the dynamic linker finds HPC-X's libucc via `hpcx.conf`. The Dockerfile's final step strips `/opt/hpcx/{ucc,ucx}/lib` from `hpcx.conf`, registers the remaining vendor `.so` trees into `/etc/ld.so.conf.d/zz-ngc-extra.conf`, and runs `ldconfig`. See [`docs/ld-cache-notes.md`](../../docs/ld-cache-notes.md) for the full diagnosis.
-- If the requested UID/GID is already occupied in the base image, the old user is removed automatically.
-- **Default editor**: `vim` (installed by `dev-tools.sh`). The image sets `EDITOR`/`VISUAL` to `vim` (inherited by both Tier 2 finals), and Debian's alternatives `editor` is pinned to `/usr/bin/vim.basic` so sudo contexts (whose `env_reset` drops those variables) still fall back to vim.
+## SSH
+
+```bash
+docker run -dit --gpus all -p 2222:22 -e SSH_PASSWORD_FILE=/run/secrets/ssh-password \
+  -v "$HOME/.config/luciole/ssh-password:/run/secrets/ssh-password:ro" ghcr.io/dkuav/luciole-cuda-base:pytorch26.06-py3
+ssh -p 2222 luciole@localhost
+```
+
+Before running this example, create a nonempty `$HOME/.config/luciole/ssh-password` file with restricted permissions. The default `SSH_MODE=password` starts sshd, but `luciole` is initially locked. For password access, mount a nonempty secret file and set `SSH_PASSWORD_FILE` to its container path. For key access, mount a nonempty `/home/luciole/.ssh/authorized_keys` and set `SSH_MODE=key-only`. Set `SSH_MODE=disabled` when SSH is unnecessary. Root SSH login is disabled with the default `DEFAULT_USER=luciole`; host keys are ensured at container startup. Publish port 22 only on a trusted interface. Compose maps host port 2222 without supplying credentials.
+
+SSH follows the explicitly selected `DEFAULT_USER`: selecting `root` permits key-only root access with a nonempty `/root/.ssh/authorized_keys` by default; root password access requires a nonempty mounted `SSH_PASSWORD_FILE`. Root SSH grants full container privileges. Changing `DEFAULT_USER` at runtime selects the SSH account, not the Dockerfile command user.
+
+## Known upstream issues
+
+`opencv.sh` is currently disabled. Apt OpenCV is installed by dev-tools, but the Dockerfile does not quarantine NVIDIA's installation or guarantee that `find_package(OpenCV)` resolves to apt. Python packages are installed separately. The advisory smoke test requires an apt-owned CMake configuration and compiles, links and runs a C++ probe, checking that CMake, headers and the runtime report the same version. It accepts the installed apt version rather than requiring the historical 4.5.x release. Python `cv2` import is checked separately.
+
+Historical [OpenCV analysis](../../docs/opencv-status.md) and [linker diagnostics](../../docs/ld-cache-notes.md) contain evidence from specific older builds. This base Dockerfile currently has no HPC-X fixup step. The manual diagnostic workflow remains available; this build migration does not resolve upstream compatibility issues.
+
+See [build architecture](../../docs/build-architecture.md) and [manifest reference](../../docs/manifest-reference.md) for configuration and release details.
+
+The shared system installer still accepts `--timezone` and `--upgrade` through explicit Dockerfile arguments. The libdatachannel, rpclib and iceoryx installers take explicit `--version` arguments from the Dockerfile; their version environment variables are no longer read. `user.sh --groups` receives `USER_GROUPS` from the manifest. Referenced groups must already exist; an empty value adds no supplementary groups, and malformed lists or nonempty groups for root are rejected. Dev/runtime inherit these groups from the base.
+
+Shared scripts and assets come from the commit-pinned `vendor/image-kit` submodule; Luciole extensions remain in `src/_scripts/` and `src/_assets/`. Manifests declare every copied input. Initialize the component with `git submodule update --init --recursive` before building.
+
+The shared entrypoint is installed as `/usr/local/bin/docker-entrypoint`. Key-only mode requires nonempty `authorized_keys` by default. Explicit `SSH_ALLOW_EMPTY_AUTHORIZED_KEYS=true` allows sshd to start while waiting for a public key to be configured; an empty file does not enable unauthenticated login.
+
+image-kit installs `gosu` and `sudo`; local `luciole-dev-tools.sh` adds `landscape-common`. CUDA dev/runtime inherit these tools from the base.
+
+`SYSTEM_UPGRADE` defaults to `true` and is explicitly passed from the manifest and Dockerfile to component `system.sh --upgrade`. The local CUDA pip wrapper upgrades pip, then the component unconditionally reinstalls pip-managed psutil and resolves the common development requirements together with Luciole vision extensions.
+
+The manifest explicitly declares the shared smoke helper with `variants[].tests[].library`; the pinned image-kit package runs the build and smoke contract.
+
+Publication uses YAML `name` independently of the directory and explicit variant channels. Verified build tags are `<variant>-<sha12>-<run-id>-<attempt>`; formal `<variant>-vMAJOR.MINOR.PATCH` tags promote an existing successful main publication receipt. All required native workers must pass before public tags advance. Historical tags remain available.

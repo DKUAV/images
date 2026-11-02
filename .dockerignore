@@ -1,0 +1,16 @@
+.git
+.agents
+.codex
+.venv
+.tool-cache
+vendor/image-kit/.venv
+vendor/image-kit/.ruff_cache
+**/__pycache__
+*.egg-info
+.pytest_cache
+.pytest-tmp*
+.ruff_cache
+build-plan*.json
+docker-bake*.json
+build-metadata*.json
+digests

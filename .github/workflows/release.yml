@@ -1,0 +1,93 @@
+name: Release verified images
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful main publication run ID
+        required: true
+        type: string
+      attempt:
+        description: Publication run attempt
+        required: true
+        type: string
+      version:
+        description: Release version, for example v1.2.0
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  packages: write
+
+concurrency:
+  group: images-publisher
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_RUN_ID: ${{ inputs.run_id }}
+      SOURCE_ATTEMPT: ${{ inputs.attempt }}
+      RELEASE_VERSION: ${{ inputs.version }}
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - run: |
+          uv sync --locked --python 3.12
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Verify source run and download its receipt
+        run: |
+          python - <<'VERIFY_PUBLICATION'
+          import json
+          import os
+          import re
+          import subprocess
+          from pathlib import Path
+
+          run_id = os.environ['SOURCE_RUN_ID']
+          attempt = os.environ['SOURCE_ATTEMPT']
+          if not all(re.fullmatch(r'[1-9][0-9]*', value) for value in (run_id, attempt)):
+              raise SystemExit('Run ID and attempt must be positive integers')
+          repository = os.environ['GITHUB_REPOSITORY']
+          run = json.loads(subprocess.check_output(
+              ['gh', 'api', f'repos/{repository}/actions/runs/{run_id}/attempts/{attempt}'], text=True))
+          if (run['conclusion'] != 'success' or run['head_branch'] != 'main'
+                  or run['event'] not in ('push', 'workflow_dispatch')
+                  or not run['path'].split('@', 1)[0].endswith('.github/workflows/publish-images.yml')
+                  or run['repository']['full_name'] != repository
+                  or run['run_attempt'] != int(attempt)):
+              raise SystemExit('Select a successful main publication run from this repository')
+          subprocess.run(['gh', 'run', 'download', run_id, '--repo', repository,
+                          '--name', f'publication-{attempt}', '--dir', 'release-input'], check=True)
+          receipt = json.loads(Path('release-input/publication.json').read_text())
+          identity = receipt['identity']
+          if (identity['revision'] != run['head_sha'] or identity['repository'] != repository
+                  or identity['owner'] != os.environ['GITHUB_REPOSITORY_OWNER'].lower()
+                  or identity['registry'] != 'ghcr.io'
+                  or identity['build_id'] != f'{run_id}-{attempt}'):
+              raise SystemExit('Publication receipt does not match the selected workflow run')
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as output:
+              output.write(f"RELEASE_REVISION={run['head_sha']}\n")
+          VERIFY_PUBLICATION
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Promote existing verified digests
+        run: |
+          python -m image_kit release --publication release-input/publication.json \
+            --owner "$GITHUB_REPOSITORY_OWNER" --repository "$GITHUB_REPOSITORY" \
+            --revision "$RELEASE_REVISION" --build-id "$SOURCE_RUN_ID-$SOURCE_ATTEMPT" \
+            --version "$RELEASE_VERSION"

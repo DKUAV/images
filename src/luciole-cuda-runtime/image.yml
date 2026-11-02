@@ -1,0 +1,28 @@
+schema_version: 2
+name: luciole-cuda-runtime
+description: CUDA runtime image with ROS 2 and inherited build tools.
+dockerfile: src/luciole-cuda-runtime/Dockerfile
+context: .
+platforms:
+- linux/amd64
+- linux/arm64
+inputs:
+- vendor/image-kit/scripts/integrations/ros2.sh
+- vendor/image-kit/scripts/system/finalize-mirror.sh
+publish: true
+variants:
+- id: pytorch26.06-py3
+  base:
+    target: luciole-cuda-base/pytorch26.06-py3
+    context: internal_base
+  build_args:
+    ROS_DISTRO: jazzy
+    ROS_TARGET: ros-base
+    USERNAME: luciole
+  tests:
+  - library: src/_tests/_lib.sh
+    script: src/_tests/smoke-runtime.sh
+    inputs:
+    - src/_tests/_lib.sh
+    policy: required
+    entrypoint: image

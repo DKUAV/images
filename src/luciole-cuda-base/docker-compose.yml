@@ -3,4 +3,4 @@ services:
     build:
       context: ../..
       dockerfile: src/luciole-cuda-base/Dockerfile
-    image: ghcr.io/dkuav/luciole-cuda-base:latest
+    image: ghcr.io/dkuav/luciole-cuda-base:pytorch26.06-py3

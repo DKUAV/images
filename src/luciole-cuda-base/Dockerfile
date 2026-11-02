@@ -3,7 +3,8 @@
 #              + system tools + pip packages + cmake + user
 # Published as ghcr.io/dkuav/luciole-cuda-base
 
-FROM nvcr.io/nvidia/pytorch:26.06-py3
+ARG BASE_IMAGE=nvcr.io/nvidia/pytorch:26.06-py3
+FROM ${BASE_IMAGE}
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG="en_US.UTF-8"
@@ -17,60 +18,73 @@ ENV EDITOR=vim
 ENV VISUAL=vim
 
 ARG TZ=Asia/Shanghai
+ARG SYSTEM_UPGRADE=true
 
-COPY src/_scripts/ /tmp/scripts/
-COPY src/_assets/ /tmp/assets/
-RUN chmod +x /tmp/scripts/*.sh /tmp/assets/*.sh
-
-RUN /tmp/scripts/system.sh
-# Replace NVIDIA's incomplete OpenCV 4.7.0 (no FFMPEG / GStreamer backends)
-# with apt's libopencv-dev 4.5.4 (full video I/O) and install clean python cv2.
-# RUN /tmp/scripts/opencv.sh
+COPY --chmod=0755 vendor/image-kit/scripts/system/system.sh /tmp/scripts/system.sh
+RUN /tmp/scripts/system.sh --timezone "${TZ}" --upgrade "${SYSTEM_UPGRADE}"
+# OpenCV replacement remains disabled; dev-tools installs apt libopencv-dev.
+COPY --chmod=0755 vendor/image-kit/scripts/dev/dev-tools.sh /tmp/scripts/dev-tools.sh
 RUN /tmp/scripts/dev-tools.sh
+COPY --chmod=0755 src/_scripts/dev/luciole-dev-tools.sh /tmp/scripts/luciole-dev-tools.sh
+RUN /tmp/scripts/luciole-dev-tools.sh
+COPY --chmod=0755 vendor/image-kit/scripts/integrations/wslg.sh /tmp/scripts/wslg.sh
 RUN /tmp/scripts/wslg.sh
 # Skip python-install.sh: Python is already provided by the base image
-RUN /tmp/scripts/pip-packages.sh
+COPY vendor/image-kit/assets/python-dev-requirements.txt /tmp/scripts/python-dev-requirements.txt
+COPY --chmod=0755 vendor/image-kit/scripts/python/cuda-pip-packages.sh /tmp/scripts/cuda-pip-packages.sh
+COPY src/_assets/luciole-cuda-requirements.txt /tmp/scripts/luciole-cuda-requirements.txt
+COPY --chmod=0755 src/_scripts/python/luciole-cuda-pip-packages.sh /tmp/scripts/luciole-cuda-pip-packages.sh
+RUN /tmp/scripts/luciole-cuda-pip-packages.sh --requirements /tmp/scripts/luciole-cuda-requirements.txt
 
 # CMake binary release — shared by both Tier 2 dev and runtime images
 ARG CMAKE_VERSION=4.3.2
+COPY --chmod=0755 vendor/image-kit/scripts/dev/cmake.sh /tmp/scripts/cmake.sh
 RUN /tmp/scripts/cmake.sh
 
 # libdatachannel for WebRTC data channels
 ARG LIBDATACHANNEL_VERSION=v0.24.5
-RUN /tmp/scripts/libdatachannel.sh
+COPY --chmod=0755 vendor/image-kit/scripts/libraries/libdatachannel.sh /tmp/scripts/libdatachannel.sh
+RUN /tmp/scripts/libdatachannel.sh --version "${LIBDATACHANNEL_VERSION}"
 
 # rpclib for RPC over AirSim
 ARG RPCLIB_VERSION=v2.3.0
-RUN /tmp/scripts/rpclib.sh
+COPY --chmod=0755 vendor/image-kit/scripts/libraries/rpclib.sh /tmp/scripts/rpclib.sh
+RUN /tmp/scripts/rpclib.sh --version "${RPCLIB_VERSION}"
 
 # iceoryx for shared memory transport
 ARG ICEORYX_VERSION=v2.0.8
-RUN /tmp/scripts/iceoryx.sh
+COPY --chmod=0755 vendor/image-kit/scripts/libraries/iceoryx.sh /tmp/scripts/iceoryx.sh
+RUN /tmp/scripts/iceoryx.sh --version "${ICEORYX_VERSION}"
 
 # SSH server for remote access (build-time config only; sshd is started at
 # runtime by docker-entrypoint.sh).
-RUN /tmp/scripts/ssh.sh
-
 ARG USERNAME=luciole
 ARG USER_UID=1000
 ARG USER_GID=${USER_UID}
-RUN /tmp/scripts/user.sh
+ARG USER_GROUPS=""
+COPY --chmod=0755 vendor/image-kit/scripts/system/user.sh /tmp/scripts/user.sh
+RUN /tmp/scripts/user.sh --username "${USERNAME}" --uid "${USER_UID}" --gid "${USER_GID}" \
+    --groups "${USER_GROUPS}"
+
+COPY --chmod=0755 vendor/image-kit/scripts/system/ssh.sh /tmp/scripts/ssh.sh
+RUN /tmp/scripts/ssh.sh --default-user "${USERNAME}" --mode password
 
 # Install the shared entrypoint (used by every Tier 2 final too). The
 # entrypoint just starts sshd (via sudo) and execs the user command; it does
 # NOT take responsibility for privilege drop — that's the image's `USER`
 # directive's job (see dev/runtime Dockerfiles). Lives outside /tmp so it
 # survives the cleanup below.
-RUN install -D -m 0755 /tmp/assets/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY --chmod=0755 vendor/image-kit/assets/docker-entrypoint.sh /usr/local/bin/docker-entrypoint
 
-RUN rm -rf /tmp/scripts /tmp/assets
+RUN rm -rf /tmp/scripts
 
 ENV XDG_RUNTIME_DIR=/run/user/${USER_UID}
+ENV DEFAULT_USER=${USERNAME} SSH_MODE=password
 # Base intentionally has NO trailing `USER` directive — its default user is
 # root (inherited from the NVIDIA base) because base is a build-stone for
 # Tier 2, not a runtime container for end users. The Tier 2 finals add a
 # real `USER <appuser>` directive at their own end, so the entrypoint picks
 # up that identity on boot. (The entrypoint itself is privilege-agnostic: it
 # uses `sudo -n` to start sshd, which works whether PID 1 is root or a sudoer.)
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint"]
 CMD ["/bin/bash"]

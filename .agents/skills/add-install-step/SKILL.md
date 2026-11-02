@@ -1,128 +1,97 @@
 ---
 name: add-install-step
-description: "Add a new shared installation step to the repository. Use when: adding a new shared install script, adding a new tool to dev images, adding a build step to Dockerfiles, creating a new _scripts entry, extracting repeated inline RUN commands into a reusable script."
-argument-hint: "Describe the installation step to add, e.g. install tool X for dev images"
+description: Add dependencies, installation steps, or build-time assets to container images in this repository. Use when choosing between image-local files, Luciole-shared extensions, and reusable image-kit capabilities, or wiring them into Dockerfiles and manifests.
 ---
 
-# Add a New Installation Step
+# Add an Image Dependency or Installation Step
 
-## When to Use
+Read the root `AGENTS.md` and inspect the affected image's Dockerfile, `image.yml`,
+existing inputs, and smoke tests before choosing a location. Preserve existing work.
 
-- Installing a new tool or configuring a new environment in one or more Docker images
-- Extracting repeated inline `RUN` commands into a reusable script
-- Introducing new build-time assets (config files, templates, etc.)
+## Choose Ownership First
 
-## Repository Layout Reference
+Separate the installation mechanism from the packages and configuration an image selects.
 
-```
-src/
-  _scripts/   # Shared install scripts (numbered sequentially)
-  _assets/    # Build-time static assets (config files, etc.)
-  <image>/
-    Dockerfile
-```
+| Scope | Location | Contents |
+|---|---|---|
+| Reusable across repositories | `vendor/image-kit/scripts/<category>/`, `vendor/image-kit/assets/` | Consumer-independent installers and container resources; deliberately shared default toolsets |
+| Shared by Luciole images | `src/_scripts/<category>/`, `src/_assets/` | Luciole-specific installation logic and shared dependency lists or configuration |
+| Specific to one image | `src/<image>/` | Image requirements, installation scripts, and configuration |
 
-## Step 1 — Choose a Script Number and Scope
+- Keep a single image's Python dependencies in `src/<image>/requirements.txt`.
+  If multiple images actually need the same set, consider a descriptive requirements
+  file under `src/_assets/` instead. Publicly available software does not automatically
+  belong in image-kit's default package set.
+- Reuse installation mechanisms independently of dependency lists. For example,
+  `ascend-python-packages.sh` belongs to image-kit, while the requirements it installs
+  belong to the consumer. The existing `utils/images` Ascend PEFT image follows this
+  pattern; inspect the current checkout before copying an example from another repository.
+- Promote logic to a shared location only when its consumers need the same semantics.
+  Do not introduce a new abstraction for hypothetical reuse or move existing files
+  merely to make layouts look alike.
+- Use capability names without sequence numbers. Shared script categories are
+  `system`, `dev`, `python`, `libraries`, and `integrations`; retain `cuda-` or
+  `ascend-` prefixes where installation behavior differs by platform.
 
-Check existing script numbers in `src/_scripts/` (currently 01–10) and pick the next available number.
+## Choose the Smallest Implementation
 
-| Number range | Conventional purpose |
-|---|---|
-| 01–03 | Core system deps (apt, Python, pip) |
-| 04–05 | Common tools (ROS 2, CMake) |
-| 06–09 | Dev-only tools (clang, dotnet, devshell) |
-| 10+   | New additions |
+- For additional Python packages, edit the appropriate requirements file and reuse
+  an existing installer. Do not add a wrapper solely to forward the same arguments.
+- Keep a short, direct installation command in the Dockerfile when sufficient.
+  Use a script for substantial installation logic, conditional behavior, compilation,
+  or configuration. Keep that script image-local unless its scope warrants sharing.
+- Determine which image layers need the dependency, including inherited packages.
+  CUDA dev and runtime share their CUDA base; Ascend has a separate vendor base.
+  Do not add business dependencies to a common base just to reach one final image.
+- Preserve vendor-specific behavior. Ascend application packages must use the existing
+  constrained installer and package check; do not bypass its recorded base constraints.
+  CUDA and Ascend may share a dependency list while retaining different installers.
+- When a new script is needed, use `#!/bin/bash`, `set -euo pipefail`, and English
+  comments describing its role and execution user. Follow existing GNU `getopt`
+  conventions for named options, `--help`, and exit status 64 for invalid usage.
+  Pass build arguments as command options rather than persisting them as `ENV`
+  unless the value is also needed at runtime. Clean apt lists after installation
+  and follow the applicable checksum policy for downloaded binaries.
 
-Determine the target scope:
-- **All images** → add to `system.sh` or a new script; update every Dockerfile
-- **All base images** → update `luciole-cuda-base`
-- **All dev images** → update `luciole-cuda-dev`
-- **Specific image only** → update only that image's Dockerfile
+## Wire the Build and Change Detection
 
-## Step 2 — Write the Script
+Dockerfiles declare installation order; `image.yml` declares build configuration,
+dependencies, copied inputs, and test policy. There is no central dependency map.
 
-Create `src/_scripts/<NN>-<name>.sh` following these conventions:
+- Use the repository root as build context. Copy each independently changeable script
+  or asset explicitly and list it in manifest `inputs`; do not copy whole directories.
+  Include nested requirements or other files read by the installer as well.
+- Keep each capability's `COPY + RUN` instructions adjacent. Put prerequisites first
+  and frequently changed business dependencies after stable layers where possible,
+  before final mirror configuration and cleanup.
+- Run system installation as root. Run user tools as the intended image user and
+  return to root for finalization; retain the image's existing final user and entrypoint.
+- For component changes, read `vendor/image-kit/AGENTS.md`, validate the component and
+  affected consumers, and follow the component-first publication and pinning rules
+  in the root `AGENTS.md`. A component pin change rebuilds all consumer images.
 
-```bash
-#!/bin/bash
-# One-line description: what this script does and which images use it.
-# If the script must run as the target non-root user, state that here.
-# List all environment variables read and their defaults.
-set -euo pipefail
+For any business image, keep its Python requirements in `src/<image>/requirements.txt`
+and choose an installation mechanism compatible with its actual base environment.
+The business image's name does not determine which installer it needs.
 
-# Accept parameters via environment variables with defaults
-MY_VAR="${MY_VAR:-default_value}"
-```
+For example, an Ascend-based business image can reuse `ascend-python-packages.sh`
+after its base has provided the Python setup, recorded constraints, and
+`ascend-pip-check`. CUDA-based or CPU-only business images should use an installer
+or direct command appropriate to their own base. Inspect the installer's contract
+before reusing it. Explicitly copy the selected requirements and installer, declare
+their source paths in `image.yml`, and preserve cleanup of temporary build inputs.
 
-Rules:
-- `set -euo pipefail` is mandatory
-- After `apt-get install`, always clean up: `rm -rf /var/lib/apt/lists/*`
-- Pass build-time values via environment variables (`ARG` → `ENV`), never hardcode
-- Verify checksums for any downloaded external binaries
+## Verify and Document
 
-## Step 3 — Handle Static Assets (if any)
-
-If the script depends on config files or templates:
-
-1. Place the files under `src/_assets/`
-2. In the Dockerfile, copy the **entire** assets directory, not individual files:
-   ```dockerfile
-   COPY src/_assets/ /tmp/assets/
-   ```
-3. Reference the path in the script via an environment variable with a default:
-   ```bash
-   MY_CONFIG="${MY_CONFIG:-/tmp/assets/my-config.yaml}"
-   ```
-
-## Step 4 — Update the Dockerfile(s)
-
-### Where to call the script
-
-- **Root-level scripts**: insert `RUN /tmp/scripts/<NN>-<name>.sh` before `USER ${USERNAME}`
-- **Scripts that must run as the target user** (e.g. devshell, pre-commit): call after `USER ${USERNAME}`
-
-### Standard Dockerfile structure
-
-```dockerfile
-COPY src/_scripts/ /tmp/scripts/
-COPY src/_assets/ /tmp/assets/        # only when assets are needed
-RUN chmod +x /tmp/scripts/*.sh
-
-# --- root-level scripts ---
-
-ARG USERNAME=luciole
-USER ${USERNAME}
-WORKDIR /home/${USERNAME}
-
-# --- user-level scripts (if any) ---
-RUN /tmp/scripts/devshell.sh
-RUN /tmp/scripts/precommit.sh
-
-USER root
-RUN rm -rf /tmp/scripts /tmp/assets   # clean up both in one RUN
-
-USER ${USERNAME}
-WORKDIR /home/${USERNAME}
-```
-
-> **Common mistake**: `/tmp/scripts/` and `/tmp/assets/` are both removed in the single `RUN rm -rf` line after switching back to root. Do not split this across multiple `RUN` instructions and do not forget `/tmp/assets/`.
-
-## Step 5 — Update Documentation
-
-Per the documentation sync rules in `AGENTS.md`:
-
-| Changed file | Documentation to update |
-|---|---|
-| New `src/_scripts/*.sh` | Update the script table in `AGENTS.md`; update `README.md` / `README_zh.md` for affected images |
-| `Dockerfile` | Update the corresponding image's `README.md` and `README_zh.md` |
-| New file under `src/_assets/` | Update image docs that reference the asset's feature |
-
-## Step 6 — Checklist
-
-- [ ] Script has `#!/bin/bash` and `set -euo pipefail`
-- [ ] Script number does not conflict with existing scripts
-- [ ] All target Dockerfiles updated (base / dev / runtime as appropriate)
-- [ ] `COPY src/_assets/` used instead of copying a single file (when assets exist)
-- [ ] Cleanup line `rm -rf /tmp/scripts /tmp/assets` covers all temp directories
-- [ ] Documentation synced (`README.md`, `README_zh.md`, `AGENTS.md`)
-- [ ] `image-deps.json` unchanged (only needed when adding a new image directory)
+- Add a smoke assertion for the capability the image is intended to provide.
+  Importing a Python binding alone does not prove its system executable or library
+  works; exercise that integration when it is part of the feature.
+- Keep Luciole smoke scripts under `src/_tests` and register their scripts, helpers,
+  and additional inputs in the manifest. Preserve existing assertions and policy.
+- Run manifest validation and repository policy checks. Run relevant shell checks
+  for script changes and component/tooling checks when those surfaces change, using
+  the commands in `AGENTS.md`. Report static checks, native container smoke tests,
+  and hardware-dependent checks separately.
+- Update affected `README.md` / `README_zh.md` pairs together; update all affected
+  image guides for a shared feature. Documents under `docs/` remain English-only.
+  Update `AGENTS.md` and this skill when maintenance conventions change.

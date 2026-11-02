@@ -1,12 +1,13 @@
 # ld.so.cache Notes — CUDA / PyTorch / HPC-X dlopen errors
 
+> **Historical diagnostic record:** The original analysis below describes specific past builds, not verified versions or fixes in current images. Current behavior is defined by Dockerfiles, image.yml and actual smoke results. OpenCV replacement is currently disabled and base has no HPC-X fixup step. See [build-architecture.md](build-architecture.md) for the current build architecture.
+
 > Status: **landed in PR #24** · Owner: DKUAV Images
 >
 > 📌 Records the root cause, the asymmetric behaviour across arches, and the
 > generic fix used to keep `import torch` (and any other dlopen-heavy import)
 > working on both amd64 and arm64 `luciole-cuda-*` images.
 >
-> 中文版：[ld-cache-notes_zh.md](./ld-cache-notes_zh.md)
 
 This document captures why `import torch` failed on the arm64
 `luciole-cuda-base` image built on top of `nvcr.io/nvidia/pytorch:24.10-py3`,

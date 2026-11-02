@@ -1,3 +1,17 @@
 # harness and editor configuration directories
 .zcode
 .vscode
+
+# Local tooling and generated build artifacts
+.venv/
+.tool-cache/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.pytest-tmp*/
+.ruff_cache/
+build-plan*.json
+docker-bake*.json
+build-metadata*.json
+digests/
+src/luciole-ascend/mount/

@@ -18,8 +18,8 @@
 #      resolve to 4.7.0.
 #   3. Refreshes ldconfig and self-verifies the C++ library resolution.
 #
-# This script only touches the C++ OpenCV and quarantines NVIDIA's dirty Python bindings. 
-# The actual Python cv2 pip installation is owned solely by pip-packages.sh.
+# This script only touches the C++ OpenCV and quarantines NVIDIA's dirty Python bindings.
+# The actual Python cv2 pip installation is owned solely by cuda-pip-packages.sh.
 #
 # Run as root. Currently called only by luciole-cuda-base.
 set -euo pipefail
@@ -48,7 +48,7 @@ mv /usr/local/include/opencv4 "${DISABLED_DIR}/include/" || true
 
 # Quarantine the mixed Python cv2 directory.
 # The NVIDIA base image places a custom __init__.py and cv2.cpython-*.so in dist-packages/cv2.
-# We must quarantine the entire dirty directory so that later, when pip-packages.sh installs
+# We must quarantine the entire dirty directory so that later, when cuda-pip-packages.sh installs
 # the pip wheel, it does so in a clean environment without import recursion loops.
 echo "=== Quarantining NGC Python cv2 directory ==="
 mkdir -p "${DISABLED_DIR}/python"

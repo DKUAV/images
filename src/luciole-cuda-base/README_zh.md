@@ -1,115 +1,117 @@
 # luciole-cuda-base
 
-DKUAV / Luciole 项目的 CUDA/PyTorch 基础镜像。构建于 NVIDIA 官方 PyTorch 镜像之上，为所有 CUDA 家族的第二层镜像提供系统工具、pip 包及预配置的非 root 用户。同时面向 amd64（x86_64 工作站）与 arm64（NVIDIA Jetson）两种架构。
+共享 NVIDIA PyTorch/CUDA 基础镜像，包含系统工具、GUI 依赖、Python 包、CMake、网络库与预配置用户。
 
-> For English documentation, see [README.md](README.md)
+> English documentation: [README.md](README.md)
 
-## Registry
+## 镜像地址与平台
 
-```
-ghcr.io/dkuav/luciole-cuda-base:latest
-```
+`ghcr.io/dkuav/luciole-cuda-base:pytorch26.06-py3` — `linux/amd64` 和 `linux/arm64`。
+Main 更新显式 variant 通道。构建标签包含 variant、SHA12 和运行批次/重试号；正式版本提升已验证构建，不重新构建。
 
-## 支持架构
+## 内容
 
-`amd64` + `arm64`
+| 类别 | 说明 |
+| --- | --- |
+| 基础 | `nvcr.io/nvidia/pytorch:26.06-py3`，Python、PyTorch 和 CUDA 由上游提供 |
+| 系统 / 构建 | vim、Git/LFS、tmux、ripgrep、fd、bat、ffmpeg、GCC、Ninja、GDB、CMake 4.3.2 |
+| Python 包 | 共用[开发依赖清单](../../vendor/image-kit/assets/python-dev-requirements.txt)，包括 uv、ty 和 Ruff；CUDA 专属 OpenCV 与视觉包由 [luciole-cuda-pip-packages.sh](../_scripts/python/luciole-cuda-pip-packages.sh) 安装。CUDA 保留 `numpy<2.0.0`。 |
+| 网络库 | libdatachannel v0.24.5、rpclib v2.3.0、iceoryx v2.0.8 |
+| GUI | WSLg 依赖、D-Bus、CJK 字体、Mesa 和 PulseAudio |
+| OpenCV | apt `libopencv-dev` 与 pip 包；`opencv.sh` 未启用，当前 Dockerfile 不隔离 NVIDIA OpenCV |
+| 软件源 | 上游 Ubuntu / PyPI 源；最终镜像切换至 Aliyun |
+| 编辑器 / 时区 | `EDITOR=vim`、`VISUAL=vim`，默认 `Asia/Shanghai` |
 
-## 内置内容
+## 用户与入口脚本
 
-| 类别 | 详情 |
-|------|------|
-| **基础镜像** | `nvcr.io/nvidia/pytorch:26.06-py3`（已含 Python + PyTorch + CUDA）|
-| **系统工具** | wget、vim、git、git-lfs、curl、zip/unzip、tmux、screen、htop、tree、parallel、rsync、build-essential、ninja-build、GDB、libssl、iputils、libgflags、libgoogle-glog、GTest / GMock |
-| **Python** | 由基础镜像提供；构建期间追加 pip 包（uv、pytest 套件、FastAPI、pybind11、pandas、numpy、loguru 等）|
-| **OpenCV** | C++：apt `libopencv-dev` 4.5.4（启用 FFMPEG + GStreamer）。Python：pip `opencv-contrib-python`（自带静态 FFMPEG）。NVIDIA 基础镜像自带的 OpenCV 4.7.0 库被移至 `/usr/local/lib/nvidia-opencv-4.7.0.disabled/`，确保 C++ `find_package(OpenCV)` 解析到 apt 版。详见 [`docs/opencv-status_zh.md`](../../docs/opencv-status_zh.md) |
-| **构建工具** | CMake 4.3.2（二进制发行版）|
-| **网络库** | libdatachannel v0.24.5（WebRTC 数据通道）、rpclib v2.3.0（TCP RPC）、iceoryx v2.0.8（零拷贝共享内存传输）|
-| **SSH** | 预装 `openssh-server`（启用公钥认证 + root 登录）；sshd 由共享 entrypoint 在容器启动时拉起 |
-| **GUI** | WSLg 支持（dbus-x11、中日韩字体、Mesa、PulseAudio）|
-| **镜像加速** | 本 **基础镜像** 保持默认 Ubuntu / PyPI 源（构建期一并使用）。下游第二层最终镜像（`luciole-cuda-dev`、`luciole-cuda-runtime`）会在其构建的最后一步将持久化的源切换到阿里云。 |
-| **时区** | `Asia/Shanghai`（可通过 `TZ` 覆盖）|
+默认容器用户为 `root`，默认命令为 `/bin/bash`。配置的 `luciole` 账户 UID/GID 为 1000，具有免密 sudo 权限。Base 不覆盖上游工作目录。
 
-## 默认用户
+身份由 Dockerfile 的 `USER` 决定，即使覆盖 ENTRYPOINT 也保持该身份。共享入口脚本按 `SSH_MODE` 启动 sshd，再执行用户命令。默认是 password 模式，但 `luciole` 初始锁定且镜像内没有密码；默认 `DEFAULT_USER=luciole` 时禁止 root SSH 登录。`APP_USER` 仅是描述性元数据。需要 root 会话时显式使用 `docker run --user root`。
 
-| 配置项 | 值 |
-|--------|----|
-| 用户名 | `luciole` |
-| UID / GID | `1000` / `1000` |
-| sudo | 免密码 |
+## 构建参数
 
-## 构建参数（ARG）
+标准构建使用[清单](image.yml)中的值；直接构建仍可使用 Dockerfile 默认值。修改默认值时同步更新两者。
 
-| ARG | 默认值 | 说明 |
-|-----|--------|------|
+| 参数 | 默认值 | 含义 |
+| --- | --- | --- |
+| `BASE_IMAGE` | `nvcr.io/nvidia/pytorch:26.06-py3` | 外部基础镜像；清单 digest 可锁定内容 |
 | `TZ` | `Asia/Shanghai` | 时区 |
-| `CMAKE_VERSION` | `4.3.2` | 安装的 CMake 版本 |
-| `LIBDATACHANNEL_VERSION` | `v0.24.5` | libdatachannel 发布 tag |
-| `RPCLIB_VERSION` | `v2.3.0` | rpclib 发布 tag |
-| `ICEORYX_VERSION` | `v2.0.8` | iceoryx 发布 tag |
-| `USERNAME` | `luciole` | 非 root 用户名 |
-| `USER_UID` | `1000` | 用户 UID |
-| `USER_GID` | `1000` | 用户 GID |
-
-## Entrypoint 与 SSH
-
-本家族所有镜像都继承由基础镜像在 `/usr/local/bin/docker-entrypoint.sh`
-安装的共享 entrypoint。容器启动时它会：
-
-1. **启动 sshd**（`service ssh start`）使容器立即可被 SSH 访问——host key
-   与 `sshd_config` 由 [`ssh.sh`](../_scripts/ssh.sh) 在构建期备好，但
-   `docker build` 层不能运行守护进程，真实的拉起必须在运行期发生。
-2. **降权**到 `$APP_USER`（缺省为空 → 保持 root）后用 `gosu` + `exec` 接管
-   用户命令，使信号（`SIGTERM` 等）正确传播，`docker stop` 能及时结束。
-
-基础镜像设 `APP_USER=""`，所以启动后为 **root**（base 是构建积木而非
-最终运行容器，默认用户故意是 root）。第二层最终镜像（`luciole-cuda-dev`、
-`luciole-cuda-runtime`）设置 `ENV APP_USER=luciole` 以着陆到开发账户。
-运行期可用 `-e APP_USER=…` 覆盖。
-
-### 通过 SSH 连接
-
-暴露端口后即可用 `luciole` / `root` 账户登录（默认口令 `123456`；更推荐
-把公钥写入 `~/.ssbold/authorized_keys`）：
-
-```bash
-docker run -d --gpus all -p 2222:22 ghcr.io/dkuav/luciole-cuda-dev:latest
-ssh -p 2222 luciole@localhost
-```
-
-| 配置项 | 值 |
-|--------|----|
-| Host key | 构建期由 `ssh-keygen -A` 生成（烘入镜像）|
-| 口令（root / luciole）| `123456`（运行期用 `chpasswd` 修改）|
-| `PubkeyAuthentication` | `yes` |
-| `PermitRootLogin` | `yes` |
+| `SYSTEM_UPGRADE` | `true` | 系统初始化时升级已安装软件包 |
+| `CMAKE_VERSION` | `4.3.2` | CMake 版本 |
+| `LIBDATACHANNEL_VERSION` | `v0.24.5` | libdatachannel 版本 |
+| `RPCLIB_VERSION` | `v2.3.0` | rpclib 版本 |
+| `ICEORYX_VERSION` | `v2.0.8` | iceoryx 版本 |
+| `USERNAME` | `luciole` | 配置的账户名，必须与内部基础镜像一致 |
+| `USER_UID` | `1000` | 账户 UID |
+| `USER_GID` | `1000` | 账户 GID；直接构建默认跟随 USER_UID |
+| `USER_GROUPS` | 空 | 逗号分隔的已有附加用户组；root 必须为空 |
 
 ## 快速开始
 
 ```bash
-docker pull ghcr.io/dkuav/luciole-cuda-base:latest
-docker run -it --rm --gpus all ghcr.io/dkuav/luciole-cuda-base:latest bash
+docker pull ghcr.io/dkuav/luciole-cuda-base:pytorch26.06-py3
+docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-base:pytorch26.06-py3
 ```
 
-### 本地构建
+## 清单构建与测试
+
+按[根文档](../../README_zh.md#本地构建与烟测)安装工具，ARM64 宿主机使用原生 `linux/arm64` 平台。
+
+```bash
+# 安装工具后在仓库根目录执行。
+python -m image_kit plan --target luciole-cuda-base/pytorch26.06-py3 --output build-plan.json
+revision=$(git rev-parse HEAD)
+python -m image_kit bake --plan build-plan.json --owner dkuav \
+  --repository dkuav/images --revision "$revision" --platform linux/amd64 \
+  --mode load --output docker-bake.load.json
+docker buildx bake --file docker-bake.load.json
+python -m image_kit test --plan build-plan.json --owner dkuav \
+  --revision "$revision" --platform linux/amd64
+```
+
+Bake 流程构建当前工作区的依赖，只有显式选择的镜像标记为发布。Advisory：断言失败仅报告，不阻断发布。 Docker、构建或缺失脚本错误始终导致失败，包括 advisory 镜像。
+
+## Compose 与直接构建
 
 ```bash
 cd src/luciole-cuda-base
 docker compose build
-```
-
-或从仓库根目录构建：
-
-```bash
+# 在仓库根目录：
 docker build -f src/luciole-cuda-base/Dockerfile -t luciole-cuda-base .
 ```
 
-## 注意事项
+直接通过 Docker/Compose 构建最终镜像时，默认使用已发布的 base。验证当前工作区依赖时使用 Bake。Base Compose 仅用于构建；dev/runtime Compose 配置交互终端和 SSH `2222:22` 映射。
 
-- 这是一个**第一层基础镜像**，已发布至 GHCR，供 [`luciole-cuda-dev`](../luciole-cuda-dev/README_zh.md) 和 [`luciole-cuda-runtime`](../luciole-cuda-runtime/README_zh.md) 以 `FROM ghcr.io/dkuav/luciole-cuda-base:latest` 方式使用。
-- 由于 `pytorch:26.06-py3` 已内置 Python，构建时跳过 `python-install.sh`。
-- 本镜像预装 CMake，使两个第二层镜像共享同一个构建工具版本。
-- 本镜像不含 ROS 2、clang 或 devshell，这些内容由第二层最终镜像负责添加。
-- **OpenCV 替换**：NVIDIA `pytorch:26.06-py3` 自带的 `/usr/local/lib/libopencv_*.so.4.7.0` 在构建时禁用了全部视频解码后端（FFMPEG、GStreamer）。`opencv.sh` 把它隔离到 `/usr/local/lib/nvidia-opencv-4.7.0.disabled/`，并安装 apt 的 `libopencv-dev` 4.5.4（含全部后端）用于 C++ `find_package(OpenCV)`。Python `import cv2` 继续使用 pip 的 `opencv-contrib-python` wheel，该 wheel 自带静态 FFMPEG，与 C++ OpenCV 互不干扰。完整分析见 [`docs/opencv-status_zh.md`](../../docs/opencv-status_zh.md)。
-- **ld.so.cache 注册 / HPC-X 符号修复**：NVIDIA NGC pytorch:26.06-py3（arm64）里的 HPC-X v2.20 同时附带了 UCX 1.17 + UCC 1.4——而 UCC 1.4 引用了只在 UCX 1.18+ 才有的符号 `ucs_config_doc_nop`。这让 arm64 base 上 `import torch` 因 `undefined symbol: ucs_config_doc_nop` 失败（torch 本身不用 libucc，但不慎被 `hpcx.conf` 暴露后落入坏链）。Dockerfile 末尾会从 `hpcx.conf` 中去掉 `/opt/hpcx/{ucc,ucx}/lib` 两行，把其他厂商 `.so` 树写入 `/etc/ld.so.conf.d/zz-ngc-extra.conf`，再执行 `ldconfig`。完整诊断见 [`docs/ld-cache-notes_zh.md`](../../docs/ld-cache-notes_zh.md)。
-- 若基础镜像中 UID/GID 已被占用，构建时会自动删除原有用户后再创建 `luciole`。
-- **默认编辑器**：`vim`（由 `dev-tools.sh` 安装）。镜像将 `EDITOR`/`VISUAL` 设为 `vim`（两个第二层镜像均继承），并把 Debian alternatives 的 `editor` 钉在 `/usr/bin/vim.basic`，确保 sudo 场景（其 `env_reset` 会丢掉这些环境变量）下依然回退到 vim。
+## SSH
+
+```bash
+docker run -dit --gpus all -p 2222:22 -e SSH_PASSWORD_FILE=/run/secrets/ssh-password \
+  -v "$HOME/.config/luciole/ssh-password:/run/secrets/ssh-password:ro" ghcr.io/dkuav/luciole-cuda-base:pytorch26.06-py3
+ssh -p 2222 luciole@localhost
+```
+
+运行上述示例前，请在宿主机创建非空的 `$HOME/.config/luciole/ssh-password` 密码文件并限制其读取权限。默认 `SSH_MODE=password` 会启动 sshd，但 `luciole` 初始锁定。密码登录需挂载非空密码文件并设置 `SSH_PASSWORD_FILE`；公钥登录需挂载非空的 `/home/luciole/.ssh/authorized_keys` 并设置 `SSH_MODE=key-only`。不使用 SSH 时设为 `disabled`。默认 `DEFAULT_USER=luciole` 时禁止 root SSH 登录；host key 在容器启动时确保存在。仅向可信接口映射 22 端口。Compose 映射宿主机 2222 端口，但不提供凭据。
+
+SSH 使用显式选择的 `DEFAULT_USER`：选择 `root` 后，公钥模式默认要求非空的 `/root/.ssh/authorized_keys`；root 密码登录必须挂载非空的 `SSH_PASSWORD_FILE`。root SSH 具有完整容器权限。运行时修改 `DEFAULT_USER` 只选择 SSH 账户，不改变 Dockerfile 命令用户。
+
+## 已知上游问题
+
+`opencv.sh` 当前未启用。Dev-tools 安装 apt OpenCV，但 Dockerfile 不隔离 NVIDIA 安装，也不保证 `find_package(OpenCV)` 解析到 apt。Python 包单独安装。Advisory 烟测要求 CMake 配置属于 apt 包，并编译、链接、运行 C++ 探针，检查 CMake、头文件与运行库报告相同版本。检查接受已安装的 apt 版本，不再要求历史 4.5.x 版本；Python `cv2` 导入单独检查。
+
+历史 [OpenCV 分析](../../docs/opencv-status.md)和[链接器诊断](../../docs/ld-cache-notes.md)包含特定旧构建的证据。当前 base Dockerfile 没有 HPC-X 修复步骤。手动诊断工作流继续保留，本次构建迁移不解决上游兼容问题。
+
+配置与发布细节见[构建架构](../../docs/build-architecture.md)和[清单参考](../../docs/manifest-reference.md)。
+
+共享系统安装脚本仍支持 `--timezone` 和 `--upgrade`，并由 Dockerfile 显式传参。libdatachannel、rpclib 和 iceoryx 安装脚本由 Dockerfile 显式传入 `--version`，不再读取版本环境变量。`user.sh --groups` 接收清单的 `USER_GROUPS`。引用的组必须已经存在；空值不添加附加组，格式错误的列表和 root 的非空附加组会被拒绝。Dev/runtime 继承 base 配置的附加组。
+
+共享脚本和资产来自固定提交的 `vendor/image-kit` submodule；Luciole 扩展保留在 `src/_scripts/` 和 `src/_assets/`。清单声明每个复制输入，构建前先执行 `git submodule update --init --recursive`。
+
+共享入口命令安装为 `/usr/local/bin/docker-entrypoint`。公钥模式默认要求非空 `authorized_keys`；显式设置 `SSH_ALLOW_EMPTY_AUTHORIZED_KEYS=true` 时，允许 sshd 先启动，等待后续配置公钥；空文件不允许无密钥登录。
+
+公共工具中的 `gosu` 和 `sudo` 由 image-kit 安装，`landscape-common` 由本地 `luciole-dev-tools.sh` 补充；CUDA dev/runtime 从 base 继承。
+
+`SYSTEM_UPGRADE` 默认为 `true`，由清单与 Dockerfile 显式传给组件 `system.sh --upgrade`。本地 CUDA pip 包装脚本先升级 pip，再由组件无条件重新安装 pip 管理的 psutil，并统一解析公共开发依赖及 Luciole 视觉扩展。
+
+清单通过 `variants[].tests[].library` 显式声明共享烟测辅助脚本；固定版本的 image-kit 包负责执行构建及烟测契约。
+
+发布名称由 YAML `name` 决定，不要求与目录名相同，并使用显式 variant 通道。已验证构建标签为 `<variant>-<sha12>-<run-id>-<attempt>`；正式 `<variant>-vMAJOR.MINOR.PATCH` 标签从成功的 main 发布收据提升。所有必需原生任务通过后才更新公开标签，历史制品保留。
