@@ -11,10 +11,10 @@ The package check permits only three exact known vendor diagnostics: the `mindst
 Build and run smoke checks on a native ARM64 host:
 
 ```bash
-python -m tools.images plan --image luciole-ascend --output build-plan.json
-python -m tools.images bake --plan build-plan.json --owner dkuav --revision "$(git rev-parse HEAD)" --platform linux/arm64 --mode load --output docker-bake.load.json
+python -m image_kit plan --target luciole-ascend/2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12 --output build-plan.json
+python -m image_kit bake --plan build-plan.json --owner dkuav --revision "$(git rev-parse HEAD)" --platform linux/arm64 --mode load --output docker-bake.load.json
 docker buildx bake -f docker-bake.load.json
-python -m tools.images test --plan build-plan.json --owner dkuav --revision "$(git rev-parse HEAD)" --platform linux/arm64
+python -m image_kit test --plan build-plan.json --owner dkuav --revision "$(git rev-parse HEAD)" --platform linux/arm64
 ```
 
 Direct builds use the tagged vendor base by default and the repository root as context. Compose uses `context: ../..`. CI publishes `main`, `latest`, seven-character SHA and version tags after native checks pass. The required smoke test needs no NPU and does not verify hardware compatibility.
@@ -24,7 +24,7 @@ Direct builds use the tagged vendor base by default and the repository root as c
 Use an ARM64 host with a compatible Ascend 910B driver and Ascend Docker Runtime. Follow the [vendor compatibility information](https://www.hiascend.com/developer/download/compatibility) for host driver and CANN pairing. For example, with the `ascend` runtime registered:
 
 ```bash
-IMAGE=ghcr.io/dkuav/luciole-ascend:latest
+IMAGE=ghcr.io/dkuav/luciole-ascend:2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12
 docker run --rm -it --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disabled "$IMAGE"
 docker run --rm -i --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disabled "$IMAGE" bash -s < src/_tests/npu-ascend.sh
 ```
@@ -44,3 +44,7 @@ The shared entrypoint is installed as `/usr/local/bin/docker-entrypoint`. Key-on
 image-kit installs `gosu` and `sudo`; local `luciole-dev-tools.sh` adds `landscape-common`. CUDA dev/runtime inherit these tools from the base.
 
 `SYSTEM_UPGRADE` remains `false`. Ascend preserves vendor Python/CANN constraints and does not run the CUDA psutil or vision-extension installation.
+
+The manifest explicitly declares the shared smoke helper with `variants[].tests[].library`; the pinned image-kit package runs the build and smoke contract.
+
+Publication uses YAML `name` independently of the directory and explicit variant channels. Verified build tags are `<variant>-<sha12>-<run-id>-<attempt>`; formal `<variant>-vMAJOR.MINOR.PATCH` tags promote an existing successful main publication receipt. All required native workers must pass before public tags advance. Historical tags remain available.

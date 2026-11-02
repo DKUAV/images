@@ -1,51 +1,59 @@
 # Build architecture
 
-> 中文文档：[build-architecture_zh.md](build-architecture_zh.md)
+The pinned image-kit 0.2 package owns the schema v2, repository model, planner, native Bake
+renderer, smoke execution and digest publication. YAML `name` controls package identity;
+directories only locate manifests and explicitly referenced files. Both Luciole and utils/images
+use the same interface. See the shared [manifest reference](../vendor/image-kit/docs/manifest-reference.md),
+[CLI contract](../vendor/image-kit/docs/cli-reference.md) and
+[migration](../vendor/image-kit/docs/migration-v2.md).
 
-## Responsibilities
+Dockerfiles retain installation order and direct-build defaults. Manifests own software choices,
+platforms, build arguments, internal bases, inputs and test contracts. Consumer checks retain
+account inheritance, Dockerfile ARG/COPY wiring and bilingual README rules. Documents in `docs/`
+are English-only. Generated plans, Bake files and publication receipts are CI artifacts.
 
-Each existing image directory has one `image.yml`; its name remains the GHCR repository name. The manifest declares the base, platforms, build arguments, copied shared inputs and smoke contract. Dockerfiles own installation order and user transitions. Library versions, ROS options and pre-commit configuration are passed explicitly through named script arguments. System timezone and upgrade policy are also passed explicitly. Shared capabilities and assets come from the pinned image-kit submodule; Luciole extensions remain local.
+## Selection and native execution
 
-Python 3.11+ tooling validates these contracts and produces a versioned JSON build plan and a Buildx Bake graph. The checked-in [schema](../schemas/image.schema.json) and [manifest reference](manifest-reference.md) define the contract. Generated JSON is ignored locally and uploaded as CI artifacts.
+`plan --all`, `--family <YAML-name>` or `--target <name/variant>` select outputs. Git-based planning
+uses actual manifest, Dockerfile, installation and smoke inputs and propagates to downstream
+consumers. README and Compose changes alone do not rebuild images. Infrastructure and component
+pin changes rebuild all targets. Explicit Git diffs retain deleted and renamed input paths.
 
-The Dockerfiles retain defaults for direct Docker/Compose builds. YAML is authoritative for the standard tool/CI path; update the compatibility defaults and bilingual guides when changing manifest defaults. Direct final-image builds use a published base unless explicitly overridden.
+Ancestors are added without expanding publication selection and build only on required native
+platforms. A parent may cover more platforms than its child. Internal `base.target` and
+`base.context` connect to the same checkout via Bake named contexts. The plan derives workers
+for amd64 and arm64; no QEMU is configured. `build-test` validates the generated Bake graph,
+builds and tests independent components, then reports aggregate failures.
 
-## Selection and dependencies
+Hosted workers remove unused SDKs and preloaded Docker images before creating Buildx, retain
+Python/Node/Docker, limit BuildKit solver parallelism to one, and report disk usage on failure.
+Capacity must cover both build cache and locally loaded smoke images. Load graphs import
+architecture-scoped Actions caches only; trusted publication can export them. Direct shell
+builds expose the Actions cache runtime through the pinned helper action.
 
-`plan --all` selects every image. `plan --image <name>` selects just that image for publication. `plan --base <commit> --head <commit>` selects consumers of changed manifests, Dockerfiles, shared inputs and smoke inputs, then recursively selects their downstream consumers. Git diffs disable rename collapsing so removal of an old input path is visible.
+Luciole tests explicitly retain the image entrypoint/user and source their declared helper.
+utils tests explicitly override the entrypoint with Bash. Both use read-only test mounts,
+disable image pulls, and receive `SMOKE_HARD_GATE`. Advisory suppression belongs to the helper;
+container startup, missing scripts and Docker errors remain fatal. Hardware checks are separate.
 
-The planner then adds every ancestor needed to build the selection. These additional targets have `publish: false`; selecting dev alone therefore builds/tests base and dev, without releasing base or runtime. `base.dependency` becomes a Bake named context referencing `target:<base-name>`, so dev uses the base built from the same checkout, including in PRs.
+## Publication and formal releases
 
-README and Compose changes do not select images. Changes to the image tooling, schemas, workflows, Python project configuration or Docker context exclusions select all images. Changes to a shared smoke helper affect all its declared consumers. A missing declared file fails validation instead of silently skipping its consumer.
+PRs have read-only contents access and never log in, push images or export caches. Main and
+manual publications first complete validation and native smoke tests, push selected targets
+by digest, and collect file-loaded Bake metadata. Full provenance is transferred through
+`toJSON` inside a quoted Node heredoc, never an environment variable or command argument.
+Build ID is `<run-id>-<attempt>` and is passed unchanged through every pipeline stage.
 
-## Native builds and smoke tests
+The merge job waits for every native worker. It verifies the exact expected platform set and
+shared build identity, composes indexes with provenance, and checks all existing build tags
+before writing public tags. Build tags are `<variant>-<sha12>-<run-id>-<attempt>` and are never
+overwritten with different content. Only after all build tags succeed does main advance the
+floating `<variant>` channels. Other refs receive build tags only. No global `latest`, `main`,
+bare SHA or unprefixed version tag is generated; historical artifacts remain available.
 
-The runner matrix is derived from the plan: `linux/amd64` uses `ubuntu-24.04`; `linux/arm64` uses `ubuntu-24.04-arm`. Each worker renders only its native platform. QEMU is not configured.
-
-Each worker builds the entire selected dependency graph and loads its images for smoke tests. Before creating Buildx, the native workflow removes unused hosted-runner SDKs (Android, .NET, Haskell, Swift, Boost and CodeQL), clears apt downloads and prunes preloaded Docker images. Python, Node, Docker and checkout inputs are retained. BuildKit solver parallelism is limited to one to reduce concurrent installation work in the dev/runtime branches. Disk usage is logged before/after cleanup and at job completion, including failures. Capacity must cover the NVIDIA layers, BuildKit cache and loaded test images; larger graphs or upstream images may still require a larger native runner.
-
-Load mode exports local images at `ghcr.io/<owner>/<name>:sha-<7-character-sha>`. The test command mounts `src/_tests` read-only at `/tmp/smoke`, sources `_lib.sh`, runs the declared script and passes `SMOKE_HARD_GATE` explicitly. It tests dependency-only targets as well as publish targets, preserving the image entrypoint and Dockerfile user.
-
-Base uses advisory assertions; dev/runtime require success. Advisory handling stays in the shell helper, so a Docker failure or a missing script still fails the worker. The test runner attempts all loaded contracts before returning an aggregate failure. Build failures and dependency failures remain fatal.
-
-The base preserves upstream package sources. Dev/runtime run `finalize-mirror.sh` as root after all package installation, then clean up and refresh `ldconfig`. Devshell and pre-commit initialization run as the target non-root user.
-
-## Release and permissions
-
-PR callers grant only `contents: read`. They build/load/test without GHCR login, image pushes or cache exports. Publishing callers grant `contents: read` and `packages: write`. Both call the same native workflow, and their Bake graphs differ only in cache/export behavior.
-
-CI uses `--github-cache` with `docker/bake-action`, which provides GitHub cache authentication. Cache scopes include image and architecture. Load graphs only import caches; publishing graphs may export them. Local graphs omit GitHub cache settings by default and need no Actions credentials.
-
-After native smoke tests, publish mode exports selected targets by digest; build-only ancestors remain cache-only. Workers collect the actual Bake digest metadata. Merge validates the complete expected image/platform set, revision, owner and digest format before any tag update. If any worker fails, merge is skipped. One worker may have uploaded untagged digests, but public tags are not advanced.
-
-Publication metadata, including provenance for the entire graph, is written to a file through Node's standard input before digest collection. The workflow uses `toJSON` to encode the action output as a JavaScript string literal inside a quoted heredoc. Do not put the full metadata in an environment variable or command-line argument: it can exceed Linux process-start limits.
-
-All SHA manifests are created before convenience tags advance. Main publishes `main`, `latest` and `sha-<7-character-sha>`; `v*` events build all images and publish the version and SHA tags. Manual dispatch selects one/all images; other branches receive SHA tags only. Publishers share a concurrency group. Registry updates across multiple image tags are sequential, not transactional; a registry error stops remaining updates and fails CI.
-
-SHA tags identify source revisions, but tag-tracking upstream bases can change across repeated builds. This migration retains the existing tag behavior rather than introducing immutable-tag enforcement. Pin the resulting digest when needed.
-
-## Maintenance and known issues
-
-Add each copied file to `inputs` and give independent scripts adjacent `COPY + RUN` pairs. Validation checks local file copies against the declared inputs and rejects directory-wide copies. Keep the target user's `USERNAME` consistent across internal base relationships.
-
-The OpenCV replacement script remains disabled. Existing OpenCV and PyTorch assertions are preserved; failures remain diagnostics or gates according to the image policy. The [OpenCV analysis](opencv-status.md) and [linker notes](ld-cache-notes.md) retain historical evidence, not a guarantee about current upstream releases. The separate manual diagnostic workflow is retained.
+Merge emits `publication.json` with source identity, platforms and final index digests. The
+separate release workflow selects a successful main publication run and attempt, validates its
+receipt and creates `<variant>-vMAJOR.MINOR.PATCH` from existing digests without rebuilding.
+Artifacts are attempt-qualified and receipts retained for 90 days. Registry writes across tags
+are sequential, not transactional; failures stop later promotion. Keep a digest for fixed use.
+Native image builds and NPU tests remain distinct from static tooling checks.

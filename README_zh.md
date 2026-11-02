@@ -28,30 +28,33 @@ CUDA 与昇腾共用 Python 开发依赖清单，包括 uv、ty 和 Ruff 等基�
 ## 使用镜像
 
 ```bash
-docker pull ghcr.io/dkuav/luciole-cuda-dev:latest
-docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-dev:latest
+docker pull ghcr.io/dkuav/luciole-cuda-dev:pytorch26.06-py3
+docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-dev:pytorch26.06-py3
 ```
 
 CUDA base 默认以 root 运行；CUDA dev/runtime 和昇腾镜像默认为 `luciole`（UID/GID 1000）。共享入口脚本根据 `SSH_MODE` 启动 sshd，再以 Dockerfile 的 `USER` 执行命令。SSH 默认是 password 模式，但 `luciole` 初始锁定，需在运行时提供凭据；默认禁止 root SSH 登录。显式选择 `DEFAULT_USER=root` 可启用 root SSH；root 密码模式必须挂载密码文件，公钥模式必须提供非空公钥文件。`APP_USER` 只是 CUDA 描述性元数据。SSH 和 Compose 示例见各镜像文档。
 
 ## 本地构建与烟测
 
-安装 Python 3.11+ 工具，并准备支持 Linux 容器和 Buildx 的 Docker 引擎。以下示例使用 Bash；PowerShell 使用 `.venv\Scripts\Activate.ps1` 激活环境，并用 `$revision = git rev-parse HEAD` 获取提交号。
+构建工具由固定版本的 `vendor/image-kit` 包提供。本仓库使用 v2 schema 和显式 variant，保留镜像名称、原生平台和发布标签。`tools/` 只保留 Luciole 仓库规则检查和兼容入口。`docs/` 仅用英文，根目录及镜像 README 保持中英双语。
+
+安装 uv 和 Python 3.11+ 工具，并准备支持 Linux 容器和 Buildx 的 Docker 引擎。以下示例使用 Bash；PowerShell 使用 `.venv\Scripts\Activate.ps1` 激活环境，并用 `$revision = git rev-parse HEAD` 获取提交号。
 
 ```bash
-python -m venv .venv
+git submodule update --init --recursive
+uv sync --locked --extra dev
 source .venv/bin/activate
-python -m pip install -e '.[dev]'
-python -m tools.images validate
-python -m tools.images list
+python -m image_kit validate
+python -m tools.check_repository
+python -m image_kit list
 
-python -m tools.images plan --image luciole-cuda-dev --output build-plan.json
+python -m image_kit plan --target luciole-cuda-dev/pytorch26.06-py3 --output build-plan.json
 revision=$(git rev-parse HEAD)
-python -m tools.images bake --plan build-plan.json --owner dkuav \
+python -m image_kit bake --plan build-plan.json --owner dkuav \
   --repository dkuav/images --revision "$revision" --platform linux/amd64 \
   --mode load --output docker-bake.load.json
 docker buildx bake --file docker-bake.load.json
-python -m tools.images test --plan build-plan.json --owner dkuav \
+python -m image_kit test --plan build-plan.json --owner dkuav \
   --revision "$revision" --platform linux/amd64
 ```
 
@@ -84,21 +87,21 @@ graph LR
 
 - PR 在 amd64/arm64 原生 runner 上构建受影响镜像和依赖，不登录仓库、不推送镜像、不写缓存。仅文档变更执行静态校验并跳过构建。
 - 每个原生任务在创建 Buildx 前清理 runner 上无关的预装 SDK 和 Docker 镜像，将 BuildKit 限为单个并发构建步骤，并在失败时也输出磁盘用量。NVIDIA 基础镜像、构建缓存和导入本地用于烟测的镜像均需要磁盘空间。
-- Main 推送发布受影响镜像；`v*` 标签推送全量构建；手动触发选择一个或全部镜像，并构建所有声明平台。
-- Main 发布 `latest`、`main`、`sha-<7位提交号>`；版本标签事件发布版本标签和 SHA 标签；其他分支手动运行只发布 SHA 标签。
+- Main 发布受影响目标；手动触发选择全部目标、YAML 镜像名或精确的 name/variant。独立手动版本流程提升已验证的 main 构建，不重新构建。
+- 标签统一为 `<variant>`、`<variant>-<sha12>-<run-id>-<attempt>` 和可选的 `<variant>-vMAJOR.MINOR.PATCH`。仅 main 更新 variant 通道，构建及版本标签禁止覆盖。旧的全局别名不再更新。
 - Base 的断言失败仅报告；dev/runtime 的断言失败阻止发布。构建、Docker 执行和缺失脚本错误始终失败。所有原生任务成功且预期 digest 齐全后才更新最终标签。
 - 共享输入影响其消费者及下游依赖；烟测输入也会触发验证。README/Compose 变更不重建镜像，工具/schema/工作流变更全量重建。
 
-详见[构建架构](docs/build-architecture_zh.md)、[清单参考](docs/manifest-reference_zh.md)和[工作流](.github/workflows/publish-images.yml)。跟踪上游版本标签时，不同构建的内容可能变化；需要固定制品时请锁定镜像 digest。
+详见[构建架构](docs/build-architecture.md)、[清单参考](docs/manifest-reference.md)和[工作流](.github/workflows/publish-images.yml)。跟踪上游版本标签时，不同构建的内容可能变化；需要固定制品时请锁定镜像 digest。
 
 ## 添加或修改镜像
 
 1. 创建小写、连字符命名的镜像目录、Dockerfile、`image.yml`、Compose 配置和中英文 README。
 2. 在清单中声明基础镜像、平台、构建参数、每个复制的共享文件和烟测契约，无需编辑工作流矩阵。
 3. 独立脚本使用相邻的 `COPY + RUN`。烟测脚本放在 `src/_tests`，将共享 helper 声明为输入。
-4. 运行 `python -m tools.images validate`、`python -m pytest`，以及受影响平台的原生构建与烟测。
+4. 运行 `python -m image_kit validate`、`python -m tools.check_repository`、`python -m pytest`、`python -m pytest vendor/image-kit/tests`，以及受影响平台的原生构建与烟测。
 
-当前 OpenCV 替换未启用；已有 OpenCV 断言继续保留，可能暴露上游差异。历史 [OpenCV 分析](docs/opencv-status_zh.md)与[链接器诊断](docs/ld-cache-notes_zh.md)保留原始证据，不代表当前镜像行为已被验证。
+当前 OpenCV 替换未启用；已有 OpenCV 断言继续保留，可能暴露上游差异。历史 [OpenCV 分析](docs/opencv-status.md)与[链接器诊断](docs/ld-cache-notes.md)保留原始证据，不代表当前镜像行为已被验证。
 
 ## 共享组件
 
@@ -110,4 +113,6 @@ git submodule update --init --recursive
 
 首次克隆可使用 `git clone --recurse-submodules`。组件固定到审阅过的提交，CI 初始化该提交，不自动跟踪分支。共享脚本、入口、pre-commit 配置和 Python 开发依赖来自组件。本仓库额外安装 `landscape-common`；`gosu` 和 `sudo` 由组件提供。CUDA 将公共 requirements 与 `src/_assets/luciole-cuda-requirements.txt` 一起解析，保留 `numpy<2.0.0` 和视觉包。Python 检查与格式化使用 Ruff，不再显式安装或要求 black。
 
-本仓库保留 `tools/images`、现有清单 schema、CUDA 双架构构建、烟测门禁和发布标签，不使用 image-kit 的 family/variant 构建引擎。组件指针和 `.gitmodules` 变化触发全部镜像重建。组件改动需先提交并发布，再更新消费仓库指针。
+本仓库使用 image-kit 的统一 v2 schema 及构建引擎，保留 CUDA 双架构构建、烟测门禁和发布标签。`tools/images` 只提供兼容入口与 Luciole 仓库规则。详见英文[迁移及消费者兼容说明](docs/image-kit-migration.md)。组件指针和 `.gitmodules` 变化触发全部镜像重建。组件改动需先提交并发布，再更新消费仓库指针。
+
+发布名称由 YAML `name` 决定，不要求与目录名相同，并使用显式 variant 通道。已验证构建标签为 `<variant>-<sha12>-<run-id>-<attempt>`；正式 `<variant>-vMAJOR.MINOR.PATCH` 标签从成功的 main 发布收据提升。所有必需原生任务通过后才更新公开标签，历史制品保留。

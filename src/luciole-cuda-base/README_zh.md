@@ -6,8 +6,8 @@
 
 ## 镜像地址与平台
 
-`ghcr.io/dkuav/luciole-cuda-base:latest` — `linux/amd64` 和 `linux/arm64`。
-Main 还发布 `main`、`sha-<7位提交号>`；`v*` 事件发布版本和 SHA 标签。
+`ghcr.io/dkuav/luciole-cuda-base:pytorch26.06-py3` — `linux/amd64` 和 `linux/arm64`。
+Main 更新显式 variant 通道。构建标签包含 variant、SHA12 和运行批次/重试号；正式版本提升已验证构建，不重新构建。
 
 ## 内容
 
@@ -49,8 +49,8 @@ Main 还发布 `main`、`sha-<7位提交号>`；`v*` 事件发布版本和 SHA �
 ## 快速开始
 
 ```bash
-docker pull ghcr.io/dkuav/luciole-cuda-base:latest
-docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-base:latest
+docker pull ghcr.io/dkuav/luciole-cuda-base:pytorch26.06-py3
+docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-base:pytorch26.06-py3
 ```
 
 ## 清单构建与测试
@@ -59,13 +59,13 @@ docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-base:latest
 
 ```bash
 # 安装工具后在仓库根目录执行。
-python -m tools.images plan --image luciole-cuda-base --output build-plan.json
+python -m image_kit plan --target luciole-cuda-base/pytorch26.06-py3 --output build-plan.json
 revision=$(git rev-parse HEAD)
-python -m tools.images bake --plan build-plan.json --owner dkuav \
+python -m image_kit bake --plan build-plan.json --owner dkuav \
   --repository dkuav/images --revision "$revision" --platform linux/amd64 \
   --mode load --output docker-bake.load.json
 docker buildx bake --file docker-bake.load.json
-python -m tools.images test --plan build-plan.json --owner dkuav \
+python -m image_kit test --plan build-plan.json --owner dkuav \
   --revision "$revision" --platform linux/amd64
 ```
 
@@ -86,7 +86,7 @@ docker build -f src/luciole-cuda-base/Dockerfile -t luciole-cuda-base .
 
 ```bash
 docker run -dit --gpus all -p 2222:22 -e SSH_PASSWORD_FILE=/run/secrets/ssh-password \
-  -v "$HOME/.config/luciole/ssh-password:/run/secrets/ssh-password:ro" ghcr.io/dkuav/luciole-cuda-base:latest
+  -v "$HOME/.config/luciole/ssh-password:/run/secrets/ssh-password:ro" ghcr.io/dkuav/luciole-cuda-base:pytorch26.06-py3
 ssh -p 2222 luciole@localhost
 ```
 
@@ -98,9 +98,9 @@ SSH 使用显式选择的 `DEFAULT_USER`：选择 `root` 后，公钥模式默�
 
 `opencv.sh` 当前未启用。Dev-tools 安装 apt OpenCV，但 Dockerfile 不隔离 NVIDIA 安装，也不保证 `find_package(OpenCV)` 解析到 apt。Python 包单独安装。已有烟测断言保留，可能报告差异。
 
-历史 [OpenCV 分析](../../docs/opencv-status_zh.md)和[链接器诊断](../../docs/ld-cache-notes_zh.md)包含特定旧构建的证据。当前 base Dockerfile 没有 HPC-X 修复步骤。手动诊断工作流继续保留，本次构建迁移不解决上游兼容问题。
+历史 [OpenCV 分析](../../docs/opencv-status.md)和[链接器诊断](../../docs/ld-cache-notes.md)包含特定旧构建的证据。当前 base Dockerfile 没有 HPC-X 修复步骤。手动诊断工作流继续保留，本次构建迁移不解决上游兼容问题。
 
-配置与发布细节见[构建架构](../../docs/build-architecture_zh.md)和[清单参考](../../docs/manifest-reference_zh.md)。
+配置与发布细节见[构建架构](../../docs/build-architecture.md)和[清单参考](../../docs/manifest-reference.md)。
 
 共享系统安装脚本仍支持 `--timezone` 和 `--upgrade`，并由 Dockerfile 显式传参。libdatachannel、rpclib 和 iceoryx 安装脚本由 Dockerfile 显式传入 `--version`，不再读取版本环境变量。`user.sh --groups` 接收清单的 `USER_GROUPS`。引用的组必须已经存在；空值不添加附加组，格式错误的列表和 root 的非空附加组会被拒绝。Dev/runtime 继承 base 配置的附加组。
 
@@ -111,3 +111,7 @@ SSH 使用显式选择的 `DEFAULT_USER`：选择 `root` 后，公钥模式默�
 公共工具中的 `gosu` 和 `sudo` 由 image-kit 安装，`landscape-common` 由本地 `luciole-dev-tools.sh` 补充；CUDA dev/runtime 从 base 继承。
 
 `SYSTEM_UPGRADE` 默认为 `true`，由清单与 Dockerfile 显式传给组件 `system.sh --upgrade`。本地 CUDA pip 包装脚本先升级 pip，再由组件无条件重新安装 pip 管理的 psutil，并统一解析公共开发依赖及 Luciole 视觉扩展。
+
+清单通过 `variants[].tests[].library` 显式声明共享烟测辅助脚本；固定版本的 image-kit 包负责执行构建及烟测契约。
+
+发布名称由 YAML `name` 决定，不要求与目录名相同，并使用显式 variant 通道。已验证构建标签为 `<variant>-<sha12>-<run-id>-<attempt>`；正式 `<variant>-vMAJOR.MINOR.PATCH` 标签从成功的 main 发布收据提升。所有必需原生任务通过后才更新公开标签，历史制品保留。

@@ -6,8 +6,8 @@ Development image extending base with ROS 2 Jazzy, LLVM 21, an interactive devel
 
 ## Registry and platforms
 
-`ghcr.io/dkuav/luciole-cuda-dev:latest` — `linux/amd64` and `linux/arm64`.
-Main also publishes `main` and `sha-<7-character-sha>`; `v*` events publish the version and SHA tags.
+`ghcr.io/dkuav/luciole-cuda-dev:pytorch26.06-py3` — `linux/amd64` and `linux/arm64`.
+Main advances the explicit variant channel. Build tags include variant, SHA12 and run ID/attempt; formal versions promote verified builds without rebuilding.
 
 ## Contents
 
@@ -34,7 +34,7 @@ The [manifest](image.yml) supplies these values for standard builds. Dockerfile 
 | Argument | Default | Meaning |
 | --- | --- | --- |
 | `BASE_IMAGE` | `ghcr.io/dkuav/luciole-cuda-base:${BASE_TAG}` | Direct-build fallback; Bake supplies the same-checkout base context |
-| `BASE_TAG` | `latest` | Compatibility argument for direct Docker/Compose builds |
+| `BASE_TAG` | `pytorch26.06-py3` | Compatibility argument for direct Docker/Compose builds |
 | `ROS_DISTRO` | `jazzy` | ROS distribution |
 | `ROS_TARGET` | `ros-base` | ROS installation target |
 | `USERNAME` | `luciole` | Configured account; must match internal base |
@@ -42,8 +42,8 @@ The [manifest](image.yml) supplies these values for standard builds. Dockerfile 
 ## Quick start
 
 ```bash
-docker pull ghcr.io/dkuav/luciole-cuda-dev:latest
-docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-dev:latest
+docker pull ghcr.io/dkuav/luciole-cuda-dev:pytorch26.06-py3
+docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-dev:pytorch26.06-py3
 ```
 
 ## Manifest build and tests
@@ -52,13 +52,13 @@ Install tooling as described in the [root guide](../../README.md#local-build-and
 
 ```bash
 # Run from the repository root after installing the tooling.
-python -m tools.images plan --image luciole-cuda-dev --output build-plan.json
+python -m image_kit plan --target luciole-cuda-dev/pytorch26.06-py3 --output build-plan.json
 revision=$(git rev-parse HEAD)
-python -m tools.images bake --plan build-plan.json --owner dkuav \
+python -m image_kit bake --plan build-plan.json --owner dkuav \
   --repository dkuav/images --revision "$revision" --platform linux/amd64 \
   --mode load --output docker-bake.load.json
 docker buildx bake --file docker-bake.load.json
-python -m tools.images test --plan build-plan.json --owner dkuav \
+python -m image_kit test --plan build-plan.json --owner dkuav \
   --revision "$revision" --platform linux/amd64
 ```
 
@@ -79,7 +79,7 @@ Direct final-image Docker/Compose builds use the published base by default. Use 
 
 ```bash
 docker run -dit --gpus all -p 2222:22 -e SSH_PASSWORD_FILE=/run/secrets/ssh-password \
-  -v "$HOME/.config/luciole/ssh-password:/run/secrets/ssh-password:ro" ghcr.io/dkuav/luciole-cuda-dev:latest
+  -v "$HOME/.config/luciole/ssh-password:/run/secrets/ssh-password:ro" ghcr.io/dkuav/luciole-cuda-dev:pytorch26.06-py3
 ssh -p 2222 luciole@localhost
 ```
 
@@ -104,3 +104,7 @@ The shared entrypoint is installed as `/usr/local/bin/docker-entrypoint`. Key-on
 image-kit installs `gosu` and `sudo`; local `luciole-dev-tools.sh` adds `landscape-common`. CUDA dev/runtime inherit these tools from the base.
 
 This image Dockerfile appends `load_ros` to the target user's Bash/zsh configuration after devshell setup, using the build-time `ROS_DISTRO`; shared devshell has no ROS-specific logic.
+
+The manifest explicitly declares the shared smoke helper with `variants[].tests[].library`; the pinned image-kit package runs the build and smoke contract.
+
+Publication uses YAML `name` independently of the directory and explicit variant channels. Verified build tags are `<variant>-<sha12>-<run-id>-<attempt>`; formal `<variant>-vMAJOR.MINOR.PATCH` tags promote an existing successful main publication receipt. All required native workers must pass before public tags advance. Historical tags remain available.

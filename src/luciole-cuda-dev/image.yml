@@ -1,23 +1,32 @@
-schema_version: 1
+schema_version: 2
 name: luciole-cuda-dev
 description: CUDA development image with ROS 2, LLVM and developer shell.
 dockerfile: src/luciole-cuda-dev/Dockerfile
 context: .
-platforms: [linux/amd64, linux/arm64]
-base:
-  dependency: luciole-cuda-base
-build_args:
-  ROS_DISTRO: jazzy
-  ROS_TARGET: ros-base
-  USERNAME: luciole
+platforms:
+- linux/amd64
+- linux/arm64
 inputs:
-  - vendor/image-kit/scripts/integrations/ros2.sh
-  - vendor/image-kit/scripts/dev/clang.sh
-  - vendor/image-kit/scripts/dev/devshell.sh
-  - vendor/image-kit/scripts/dev/precommit.sh
-  - vendor/image-kit/scripts/system/finalize-mirror.sh
-  - vendor/image-kit/assets/.pre-commit-config.yaml
-smoke:
-  script: src/_tests/smoke-dev.sh
-  inputs: [src/_tests/_lib.sh]
-  policy: required
+- vendor/image-kit/scripts/integrations/ros2.sh
+- vendor/image-kit/scripts/dev/clang.sh
+- vendor/image-kit/scripts/dev/devshell.sh
+- vendor/image-kit/scripts/dev/precommit.sh
+- vendor/image-kit/scripts/system/finalize-mirror.sh
+- vendor/image-kit/assets/.pre-commit-config.yaml
+publish: true
+variants:
+- id: pytorch26.06-py3
+  base:
+    target: luciole-cuda-base/pytorch26.06-py3
+    context: internal_base
+  build_args:
+    ROS_DISTRO: jazzy
+    ROS_TARGET: ros-base
+    USERNAME: luciole
+  tests:
+  - library: src/_tests/_lib.sh
+    script: src/_tests/smoke-dev.sh
+    inputs:
+    - src/_tests/_lib.sh
+    policy: required
+    entrypoint: image

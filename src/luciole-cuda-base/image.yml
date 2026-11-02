@@ -1,40 +1,48 @@
-schema_version: 1
+schema_version: 2
 name: luciole-cuda-base
 description: Shared NVIDIA PyTorch/CUDA base with tools, libraries and user account.
 dockerfile: src/luciole-cuda-base/Dockerfile
 context: .
-platforms: [linux/amd64, linux/arm64]
-base:
-  image: nvcr.io/nvidia/pytorch:26.06-py3
-  digest: null
-build_args:
-  TZ: Asia/Shanghai
-  SYSTEM_UPGRADE: true
-  CMAKE_VERSION: 4.3.2
-  LIBDATACHANNEL_VERSION: v0.24.5
-  RPCLIB_VERSION: v2.3.0
-  ICEORYX_VERSION: v2.0.8
-  USERNAME: luciole
-  USER_UID: 1000
-  USER_GID: 1000
-  USER_GROUPS: ""
+platforms:
+- linux/amd64
+- linux/arm64
 inputs:
-  - src/_scripts/dev/luciole-dev-tools.sh
-  - src/_scripts/python/luciole-cuda-pip-packages.sh
-  - src/_assets/luciole-cuda-requirements.txt
-  - vendor/image-kit/scripts/system/system.sh
-  - vendor/image-kit/scripts/dev/dev-tools.sh
-  - vendor/image-kit/scripts/integrations/wslg.sh
-  - vendor/image-kit/scripts/python/cuda-pip-packages.sh
-  - vendor/image-kit/assets/python-dev-requirements.txt
-  - vendor/image-kit/scripts/dev/cmake.sh
-  - vendor/image-kit/scripts/libraries/libdatachannel.sh
-  - vendor/image-kit/scripts/libraries/rpclib.sh
-  - vendor/image-kit/scripts/libraries/iceoryx.sh
-  - vendor/image-kit/scripts/system/ssh.sh
-  - vendor/image-kit/scripts/system/user.sh
-  - vendor/image-kit/assets/docker-entrypoint.sh
-smoke:
-  script: src/_tests/smoke-base.sh
-  inputs: [src/_tests/_lib.sh]
-  policy: advisory
+- src/_scripts/dev/luciole-dev-tools.sh
+- src/_scripts/python/luciole-cuda-pip-packages.sh
+- src/_assets/luciole-cuda-requirements.txt
+- vendor/image-kit/scripts/system/system.sh
+- vendor/image-kit/scripts/dev/dev-tools.sh
+- vendor/image-kit/scripts/integrations/wslg.sh
+- vendor/image-kit/scripts/python/cuda-pip-packages.sh
+- vendor/image-kit/assets/python-dev-requirements.txt
+- vendor/image-kit/scripts/dev/cmake.sh
+- vendor/image-kit/scripts/libraries/libdatachannel.sh
+- vendor/image-kit/scripts/libraries/rpclib.sh
+- vendor/image-kit/scripts/libraries/iceoryx.sh
+- vendor/image-kit/scripts/system/ssh.sh
+- vendor/image-kit/scripts/system/user.sh
+- vendor/image-kit/assets/docker-entrypoint.sh
+publish: true
+variants:
+- id: pytorch26.06-py3
+  base:
+    image: nvcr.io/nvidia/pytorch:26.06-py3
+    digest: null
+  build_args:
+    TZ: Asia/Shanghai
+    SYSTEM_UPGRADE: true
+    CMAKE_VERSION: 4.3.2
+    LIBDATACHANNEL_VERSION: v0.24.5
+    RPCLIB_VERSION: v2.3.0
+    ICEORYX_VERSION: v2.0.8
+    USERNAME: luciole
+    USER_UID: 1000
+    USER_GID: 1000
+    USER_GROUPS: ''
+  tests:
+  - library: src/_tests/_lib.sh
+    script: src/_tests/smoke-base.sh
+    inputs:
+    - src/_tests/_lib.sh
+    policy: advisory
+    entrypoint: image

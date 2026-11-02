@@ -6,8 +6,8 @@
 
 ## 镜像地址与平台
 
-`ghcr.io/dkuav/luciole-cuda-runtime:latest` — `linux/amd64` 和 `linux/arm64`。
-Main 还发布 `main`、`sha-<7位提交号>`；`v*` 事件发布版本和 SHA 标签。
+`ghcr.io/dkuav/luciole-cuda-runtime:pytorch26.06-py3` — `linux/amd64` 和 `linux/arm64`。
+Main 更新显式 variant 通道。构建标签包含 variant、SHA12 和运行批次/重试号；正式版本提升已验证构建，不重新构建。
 
 ## 内容
 
@@ -31,7 +31,7 @@ Main 还发布 `main`、`sha-<7位提交号>`；`v*` 事件发布版本和 SHA �
 | 参数 | 默认值 | 含义 |
 | --- | --- | --- |
 | `BASE_IMAGE` | `ghcr.io/dkuav/luciole-cuda-base:${BASE_TAG}` | 直接构建的回退值；Bake 注入当前工作区的 base context |
-| `BASE_TAG` | `latest` | 直接 Docker/Compose 构建的兼容参数 |
+| `BASE_TAG` | `pytorch26.06-py3` | 直接 Docker/Compose 构建的兼容参数 |
 | `ROS_DISTRO` | `jazzy` | ROS 发行版 |
 | `ROS_TARGET` | `ros-base` | ROS 安装目标 |
 | `USERNAME` | `luciole` | 配置的账户名，必须与内部基础镜像一致 |
@@ -39,8 +39,8 @@ Main 还发布 `main`、`sha-<7位提交号>`；`v*` 事件发布版本和 SHA �
 ## 快速开始
 
 ```bash
-docker pull ghcr.io/dkuav/luciole-cuda-runtime:latest
-docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-runtime:latest
+docker pull ghcr.io/dkuav/luciole-cuda-runtime:pytorch26.06-py3
+docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-runtime:pytorch26.06-py3
 ```
 
 ## 清单构建与测试
@@ -49,13 +49,13 @@ docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-runtime:latest
 
 ```bash
 # 安装工具后在仓库根目录执行。
-python -m tools.images plan --image luciole-cuda-runtime --output build-plan.json
+python -m image_kit plan --target luciole-cuda-runtime/pytorch26.06-py3 --output build-plan.json
 revision=$(git rev-parse HEAD)
-python -m tools.images bake --plan build-plan.json --owner dkuav \
+python -m image_kit bake --plan build-plan.json --owner dkuav \
   --repository dkuav/images --revision "$revision" --platform linux/amd64 \
   --mode load --output docker-bake.load.json
 docker buildx bake --file docker-bake.load.json
-python -m tools.images test --plan build-plan.json --owner dkuav \
+python -m image_kit test --plan build-plan.json --owner dkuav \
   --revision "$revision" --platform linux/amd64
 ```
 
@@ -76,7 +76,7 @@ docker build -f src/luciole-cuda-runtime/Dockerfile -t luciole-cuda-runtime .
 
 ```bash
 docker run -dit --gpus all -p 2222:22 -e SSH_PASSWORD_FILE=/run/secrets/ssh-password \
-  -v "$HOME/.config/luciole/ssh-password:/run/secrets/ssh-password:ro" ghcr.io/dkuav/luciole-cuda-runtime:latest
+  -v "$HOME/.config/luciole/ssh-password:/run/secrets/ssh-password:ro" ghcr.io/dkuav/luciole-cuda-runtime:pytorch26.06-py3
 ssh -p 2222 luciole@localhost
 ```
 
@@ -88,7 +88,7 @@ SSH 使用显式选择的 `DEFAULT_USER`：选择 `root` 后，公钥模式默�
 
 使用 ROS 前执行 `source /opt/ros/jazzy/setup.bash`。Runtime 不添加 devshell、`load_ros` 别名或 LLVM，默认命令保持 Bash。
 
-配置与发布细节见[构建架构](../../docs/build-architecture_zh.md)和[清单参考](../../docs/manifest-reference_zh.md)。
+配置与发布细节见[构建架构](../../docs/build-architecture.md)和[清单参考](../../docs/manifest-reference.md)。
 
 Dockerfile 通过 `--distro` 和 `--target` 显式传递清单的 ROS 配置；对应安装脚本不再读取配置环境变量。附加用户组由 base 清单的 `USER_GROUPS` 配置，并由本镜像继承。
 
@@ -97,3 +97,7 @@ Dockerfile 通过 `--distro` 和 `--target` 显式传递清单的 ROS 配置；�
 共享入口命令安装为 `/usr/local/bin/docker-entrypoint`。公钥模式默认要求非空 `authorized_keys`；显式设置 `SSH_ALLOW_EMPTY_AUTHORIZED_KEYS=true` 时，允许 sshd 先启动，等待后续配置公钥；空文件不允许无密钥登录。
 
 公共工具中的 `gosu` 和 `sudo` 由 image-kit 安装，`landscape-common` 由本地 `luciole-dev-tools.sh` 补充；CUDA dev/runtime 从 base 继承。
+
+清单通过 `variants[].tests[].library` 显式声明共享烟测辅助脚本；固定版本的 image-kit 包负责执行构建及烟测契约。
+
+发布名称由 YAML `name` 决定，不要求与目录名相同，并使用显式 variant 通道。已验证构建标签为 `<variant>-<sha12>-<run-id>-<attempt>`；正式 `<variant>-vMAJOR.MINOR.PATCH` 标签从成功的 main 发布收据提升。所有必需原生任务通过后才更新公开标签，历史制品保留。

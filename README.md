@@ -28,30 +28,33 @@ CUDA and Ascend use the same Python development requirements for tools such as u
 ## Use an image
 
 ```bash
-docker pull ghcr.io/dkuav/luciole-cuda-dev:latest
-docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-dev:latest
+docker pull ghcr.io/dkuav/luciole-cuda-dev:pytorch26.06-py3
+docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-dev:pytorch26.06-py3
 ```
 
 CUDA base defaults to root; CUDA dev/runtime and Ascend default to `luciole` (UID/GID 1000). The shared entrypoint starts sshd according to `SSH_MODE` and executes the command as the Dockerfile's `USER`. Password mode is the default, but `luciole` is locked until credentials are supplied at runtime; root SSH login is disabled by default. Explicitly selecting `DEFAULT_USER=root` supports root SSH; root password mode requires a mounted password file, and root key-only mode requires a nonempty authorized-keys file. `APP_USER` is CUDA metadata, not an identity switch. See the image guides for SSH and Compose examples.
 
 ## Local build and smoke tests
 
-Install Python 3.11+ tooling and use a Docker daemon capable of Linux containers with Buildx. The following examples use Bash; on PowerShell activate the virtual environment with `.venv\Scripts\Activate.ps1` and obtain the revision with `$revision = git rev-parse HEAD`.
+Build tooling comes from the pinned `vendor/image-kit` package. This repository uses schema v2 and explicit variants, preserving image names, native platforms and publication tags. Local `tools/` contains Luciole policy checks and compatibility imports. Documents in `docs/` are English; root and image READMEs are maintained in English and Chinese.
+
+Install uv and Python 3.11+ tooling and use a Docker daemon capable of Linux containers with Buildx. The following examples use Bash; on PowerShell activate the virtual environment with `.venv\Scripts\Activate.ps1` and obtain the revision with `$revision = git rev-parse HEAD`.
 
 ```bash
-python -m venv .venv
+git submodule update --init --recursive
+uv sync --locked --extra dev
 source .venv/bin/activate
-python -m pip install -e '.[dev]'
-python -m tools.images validate
-python -m tools.images list
+python -m image_kit validate
+python -m tools.check_repository
+python -m image_kit list
 
-python -m tools.images plan --image luciole-cuda-dev --output build-plan.json
+python -m image_kit plan --target luciole-cuda-dev/pytorch26.06-py3 --output build-plan.json
 revision=$(git rev-parse HEAD)
-python -m tools.images bake --plan build-plan.json --owner dkuav \
+python -m image_kit bake --plan build-plan.json --owner dkuav \
   --repository dkuav/images --revision "$revision" --platform linux/amd64 \
   --mode load --output docker-bake.load.json
 docker buildx bake --file docker-bake.load.json
-python -m tools.images test --plan build-plan.json --owner dkuav \
+python -m image_kit test --plan build-plan.json --owner dkuav \
   --revision "$revision" --platform linux/amd64
 ```
 
@@ -84,8 +87,8 @@ graph LR
 
 - PRs build affected images and dependencies on native amd64/arm64 runners, without registry login, pushes or cache writes. Documentation-only PRs run static validation and skip builds.
 - Each native worker frees unused hosted-runner SDKs and preloaded Docker images before creating Buildx, limits BuildKit to one concurrent build step, and reports disk usage even on failure. The NVIDIA base, build cache and locally loaded smoke-test images all need disk space.
-- Pushes to main publish affected images; `v*` tag pushes build all images. Manual dispatch selects one image or all images, with all declared platforms.
-- Main publishes `latest`, `main`, and `sha-<7-character-sha>`. Version-tag events publish the version tag and SHA tag. Manual runs on other branches publish only SHA tags.
+- Main publishes affected targets. Manual dispatch selects all targets, a YAML image name or an exact name/variant. A separate manual release promotes a verified main run without rebuilding.
+- Tags use `<variant>`, `<variant>-<sha12>-<run-id>-<attempt>` and optional `<variant>-vMAJOR.MINOR.PATCH`. Only main advances variant channels; build/version tags cannot be overwritten. Old global aliases are no longer updated.
 - base assertion failures are reported; dev/runtime assertion failures block publication. Build, Docker execution and missing-script errors always fail. Final tags advance only after every native worker succeeds and all expected digests exist.
 - Shared inputs trigger their consumers and downstream dependents. Smoke inputs also trigger validation. README/Compose changes do not rebuild images; tooling/schema/workflow changes rebuild all images.
 
@@ -96,7 +99,7 @@ See [build architecture](docs/build-architecture.md), [manifest reference](docs/
 1. Add a lowercase, hyphenated image directory, Dockerfile, `image.yml`, Compose configuration and bilingual READMEs.
 2. Declare its base, platforms, build arguments, each copied shared file and smoke contract in the manifest. No workflow matrix edit is needed.
 3. Keep independent scripts in adjacent `COPY + RUN` pairs. Add the smoke script under `src/_tests` and declare the shared helper as an input.
-4. Run `python -m tools.images validate`, `python -m pytest`, and native builds/tests for affected platforms.
+4. Run `python -m image_kit validate`, `python -m tools.check_repository`, `python -m pytest`, `python -m pytest vendor/image-kit/tests`, and native builds/tests for affected platforms.
 
 Current OpenCV replacement is disabled; existing OpenCV assertions remain in place and may expose upstream differences. Historical [OpenCV analysis](docs/opencv-status.md) and [linker diagnostics](docs/ld-cache-notes.md) retain their original evidence; they do not certify current image behavior.
 
@@ -110,4 +113,6 @@ git submodule update --init --recursive
 
 Fresh clones can use `git clone --recurse-submodules`. Keep the component pinned to a reviewed commit; CI initializes that commit and never follows a moving branch. Shared scripts, entrypoints, pre-commit configuration and Python development requirements come from the component. Luciole adds `landscape-common` locally; `gosu` and `sudo` are shared. CUDA combines the common requirements with `src/_assets/luciole-cuda-requirements.txt`, retaining `numpy<2.0.0` and vision packages. Ruff supplies Python linting and formatting; black is no longer explicitly installed or required.
 
-This repository retains `tools/images`, its manifest schema, dual-platform CUDA builds, smoke gates and existing publication tags. It does not use image-kit's family/variant build engine. Component pin and `.gitmodules` changes rebuild all images. Commit and publish component changes before updating the consumer pin.
+This repository uses image-kit's unified v2 schema and build engine, retaining dual-platform CUDA builds, smoke gates and existing publication tags. `tools/images` provides compatibility imports and Luciole policies. See the [migration and consumer compatibility notes](docs/image-kit-migration.md). Component pin and `.gitmodules` changes rebuild all images. Commit and publish component changes before updating the consumer pin.
+
+Publication uses YAML `name` independently of the directory and explicit variant channels. Verified build tags are `<variant>-<sha12>-<run-id>-<attempt>`; formal `<variant>-vMAJOR.MINOR.PATCH` tags promote an existing successful main publication receipt. All required native workers must pass before public tags advance. Historical tags remain available.

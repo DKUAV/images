@@ -21,7 +21,6 @@
 > needs to be called from `luciole-cuda-base`. §4 / §5 / §6 below have been
 > rewritten accordingly.
 >
-> 中文版：[opencv-status_zh.md](./opencv-status_zh.md)
 
 This document records the current state of OpenCV installations across the
 Luciole image family, with focus on the root cause, impact and candidate

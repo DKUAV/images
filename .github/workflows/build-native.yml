@@ -28,6 +28,7 @@ jobs:
       IMAGE_REPOSITORY: ${{ github.repository }}
       IMAGE_REVISION: ${{ inputs.revision }}
       IMAGE_PLATFORM: ${{ inputs.platform }}
+      IMAGE_BUILD_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       IMAGE_ARCH: ${{ inputs.platform_id }}
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
     steps:
@@ -38,11 +39,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: pip
-      - run: python -m pip install -e .
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: |
+          uv sync --locked --python 3.12
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       - uses: actions/download-artifact@v4
         with:
-          name: build-plan
+          name: build-plan-${{ github.run_attempt }}
       - name: Free disk space for CUDA builds
         shell: bash
         run: |
@@ -63,22 +69,20 @@ jobs:
           buildkitd-config-inline: |
             [worker.oci]
               max-parallelism = 1
+      - name: Expose Actions cache runtime
+        uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
       - name: Render current commit for tests
         run: |
-          python -m tools.images bake --plan build-plan.json \
+          python -m image_kit bake --plan build-plan.json \
             --owner "$IMAGE_OWNER" --repository "$IMAGE_REPOSITORY" \
-            --revision "$IMAGE_REVISION" --platform "$IMAGE_PLATFORM" \
+            --revision "$IMAGE_REVISION" --build-id "$IMAGE_BUILD_ID" --platform "$IMAGE_PLATFORM" \
             --mode load --github-cache --output docker-bake.load.json
-      - name: Build current commit for tests
-        uses: docker/bake-action@v6
-        with:
-          source: .
-          files: docker-bake.load.json
-      - name: Run manifest smoke contracts
+      - name: Build and test independent graph components
         run: |
-          python -m tools.images test --plan build-plan.json \
-            --owner "$IMAGE_OWNER" --revision "$IMAGE_REVISION" \
-            --platform "$IMAGE_PLATFORM"
+          python -m image_kit build-test --plan build-plan.json --bake docker-bake.load.json \
+            --owner "$IMAGE_OWNER" --repository "$IMAGE_REPOSITORY" \
+            --revision "$IMAGE_REVISION" --build-id "$IMAGE_BUILD_ID" \
+            --platform "$IMAGE_PLATFORM" --github-cache
       - uses: docker/login-action@v3
         if: inputs.publish
         with:
@@ -88,9 +92,9 @@ jobs:
       - name: Render publication graph
         if: inputs.publish
         run: |
-          python -m tools.images bake --plan build-plan.json \
+          python -m image_kit bake --plan build-plan.json \
             --owner "$IMAGE_OWNER" --repository "$IMAGE_REPOSITORY" \
-            --revision "$IMAGE_REVISION" --platform "$IMAGE_PLATFORM" \
+            --revision "$IMAGE_REVISION" --build-id "$IMAGE_BUILD_ID" --platform "$IMAGE_PLATFORM" \
             --mode publish --github-cache --output docker-bake.publish.json
       - name: Push selected images by digest
         id: publish
@@ -110,14 +114,14 @@ jobs:
           const fs = require('node:fs');
           fs.writeFileSync('build-metadata.json', ${{ toJSON(steps.publish.outputs.metadata) }});
           WRITE_BUILD_METADATA
-          python -m tools.images collect --plan build-plan.json \
-            --owner "$IMAGE_OWNER" --revision "$IMAGE_REVISION" \
-            --platform "$IMAGE_PLATFORM" --metadata build-metadata.json \
+          python -m image_kit collect --plan build-plan.json \
+            --owner "$IMAGE_OWNER" --revision "$IMAGE_REVISION" --build-id "$IMAGE_BUILD_ID" \
+            --repository "$IMAGE_REPOSITORY" --platform "$IMAGE_PLATFORM" --metadata build-metadata.json \
             --output "digests/$IMAGE_ARCH.json"
       - uses: actions/upload-artifact@v4
         if: inputs.publish
         with:
-          name: digests-${{ inputs.platform_id }}
+          name: digests-${{ inputs.platform_id }}-${{ github.run_attempt }}
           path: digests/*.json
           if-no-files-found: error
       - name: Report disk usage
@@ -130,7 +134,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: build-output-${{ inputs.platform_id }}
+          name: build-output-${{ inputs.platform_id }}-${{ github.run_attempt }}
           path: |
             docker-bake*.json
             build-metadata*.json

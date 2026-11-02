@@ -2,7 +2,7 @@
 # Tier 2 final: CUDA/PyTorch runtime environment with ROS2 (no devshell)
 # FROM: ghcr.io/dkuav/luciole-cuda-base (pytorch:26.06-py3 + system + pip + cmake + user)
 
-ARG BASE_TAG=latest
+ARG BASE_TAG=pytorch26.06-py3
 ARG BASE_IMAGE=ghcr.io/dkuav/luciole-cuda-base:${BASE_TAG}
 FROM ${BASE_IMAGE}
 

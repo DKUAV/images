@@ -3,7 +3,7 @@ services:
     build:
       context: ../..
       dockerfile: src/luciole-cuda-dev/Dockerfile
-    image: ghcr.io/dkuav/luciole-cuda-dev:latest
+    image: ghcr.io/dkuav/luciole-cuda-dev:pytorch26.06-py3
 
     # Dockerfile USER selects luciole; the entrypoint starts sshd through sudo.
     # APP_USER is descriptive metadata and does not change the runtime identity.

@@ -3,12 +3,15 @@ name: Build and publish images
 on:
   push:
     branches: [main]
-    tags: ['v*']
   pull_request:
   workflow_dispatch:
     inputs:
-      image:
-        description: Image name; leave empty to build all images
+      family:
+        description: YAML image name; leave empty to select all or use target
+        required: false
+        type: string
+      target:
+        description: Exact name/variant; mutually exclusive with family
         required: false
         type: string
 
@@ -40,44 +43,59 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: pip
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
       - name: Install tooling
-        run: python -m pip install -e '.[dev]'
+        run: |
+          uv sync --locked --extra dev --python 3.12
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       - name: Check tooling and contracts
         run: |
           python -m ruff check tools
           python -m ruff format --check tools
           python -m ty check
           python -m pytest
-          python -m tools.images validate
+          python -m image_kit validate
+          python -m tools.check_repository
+          python -m pytest vendor/image-kit/tests
           bash vendor/image-kit/tests/install-arguments.sh
           bash vendor/image-kit/tests/ascend-pip-check.sh
       - name: Calculate affected images
         id: plan
         env:
           EVENT_NAME: ${{ github.event_name }}
-          REF_TYPE: ${{ github.ref_type }}
           BEFORE_SHA: ${{ github.event.before }}
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-          INPUT_IMAGE: ${{ inputs.image }}
+          INPUT_FAMILY: ${{ inputs.family }}
+          INPUT_TARGET: ${{ inputs.target }}
         run: |
           arguments=(--all)
           if [[ "$EVENT_NAME" == pull_request ]]; then
             base="$(git merge-base "$PR_BASE" "$HEAD_SHA")"
             arguments=(--base "$base" --head "$HEAD_SHA")
-          elif [[ "$EVENT_NAME" == workflow_dispatch && -n "$INPUT_IMAGE" ]]; then
-            arguments=(--image "$INPUT_IMAGE")
-          elif [[ "$EVENT_NAME" == push && "$REF_TYPE" != tag && -n "$BEFORE_SHA" && ! "$BEFORE_SHA" =~ ^0+$ ]]; then
+          elif [[ "$EVENT_NAME" == workflow_dispatch ]]; then
+            if [[ -n "$INPUT_FAMILY" && -n "$INPUT_TARGET" ]]; then
+              echo "Choose family or target, not both" >&2
+              exit 2
+            fi
+            if [[ -n "$INPUT_TARGET" ]]; then
+              arguments=(--target "$INPUT_TARGET")
+            elif [[ -n "$INPUT_FAMILY" ]]; then
+              arguments=(--family "$INPUT_FAMILY")
+            fi
+          elif [[ "$EVENT_NAME" == push && -n "$BEFORE_SHA" && ! "$BEFORE_SHA" =~ ^0+$ ]]; then
             arguments=(--base "$BEFORE_SHA" --head "$HEAD_SHA")
           fi
-          python -m tools.images plan "${arguments[@]}" \
+          python -m image_kit plan "${arguments[@]}" \
             --output build-plan.json --github-output "$GITHUB_OUTPUT"
           echo "revision=$HEAD_SHA" >> "$GITHUB_OUTPUT"
           cat build-plan.json
       - uses: actions/upload-artifact@v4
         with:
-          name: build-plan
+          name: build-plan-${{ github.run_attempt }}
           path: build-plan.json
           if-no-files-found: error
 
@@ -131,14 +149,19 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: pip
-      - run: python -m pip install -e .
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: |
+          uv sync --locked --python 3.12
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       - uses: actions/download-artifact@v4
         with:
-          name: build-plan
+          name: build-plan-${{ github.run_attempt }}
       - uses: actions/download-artifact@v4
         with:
-          pattern: digests-*
+          pattern: digests-*-${{ github.run_attempt }}
           path: digests
           merge-multiple: true
       - uses: docker/setup-buildx-action@v3
@@ -152,7 +175,17 @@ jobs:
           IMAGE_OWNER: ${{ github.repository_owner }}
           IMAGE_REVISION: ${{ needs.plan.outputs.revision }}
           IMAGE_REF: ${{ github.ref }}
+          IMAGE_BUILD_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+          IMAGE_REPOSITORY: ${{ github.repository }}
         run: |
-          python -m tools.images merge --plan build-plan.json \
+          python -m image_kit merge --plan build-plan.json \
             --owner "$IMAGE_OWNER" --revision "$IMAGE_REVISION" \
-            --digests digests --ref "$IMAGE_REF"
+            --build-id "$IMAGE_BUILD_ID" --repository "$IMAGE_REPOSITORY" \
+            --digests digests --ref "$IMAGE_REF" --output publication.json
+      - name: Save verified publication receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: publication-${{ github.run_attempt }}
+          path: publication.json
+          if-no-files-found: error
+          retention-days: 90

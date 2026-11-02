@@ -3,7 +3,7 @@ services:
     build:
       context: ../..
       dockerfile: src/luciole-ascend/Dockerfile
-    image: ghcr.io/dkuav/luciole-ascend:latest
+    image: ghcr.io/dkuav/luciole-ascend:2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12
     stdin_open: true
     tty: true
     environment:

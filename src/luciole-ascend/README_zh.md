@@ -11,10 +11,10 @@
 在原生 ARM64 主机上构建和运行冒烟测试：
 
 ```bash
-python -m tools.images plan --image luciole-ascend --output build-plan.json
-python -m tools.images bake --plan build-plan.json --owner dkuav --revision "$(git rev-parse HEAD)" --platform linux/arm64 --mode load --output docker-bake.load.json
+python -m image_kit plan --target luciole-ascend/2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12 --output build-plan.json
+python -m image_kit bake --plan build-plan.json --owner dkuav --revision "$(git rev-parse HEAD)" --platform linux/arm64 --mode load --output docker-bake.load.json
 docker buildx bake -f docker-bake.load.json
-python -m tools.images test --plan build-plan.json --owner dkuav --revision "$(git rev-parse HEAD)" --platform linux/arm64
+python -m image_kit test --plan build-plan.json --owner dkuav --revision "$(git rev-parse HEAD)" --platform linux/arm64
 ```
 
 直接构建默认使用带版本标签的厂商基础镜像，并以仓库根目录为构建上下文。Compose 使用 `context: ../..`。原生检查通过后，CI 发布 `main`、`latest`、七位 SHA 和版本标签。必过的冒烟测试不需要 NPU，也不证明硬件兼容。
@@ -24,7 +24,7 @@ python -m tools.images test --plan build-plan.json --owner dkuav --revision "$(g
 宿主机需要 ARM64、兼容的昇腾 910B 驱动及 Ascend Docker Runtime。请依据[厂商配套信息](https://www.hiascend.com/developer/download/compatibility)核对宿主机驱动和 CANN 版本。注册 `ascend` runtime 后，例如：
 
 ```bash
-IMAGE=ghcr.io/dkuav/luciole-ascend:latest
+IMAGE=ghcr.io/dkuav/luciole-ascend:2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12
 docker run --rm -it --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disabled "$IMAGE"
 docker run --rm -i --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disabled "$IMAGE" bash -s < src/_tests/npu-ascend.sh
 ```
@@ -44,3 +44,7 @@ SSH 使用显式选择的 `DEFAULT_USER`：选择 `root` 后，公钥模式默�
 公共工具中的 `gosu` 和 `sudo` 由 image-kit 安装，`landscape-common` 由本地 `luciole-dev-tools.sh` 补充；CUDA dev/runtime 从 base 继承。
 
 `SYSTEM_UPGRADE` 仍为 `false`。Ascend 保留厂商 Python/CANN 约束，不调用 CUDA 的 psutil 和视觉扩展安装步骤。
+
+清单通过 `variants[].tests[].library` 显式声明共享烟测辅助脚本；固定版本的 image-kit 包负责执行构建及烟测契约。
+
+发布名称由 YAML `name` 决定，不要求与目录名相同，并使用显式 variant 通道。已验证构建标签为 `<variant>-<sha12>-<run-id>-<attempt>`；正式 `<variant>-vMAJOR.MINOR.PATCH` 标签从成功的 main 发布收据提升。所有必需原生任务通过后才更新公开标签，历史制品保留。
