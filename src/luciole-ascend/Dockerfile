@@ -30,6 +30,10 @@ COPY vendor/image-kit/assets/python-dev-requirements.txt /tmp/image-scripts/pyth
 COPY --chmod=0755 vendor/image-kit/scripts/python/ascend-pip-packages.sh /tmp/image-scripts/ascend-pip-packages.sh
 RUN /tmp/image-scripts/ascend-pip-packages.sh --requirements /tmp/image-scripts/python-dev-requirements.txt
 
+COPY src/luciole-ascend/requirements.txt /tmp/image-scripts/luciole-ascend-requirements.txt
+COPY --chmod=0755 vendor/image-kit/scripts/python/ascend-python-packages.sh /tmp/image-scripts/ascend-python-packages.sh
+RUN /tmp/image-scripts/ascend-python-packages.sh --requirements /tmp/image-scripts/luciole-ascend-requirements.txt
+
 COPY --chmod=0755 vendor/image-kit/scripts/dev/dev-tools.sh /tmp/image-scripts/dev-tools.sh
 RUN /tmp/image-scripts/dev-tools.sh
 COPY --chmod=0755 src/_scripts/dev/luciole-dev-tools.sh /tmp/image-scripts/luciole-dev-tools.sh

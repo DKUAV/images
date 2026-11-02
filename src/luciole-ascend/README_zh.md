@@ -6,6 +6,8 @@
 
 厂商基础镜像提供 Python 3.12、PyTorch 2.14、TorchNPU 2.14 和 CANN。共享脚本安装系统工具、CMake 4.3.2、SSH 与开发 shell。镜像保留厂商 root 账号，HOME 为 `/root`，以读取仅 root 可访问的 CANN 脚本。两类镜像通过各自的 pip 安装脚本使用共用的 `vendor/image-kit/assets/python-dev-requirements.txt`，其中包括 uv、ty 和 Ruff。昇腾脚本依据所有预装包生成的约束保留厂商 Python 环境，并在登录 shell 和入口脚本中恢复 CANN 环境。本镜像不安装 CUDA 专属视觉包、ROS 2 和网络库步骤。
 
+镜像还安装 Graphviz 系统工具以及 `graphviz`、`torchview` Python 包，用于模型可视化。
+
 依赖检查只放行三条精确匹配的厂商诊断：`mindstudio-kl 26.2.0` 对 NumPy 的版本要求，以及 `ms-service-profiler 26.0.0` 缺少两个 OTLP exporter。其他依赖错误会使构建失败；放行不代表相关厂商功能已经验证兼容。镜像保留上游 apt 和 pip 软件源。
 
 在原生 ARM64 主机上构建和运行冒烟测试：
