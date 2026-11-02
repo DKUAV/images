@@ -100,7 +100,7 @@ jobs:
           if-no-files-found: error
 
   verify-pr:
-    name: PR (${{ matrix.platform }})
+    name: PR (${{ matrix.worker_id }})
     needs: plan
     if: github.event_name == 'pull_request' && needs.plan.outputs.has_build == 'true'
     permissions:
@@ -112,12 +112,13 @@ jobs:
     with:
       runner: ${{ matrix.runner }}
       platform: ${{ matrix.platform }}
-      platform_id: ${{ matrix.platform_id }}
+      component: ${{ matrix.component }}
+      worker_id: ${{ matrix.worker_id }}
       revision: ${{ needs.plan.outputs.revision }}
       publish: false
 
   build-publish:
-    name: Publish (${{ matrix.platform }})
+    name: Publish (${{ matrix.worker_id }})
     needs: plan
     if: github.event_name != 'pull_request' && needs.plan.outputs.has_build == 'true'
     permissions:
@@ -130,7 +131,8 @@ jobs:
     with:
       runner: ${{ matrix.runner }}
       platform: ${{ matrix.platform }}
-      platform_id: ${{ matrix.platform_id }}
+      component: ${{ matrix.component }}
+      worker_id: ${{ matrix.worker_id }}
       revision: ${{ needs.plan.outputs.revision }}
       publish: true
 

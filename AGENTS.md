@@ -22,7 +22,7 @@
 - ROS 2 is added in both final images. LLVM, devshell and cached pre-commit hooks are dev-only.
 - Run devshell/precommit as the target user, then return to root for mirror configuration and cleanup. Select correct binaries for amd64/arm64.
 - Run `finalize-mirror.sh` as root after all apt/pip installation. CUDA dev/runtime select Aliyun; Ascend selects upstream.
-- CUDA base defaults to root. Final Dockerfiles set `USER luciole`; the shared entrypoint starts sshd according to `SSH_MODE` then execs the command. The account starts locked, password mode is the default, and root SSH login is disabled by default. Explicit `DEFAULT_USER=root` permits root SSH; root password mode requires a mounted password file and key-only mode requires nonempty authorized keys unless `SSH_ALLOW_EMPTY_AUTHORIZED_KEYS=true` explicitly allows starting sshd while waiting for keys. APP_USER is CUDA metadata, not privilege control.
+- CUDA base and Ascend default to root. CUDA final Dockerfiles set `USER luciole`; the shared entrypoint starts sshd according to `SSH_MODE` then execs the command. Managed non-root accounts start locked. CUDA defaults to password SSH; Ascend defaults to key-only SSH with nonempty authorized keys. CUDA final images prohibit root SSH by default; Ascend explicitly selects root. Root password mode requires a mounted password file and key-only mode requires nonempty authorized keys unless `SSH_ALLOW_EMPTY_AUTHORIZED_KEYS=true` explicitly allows starting sshd while waiting for keys. APP_USER is CUDA metadata, not privilege control.
 - Do not change software versions, SSH policy or existing smoke assertions merely to make a build refactor pass.
 
 ## CI and verification
@@ -65,5 +65,13 @@ Refactor: Synchronize shared installers and SSH behavior
 ```
 
 ## Unified v2 publication
+
+Use one worker per dependency component and native platform, pass `--component` to worker
+commands and qualify artifacts with `worker_id` and run attempt. Keep the full plan for merge.
+Ascend defaults to root with HOME=/root to read the vendor CANN environment; omit UID/GID/groups
+from its manifest. Its Bash smoke override restores the installed environment and explicitly
+checks the real entrypoint and credential-gated root SSH. CUDA account policy is unchanged.
+Ascend Compose mounts the existing host `SSH_CONFIG_DIR` read-only at `/root/.ssh`; retain
+nonempty authorized-key validation and root ownership with directory/file modes 0700/0600.
 
 Use the shared v2 plan and derived native worker matrix. Validate/build/test before digest publication; merge checks all required workers and the full identity before updating tags. Formal versions promote a verified main receipt without rebuilding or creating Git tags. Keep component publication before consumer pin commits. Docs are English-only; README pairs remain bilingual.

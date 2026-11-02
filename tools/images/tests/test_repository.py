@@ -76,6 +76,26 @@ def test_real_repository_contracts() -> None:
     assert ascend.platforms == ("linux/arm64",)
     assert ascend.variants[0].base_digest is None
     assert not ascend.variants[0].dependencies
+    assert ascend.variants[0].build_args["DEFAULT_USER"] == "root"
+    assert ascend.variants[0].build_args["SSH_MODE"] == "key-only"
+    assert not {"DEFAULT_UID", "DEFAULT_GID", "DEFAULT_GROUPS"} & set(
+        ascend.variants[0].build_args
+    )
+    plan = repo.make_plan(repo.variants)
+    workers = plan["build_matrix"]["include"]
+    assert len(workers) == 3
+    assert len({worker["worker_id"] for worker in workers}) == 3
+    for worker in workers:
+        names = {
+            item["name"]
+            for item in repo.worker_targets(
+                plan, worker["platform"], worker["component"]
+            )
+        }
+        assert names in (
+            {"luciole-ascend"},
+            {"luciole-cuda-base", "luciole-cuda-dev", "luciole-cuda-runtime"},
+        )
     common = "vendor/image-kit/assets/python-dev-requirements.txt"
     assert repo.affected([common]) == set(repo.variants)
     assert {

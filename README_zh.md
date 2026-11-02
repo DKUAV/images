@@ -32,7 +32,7 @@ docker pull ghcr.io/dkuav/luciole-cuda-dev:pytorch26.06-py3
 docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-dev:pytorch26.06-py3
 ```
 
-CUDA base 默认以 root 运行；CUDA dev/runtime 和昇腾镜像默认为 `luciole`（UID/GID 1000）。共享入口脚本根据 `SSH_MODE` 启动 sshd，再以 Dockerfile 的 `USER` 执行命令。SSH 默认是 password 模式，但 `luciole` 初始锁定，需在运行时提供凭据；默认禁止 root SSH 登录。显式选择 `DEFAULT_USER=root` 可启用 root SSH；root 密码模式必须挂载密码文件，公钥模式必须提供非空公钥文件。`APP_USER` 只是 CUDA 描述性元数据。SSH 和 Compose 示例见各镜像文档。
+CUDA base 和昇腾镜像默认以 root 运行；CUDA dev/runtime 默认为 `luciole`（UID/GID 1000）。昇腾使用 `/root` 作为 HOME，以读取厂商 CANN 环境。共享入口脚本根据 `SSH_MODE` 启动 sshd，再以 Dockerfile 的 `USER` 执行命令。CUDA 默认使用 password 模式；昇腾默认使用 key-only SSH，要求非空的 `/root/.ssh/authorized_keys`。显式启用 root 密码 SSH 时必须在运行时挂载密码文件。公钥模式要求非空公钥文件，`SSH_MODE=disabled` 不启动 SSH 服务。CUDA dev/runtime 默认禁止 root SSH。`APP_USER` 只是 CUDA 描述性元数据。SSH 和 Compose 示例见各镜像文档。
 
 ## 本地构建与烟测
 
@@ -87,10 +87,12 @@ docker build -f src/luciole-cuda-dev/Dockerfile -t luciole-cuda-dev .
 
 ```mermaid
 graph LR
-  P["校验 + 计划"] --> A["amd64：构建 + 烟测"]
-  P --> B["arm64：构建 + 烟测"]
+  P["校验 + 计划"] --> A["amd64 CUDA：构建 + 烟测"]
+  P --> B["arm64 CUDA：构建 + 烟测"]
   A --> X["按 digest 推送"]
   B --> Y["按 digest 推送"]
+  P --> C["arm64 昇腾：构建 + 烟测"]
+  C --> Y
   X --> M["检查完整平台集合 + 合并标签"]
   Y --> M
 ```
@@ -126,3 +128,5 @@ git submodule update --init --recursive
 本仓库使用 image-kit 的统一 v2 schema 及构建引擎，保留 CUDA 双架构构建、烟测门禁和发布标签。`tools/images` 只提供兼容入口与 Luciole 仓库规则。详见英文[迁移及消费者兼容说明](docs/image-kit-migration.md)。组件指针和 `.gitmodules` 变化触发全部镜像重建。组件改动需先提交并发布，再更新消费仓库指针。
 
 发布名称由 YAML `name` 决定，不要求与目录名相同，并使用显式 variant 通道。已验证构建标签为 `<variant>-<sha12>-<run-id>-<attempt>`；正式 `<variant>-vMAJOR.MINOR.PATCH` 标签从成功的 main 发布收据提升。所有必需原生任务通过后才更新公开标签，历史制品保留。
+
+CI 按独立依赖组件和原生平台分配 worker。每个 worker 保留内部父镜像，传入生成的 `--component`，并在产物名称中使用 `worker_id`。最终合并仍核对所有 worker 覆盖的完整原始计划。收集阶段按 registry 不可变 digest 读取已发布的原生 manifest，将配置摘要与本地烟测镜像比较；不依赖 Buildx 可选的配置摘要字段，也不下载镜像层。

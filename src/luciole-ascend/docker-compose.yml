@@ -7,6 +7,13 @@ services:
     stdin_open: true
     tty: true
     environment:
-      - SSH_MODE=password
+      - SSH_MODE=key-only
+    volumes:
+      - type: bind
+        source: ${SSH_CONFIG_DIR:?Set SSH_CONFIG_DIR to an existing SSH configuration directory}
+        target: /root/.ssh
+        read_only: true
+        bind:
+          create_host_path: false
     ports:
       - "2222:22"

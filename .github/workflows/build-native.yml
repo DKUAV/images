@@ -9,7 +9,10 @@ on:
       platform:
         type: string
         required: true
-      platform_id:
+      component:
+        type: string
+        required: true
+      worker_id:
         type: string
         required: true
       revision:
@@ -29,7 +32,8 @@ jobs:
       IMAGE_REVISION: ${{ inputs.revision }}
       IMAGE_PLATFORM: ${{ inputs.platform }}
       IMAGE_BUILD_ID: ${{ github.run_id }}-${{ github.run_attempt }}
-      IMAGE_ARCH: ${{ inputs.platform_id }}
+      IMAGE_COMPONENT: ${{ inputs.component }}
+      IMAGE_WORKER: ${{ inputs.worker_id }}
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
     steps:
       - uses: actions/checkout@v4
@@ -64,8 +68,8 @@ jobs:
           df -h /
       - uses: docker/setup-buildx-action@v3
         with:
-          # One worker now builds the entire dependency graph. Limit concurrent
-          # installation steps in the large dev/runtime branches.
+          # Each worker builds one dependency component on its native architecture.
+          # Limit installation concurrency within the component.
           buildkitd-config-inline: |
             [worker.oci]
               max-parallelism = 1
@@ -75,14 +79,14 @@ jobs:
         run: |
           python -m image_kit bake --plan build-plan.json \
             --owner "$IMAGE_OWNER" --repository "$IMAGE_REPOSITORY" \
-            --revision "$IMAGE_REVISION" --build-id "$IMAGE_BUILD_ID" --platform "$IMAGE_PLATFORM" \
+            --revision "$IMAGE_REVISION" --build-id "$IMAGE_BUILD_ID" --platform "$IMAGE_PLATFORM" --component "$IMAGE_COMPONENT" \
             --mode load --github-cache --output docker-bake.load.json
       - name: Build and test independent graph components
         run: |
           python -m image_kit build-test --plan build-plan.json --bake docker-bake.load.json \
             --owner "$IMAGE_OWNER" --repository "$IMAGE_REPOSITORY" \
             --revision "$IMAGE_REVISION" --build-id "$IMAGE_BUILD_ID" \
-            --platform "$IMAGE_PLATFORM" --github-cache
+            --platform "$IMAGE_PLATFORM" --component "$IMAGE_COMPONENT" --github-cache
       - uses: docker/login-action@v3
         if: inputs.publish
         with:
@@ -94,7 +98,7 @@ jobs:
         run: |
           python -m image_kit bake --plan build-plan.json \
             --owner "$IMAGE_OWNER" --repository "$IMAGE_REPOSITORY" \
-            --revision "$IMAGE_REVISION" --build-id "$IMAGE_BUILD_ID" --platform "$IMAGE_PLATFORM" \
+            --revision "$IMAGE_REVISION" --build-id "$IMAGE_BUILD_ID" --platform "$IMAGE_PLATFORM" --component "$IMAGE_COMPONENT" \
             --mode publish --github-cache --output docker-bake.publish.json
       - name: Push selected images by digest
         id: publish
@@ -116,12 +120,12 @@ jobs:
           WRITE_BUILD_METADATA
           python -m image_kit collect --plan build-plan.json \
             --owner "$IMAGE_OWNER" --revision "$IMAGE_REVISION" --build-id "$IMAGE_BUILD_ID" \
-            --repository "$IMAGE_REPOSITORY" --platform "$IMAGE_PLATFORM" --metadata build-metadata.json \
-            --output "digests/$IMAGE_ARCH.json"
+            --repository "$IMAGE_REPOSITORY" --platform "$IMAGE_PLATFORM" --component "$IMAGE_COMPONENT" --metadata build-metadata.json \
+            --output "digests/$IMAGE_WORKER.json"
       - uses: actions/upload-artifact@v4
         if: inputs.publish
         with:
-          name: digests-${{ inputs.platform_id }}-${{ github.run_attempt }}
+          name: digests-${{ inputs.worker_id }}-${{ github.run_attempt }}
           path: digests/*.json
           if-no-files-found: error
       - name: Report disk usage
@@ -134,7 +138,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: build-output-${{ inputs.platform_id }}-${{ github.run_attempt }}
+          name: build-output-${{ inputs.worker_id }}-${{ github.run_attempt }}
           path: |
             docker-bake*.json
             build-metadata*.json

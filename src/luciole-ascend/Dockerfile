@@ -3,7 +3,7 @@
 ARG BASE_IMAGE=ascendai/torch-npu:2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12
 FROM ${BASE_IMAGE}
 
-ARG DEFAULT_USER=luciole
+ARG DEFAULT_USER=root
 ARG DEFAULT_UID=1000
 ARG DEFAULT_GID=1000
 ARG DEFAULT_GROUPS=""
@@ -13,7 +13,7 @@ ARG CMAKE_VERSION=4.3.2
 ARG CMAKE_SHA256
 ARG DEVSHELL=false
 ARG PACKAGE_MIRROR=upstream
-ARG SSH_MODE=password
+ARG SSH_MODE=key-only
 ARG WORKSPACE_DIR=/work
 
 LABEL org.opencontainers.image.description="Kunpeng ARM64 and Ascend 910B TorchNPU development environment"
@@ -67,7 +67,7 @@ COPY --chmod=0755 vendor/image-kit/assets/ascend-entrypoint.sh /usr/local/bin/as
 
 ENV EDITOR=vim \
     DEFAULT_USER=${DEFAULT_USER} \
-    HOME=/home/${DEFAULT_USER} \
+    HOME=/root \
     LANG=en_US.UTF-8 \
     LC_ALL=en_US.UTF-8 \
     PACKAGE_MIRROR=${PACKAGE_MIRROR} \

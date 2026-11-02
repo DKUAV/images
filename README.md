@@ -32,7 +32,7 @@ docker pull ghcr.io/dkuav/luciole-cuda-dev:pytorch26.06-py3
 docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-dev:pytorch26.06-py3
 ```
 
-CUDA base defaults to root; CUDA dev/runtime and Ascend default to `luciole` (UID/GID 1000). The shared entrypoint starts sshd according to `SSH_MODE` and executes the command as the Dockerfile's `USER`. Password mode is the default, but `luciole` is locked until credentials are supplied at runtime; root SSH login is disabled by default. Explicitly selecting `DEFAULT_USER=root` supports root SSH; root password mode requires a mounted password file, and root key-only mode requires a nonempty authorized-keys file. `APP_USER` is CUDA metadata, not an identity switch. See the image guides for SSH and Compose examples.
+CUDA base and Ascend default to root; CUDA dev/runtime default to `luciole` (UID/GID 1000). Ascend uses `/root` as HOME so the vendor CANN environment can be read. The shared entrypoint starts sshd according to `SSH_MODE` and executes the command as the Dockerfile's `USER`. CUDA defaults to password mode; Ascend defaults to key-only SSH and requires a nonempty `/root/.ssh/authorized_keys`. Explicit root password SSH requires a runtime-mounted password file. Key-only mode requires a nonempty authorized-keys file, and `SSH_MODE=disabled` starts no SSH server. CUDA dev/runtime prohibit root SSH by default. `APP_USER` is CUDA metadata, not an identity switch. See the image guides for SSH and Compose examples.
 
 ## Local build and smoke tests
 
@@ -87,10 +87,12 @@ Each image directory has an `image.yml`. YAML declares configuration, dependenci
 
 ```mermaid
 graph LR
-  P["Validate + plan"] --> A["amd64: build + smoke"]
-  P --> B["arm64: build + smoke"]
+  P["Validate + plan"] --> A["amd64 CUDA: build + smoke"]
+  P --> B["arm64 CUDA: build + smoke"]
   A --> X["Publish digests"]
   B --> Y["Publish digests"]
+  P --> C["arm64 Ascend: build + smoke"]
+  C --> Y
   X --> M["Check complete platform set + merge tags"]
   Y --> M
 ```
@@ -126,3 +128,5 @@ Fresh clones can use `git clone --recurse-submodules`. Keep the component pinned
 This repository uses image-kit's unified v2 schema and build engine, retaining dual-platform CUDA builds, smoke gates and existing publication tags. `tools/images` provides compatibility imports and Luciole policies. See the [migration and consumer compatibility notes](docs/image-kit-migration.md). Component pin and `.gitmodules` changes rebuild all images. Commit and publish component changes before updating the consumer pin.
 
 Publication uses YAML `name` independently of the directory and explicit variant channels. Verified build tags are `<variant>-<sha12>-<run-id>-<attempt>`; formal `<variant>-vMAJOR.MINOR.PATCH` tags promote an existing successful main publication receipt. All required native workers must pass before public tags advance. Historical tags remain available.
+
+CI assigns one worker to each independent dependency component and native platform. Each worker retains internal parents, passes the generated `--component`, and uses `worker_id` in artifact names. Final merge checks the complete original plan across all workers. Collection resolves the published native manifest by immutable registry digest and compares its config digest with the loaded smoke-test image; it does not require optional Buildx config-digest metadata or download image layers.

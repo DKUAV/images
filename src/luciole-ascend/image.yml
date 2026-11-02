@@ -29,17 +29,14 @@ variants:
     image: ascendai/torch-npu:2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12
     digest: null
   build_args:
-    DEFAULT_USER: luciole
-    DEFAULT_UID: 1000
-    DEFAULT_GID: 1000
-    DEFAULT_GROUPS: ''
+    DEFAULT_USER: root
     TZ: Asia/Shanghai
     SYSTEM_UPGRADE: false
     CMAKE_VERSION: 4.3.2
     CMAKE_SHA256: 377079ab739f5765176f427609d9a2015b756ea20d5cba908d279c3731a2f481
     DEVSHELL: true
     PACKAGE_MIRROR: upstream
-    SSH_MODE: password
+    SSH_MODE: key-only
     WORKSPACE_DIR: /work
   tests:
   - library: src/_tests/_lib.sh
@@ -48,4 +45,4 @@ variants:
     - src/_tests/_lib.sh
     - src/_tests/npu-ascend.sh
     policy: required
-    entrypoint: image
+    entrypoint: bash

@@ -22,8 +22,11 @@ pin changes rebuild all targets. Explicit Git diffs retain deleted and renamed i
 Ancestors are added without expanding publication selection and build only on required native
 platforms. A parent may cover more platforms than its child. Internal `base.target` and
 `base.context` connect to the same checkout via Bake named contexts. The plan derives workers
-for amd64 and arm64; no QEMU is configured. `build-test` validates the generated Bake graph,
-builds and tests independent components, then reports aggregate failures.
+for every independent dependency component and native platform; no QEMU is configured.
+Each matrix row supplies a `component` and unique `worker_id`. Worker commands pass
+`--component` and retain the complete plan. CUDA base/dev/runtime stay together on each
+architecture; Ascend runs on a separate ARM64 worker. `build-test` validates the generated
+Bake graph before building and testing the assigned component.
 
 Hosted workers remove unused SDKs and preloaded Docker images before creating Buildx, retain
 Python/Node/Docker, limit BuildKit solver parallelism to one, and report disk usage on failure.
@@ -31,8 +34,10 @@ Capacity must cover both build cache and locally loaded smoke images. Load graph
 architecture-scoped Actions caches only; trusted publication can export them. Direct shell
 builds expose the Actions cache runtime through the pinned helper action.
 
-Luciole tests explicitly retain the image entrypoint/user and source their declared helper.
-utils tests explicitly override the entrypoint with Bash. Both use read-only test mounts,
+Luciole CUDA tests retain the image entrypoint/user and source their declared helper. Ascend
+runs as root with key-only SSH, starts tests through Bash without a mounted public key, restores the installed
+vendor environment and explicitly exercises the real Ascend entrypoint and SSH modes.
+utils tests explicitly override the entrypoint with Bash. All use read-only test mounts,
 disable image pulls, and receive `SMOKE_HARD_GATE`. Advisory suppression belongs to the helper;
 container startup, missing scripts and Docker errors remain fatal. Hardware checks are separate.
 
@@ -43,6 +48,12 @@ manual publications first complete validation and native smoke tests, push selec
 by digest, and collect file-loaded Bake metadata. Full provenance is transferred through
 `toJSON` inside a quoted Node heredoc, never an environment variable or command argument.
 Build ID is `<run-id>-<attempt>` and is passed unchanged through every pipeline stage.
+
+Collection reads each pushed digest's registry index and unique runnable platform manifest,
+excluding attestations, then compares `config.digest` with the loaded smoke-test image's config
+ID. It does not require optional Buildx config-digest metadata or pull image layers. Native
+artifacts and digest filenames include `worker_id` so same-architecture components do not
+overwrite each other. Merge still validates the complete original plan across all workers.
 
 The merge job waits for every native worker. It verifies the exact expected platform set and
 shared build identity, composes indexes with provenance, and checks all existing build tags
