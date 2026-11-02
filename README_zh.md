@@ -36,6 +36,16 @@ CUDA base 默认以 root 运行；CUDA dev/runtime 和昇腾镜像默认为 `luc
 
 ## 本地构建与烟测
 
+同步开发依赖后，在当前仓库安装 Git 提交检查，并可手动检查全部文件：
+
+```bash
+uv sync --locked --extra dev
+uv run --no-sync pre-commit install
+uv run --no-sync pre-commit run --all-files
+```
+
+这些检查包括基础文件检查、Ruff 自动修复与格式化，以及整个项目的 ty 类型检查。Ruff 和 ty 使用项目锁定的开发环境；首次运行基础 hooks 需要网络。消费仓库跳过 `vendor/`，image-kit 的 hooks 在组件仓库中单独安装和运行。
+
 构建工具由固定版本的 `vendor/image-kit` 包提供。本仓库使用 v2 schema 和显式 variant，保留镜像名称、原生平台和发布标签。`tools/` 只保留 Luciole 仓库规则检查和兼容入口。`docs/` 仅用英文，根目录及镜像 README 保持中英双语。
 
 安装 uv 和 Python 3.11+ 工具，并准备支持 Linux 容器和 Buildx 的 Docker 引擎。以下示例使用 Bash；PowerShell 使用 `.venv\Scripts\Activate.ps1` 激活环境，并用 `$revision = git rev-parse HEAD` 获取提交号。

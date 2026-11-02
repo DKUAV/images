@@ -36,6 +36,16 @@ CUDA base defaults to root; CUDA dev/runtime and Ascend default to `luciole` (UI
 
 ## Local build and smoke tests
 
+After syncing development dependencies, install the Git hook in this repository and optionally check every file:
+
+```bash
+uv sync --locked --extra dev
+uv run --no-sync pre-commit install
+uv run --no-sync pre-commit run --all-files
+```
+
+The hooks run basic file checks, Ruff fixes and formatting, and a full-project ty check. Ruff and ty use the locked project development environment; the first run of the basic hooks requires network access. Consumer hooks skip `vendor/`; install and run image-kit's hooks separately in the component repository.
+
 Build tooling comes from the pinned `vendor/image-kit` package. This repository uses schema v2 and explicit variants, preserving image names, native platforms and publication tags. Local `tools/` contains Luciole policy checks and compatibility imports. Documents in `docs/` are English; root and image READMEs are maintained in English and Chinese.
 
 Install uv and Python 3.11+ tooling and use a Docker daemon capable of Linux containers with Buildx. The following examples use Bash; on PowerShell activate the virtual environment with `.venv\Scripts\Activate.ps1` and obtain the revision with `$revision = git rev-parse HEAD`.

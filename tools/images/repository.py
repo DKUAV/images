@@ -32,7 +32,9 @@ class ImageRepository(SharedRepository):
             for variant in family.variants:
                 for dependency in variant.dependencies:
                     parent = self.variants[dependency.key]
-                    if variant.build_args.get("USERNAME") != parent.build_args.get("USERNAME"):
+                    if variant.build_args.get("USERNAME") != parent.build_args.get(
+                        "USERNAME"
+                    ):
                         raise RepositoryError(
                             f"{family.name}: USERNAME must match the inherited account"
                         )
@@ -59,12 +61,16 @@ class ImageRepository(SharedRepository):
         arguments = set(re.findall(r"(?im)^\s*ARG\s+([A-Z][A-Z0-9_]*)", content))
         if (
             missing := (
-                set().union(*(set(item.build_args) for item in self.families[name].variants))
+                set().union(
+                    *(set(item.build_args) for item in self.families[name].variants)
+                )
                 | {"BASE_IMAGE"}
             )
             - arguments
         ):
-            raise RepositoryError(f"{name}: build arguments not declared in Dockerfile: {missing}")
+            raise RepositoryError(
+                f"{name}: build arguments not declared in Dockerfile: {missing}"
+            )
         for line in content.splitlines():
             line = line.strip()
             if not line.upper().startswith("COPY ") or "--from=" in line:
@@ -72,8 +78,12 @@ class ImageRepository(SharedRepository):
             tokens = shlex.split(line)[1:]
             sources = [token for token in tokens if not token.startswith("--")][:-1]
             for source in sources:
-                if not any(fnmatch.fnmatchcase(source, pattern) for pattern in declared):
-                    raise RepositoryError(f"{name}: COPY source missing from inputs: {source}")
+                if not any(
+                    fnmatch.fnmatchcase(source, pattern) for pattern in declared
+                ):
+                    raise RepositoryError(
+                        f"{name}: COPY source missing from inputs: {source}"
+                    )
                 if not self.path(source).is_file():
                     raise RepositoryError(
                         f"{name}: COPY individual files, not directories: {source}"
@@ -97,11 +107,16 @@ class ImageRepository(SharedRepository):
                 continue
             translated = guide.with_stem(guide.stem + "_zh")
             for source in (guide, translated):
-                if not source.is_file() or not source.read_text(encoding="utf-8").strip():
+                if (
+                    not source.is_file()
+                    or not source.read_text(encoding="utf-8").strip()
+                ):
                     raise RepositoryError(f"missing bilingual guide: {source}")
                 content = source.read_text(encoding="utf-8")
                 counterpart = guide.name if source == translated else translated.name
-                if not any(f"]({prefix}{counterpart})" in content for prefix in ("", "./")):
+                if not any(
+                    f"]({prefix}{counterpart})" in content for prefix in ("", "./")
+                ):
                     raise RepositoryError(f"{source}: missing link to {counterpart}")
                 for target in re.findall(r"\]\(([^\s)]+)\)", content):
                     target = target.split("#", 1)[0]

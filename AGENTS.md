@@ -27,6 +27,9 @@
 
 ## CI and verification
 
+- Use Ruff with an 88-character line length and double quotes. Preserve the Python 3.11 target and the existing lint rules; use ty with its default configuration.
+- Use `uv run --no-sync pre-commit install` to enable repository hooks and `uv run --no-sync pre-commit run --all-files` to check all tracked files. Ruff and ty hooks use the locked dev environment. Consumer hooks skip `vendor/`; run the component hooks separately.
+
 - Keep `uv.lock` synchronized with project and local component dependencies. CI uses `uv sync --locked`; never use a moving component branch or bypass stale lockfiles.
 
 - Run `uv sync --locked --extra dev`, activate `.venv`, then run `python -m tools.check_repository`, `python -m tools.images validate`, `python -m ruff check tools`, `python -m ruff format --check tools`, `python -m pytest`, and `python -m pytest vendor/image-kit/tests` after changing build tooling or contracts.

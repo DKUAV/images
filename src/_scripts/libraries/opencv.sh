@@ -18,7 +18,7 @@
 #      resolve to 4.7.0.
 #   3. Refreshes ldconfig and self-verifies the C++ library resolution.
 #
-# This script only touches the C++ OpenCV and quarantines NVIDIA's dirty Python bindings. 
+# This script only touches the C++ OpenCV and quarantines NVIDIA's dirty Python bindings.
 # The actual Python cv2 pip installation is owned solely by cuda-pip-packages.sh.
 #
 # Run as root. Currently called only by luciole-cuda-base.

@@ -32,7 +32,9 @@ def bash() -> str:
     return executable
 
 
-def run_script(bash: str, script: str, args: list[str]) -> subprocess.CompletedProcess[str]:
+def run_script(
+    bash: str, script: str, args: list[str]
+) -> subprocess.CompletedProcess[str]:
     """Run supplied shell text with explicit positional arguments.
 
     Parameters
@@ -87,7 +89,9 @@ def test_installer_arguments(bash: str, relative: str, option: str) -> None:
         assert result.returncode == 64, result.stderr
 
 
-@pytest.mark.parametrize("groups,expected", [("", 0), ("video", 64), ("video,,render", 64)])
+@pytest.mark.parametrize(
+    "groups,expected", [("", 0), ("video", 64), ("video,,render", 64)]
+)
 def test_root_groups(bash: str, groups: str, expected: int) -> None:
     """Permit root reuse only without supplementary groups.
 
@@ -98,7 +102,9 @@ def test_root_groups(bash: str, groups: str, expected: int) -> None:
     expected : int
         Expected exit status.
     """
-    script = (ROOT / "vendor/image-kit/scripts/system/user.sh").read_text(encoding="utf-8")
+    script = (ROOT / "vendor/image-kit/scripts/system/user.sh").read_text(
+        encoding="utf-8"
+    )
     result = run_script(bash, script, ["--username", "root", "--groups", groups])
     assert result.returncode == expected, result.stderr
 
@@ -125,8 +131,12 @@ mock_sshd() { printf '%s\n' "$@"; }
 chpasswd() { cat >/dev/null; }; export -f chpasswd
 """
     config = tmp_path / "sshd.conf"
-    installer = (ROOT / "vendor/image-kit/scripts/system/ssh.sh").read_text(encoding="utf-8")
-    installer = installer.replace("/etc/ssh/sshd_config.d/99-dev-image.conf", '"${TEST_CONFIG}"')
+    installer = (ROOT / "vendor/image-kit/scripts/system/ssh.sh").read_text(
+        encoding="utf-8"
+    )
+    installer = installer.replace(
+        "/etc/ssh/sshd_config.d/99-dev-image.conf", '"${TEST_CONFIG}"'
+    )
     # Consume the test output path before the real option parser sees its arguments.
     result = run_script(
         bash,
@@ -142,10 +152,16 @@ chpasswd() { cat >/dev/null; }; export -f chpasswd
     key.write_text("test public key\n", encoding="utf-8")
     password = tmp_path / "password"
     password.write_text("test password\n", encoding="utf-8")
-    entrypoint = (ROOT / "vendor/image-kit/assets/docker-entrypoint.sh").read_text(encoding="utf-8")
+    entrypoint = (ROOT / "vendor/image-kit/assets/docker-entrypoint.sh").read_text(
+        encoding="utf-8"
+    )
     entrypoint = entrypoint.replace("/usr/sbin/sshd", "mock_sshd")
-    entrypoint = entrypoint.replace('"${USER_HOME}/.ssh/authorized_keys"', '"${TEST_KEY}"')
-    setup = '\nDEFAULT_USER="$1"; SSH_MODE="$2"; TEST_KEY="$3"; SSH_PASSWORD_FILE="$4"\n'
+    entrypoint = entrypoint.replace(
+        '"${USER_HOME}/.ssh/authorized_keys"', '"${TEST_KEY}"'
+    )
+    setup = (
+        '\nDEFAULT_USER="$1"; SSH_MODE="$2"; TEST_KEY="$3"; SSH_PASSWORD_FILE="$4"\n'
+    )
     setup += "shift 4; unset BASH_ENV\n"
     result = run_script(
         bash,
@@ -172,7 +188,14 @@ chpasswd() { cat >/dev/null; }; export -f chpasswd
         result = run_script(
             bash,
             preamble + setup + entrypoint,
-            [user, mode, key.as_posix(), password.as_posix(), "echo", "command-executed"],
+            [
+                user,
+                mode,
+                key.as_posix(),
+                password.as_posix(),
+                "echo",
+                "command-executed",
+            ],
         )
         assert result.returncode == 64
         assert "requires a non-empty" in result.stderr
@@ -180,7 +203,14 @@ chpasswd() { cat >/dev/null; }; export -f chpasswd
         result = run_script(
             bash,
             preamble + "\nSSH_ALLOW_EMPTY_AUTHORIZED_KEYS=true\n" + setup + entrypoint,
-            [user, mode, key.as_posix(), password.as_posix(), "echo", "command-executed"],
+            [
+                user,
+                mode,
+                key.as_posix(),
+                password.as_posix(),
+                "echo",
+                "command-executed",
+            ],
         )
         assert result.returncode == 0, result.stderr
         assert "SSH awaits a public key" in result.stderr
@@ -205,12 +235,20 @@ apt-get() { :; }; rm() { :; }; mkdir() { :; }; chmod() { :; }; chown() { :; }
 useradd() { printf '%s\n' "$@"; }
 TEST_SUDOERS="$1"; shift
 """
-    script = (ROOT / "vendor/image-kit/scripts/system/user.sh").read_text(encoding="utf-8")
+    script = (ROOT / "vendor/image-kit/scripts/system/user.sh").read_text(
+        encoding="utf-8"
+    )
     script = script.replace('/etc/sudoers.d/"${USERNAME_VAL}"', '"${TEST_SUDOERS}"')
     result = run_script(
         bash,
         preamble + script,
-        [(tmp_path / "sudoers").as_posix(), "--username", "luciole", "--groups", groups],
+        [
+            (tmp_path / "sudoers").as_posix(),
+            "--username",
+            "luciole",
+            "--groups",
+            groups,
+        ],
     )
     assert result.returncode == 0, result.stderr
     if groups:
@@ -232,7 +270,9 @@ def test_local_extensions(bash: str, tmp_path: Path) -> None:
     apt = (ROOT / "src/_scripts/dev/luciole-dev-tools.sh").read_text(encoding="utf-8")
     for args, expected in [(["--help"], 0), (["--unknown"], 64), (["unexpected"], 64)]:
         assert run_script(bash, apt, args).returncode == expected
-    result = run_script(bash, 'apt-get() { printf "%s\\n" "$@"; }; rm() { :; }\n' + apt, [])
+    result = run_script(
+        bash, 'apt-get() { printf "%s\\n" "$@"; }; rm() { :; }\n' + apt, []
+    )
     assert result.returncode == 0, result.stderr
     assert "landscape-common\n" in result.stdout
     assert "sudo" not in result.stdout
@@ -242,7 +282,9 @@ def test_local_extensions(bash: str, tmp_path: Path) -> None:
     requirements.write_text("example-package\n", encoding="utf-8")
     common = tmp_path / "cuda-pip-packages.sh"
     common.write_text(
-        (ROOT / "vendor/image-kit/scripts/python/cuda-pip-packages.sh").read_text(encoding="utf-8"),
+        (ROOT / "vendor/image-kit/scripts/python/cuda-pip-packages.sh").read_text(
+            encoding="utf-8"
+        ),
         encoding="utf-8",
         newline="\n",
     )

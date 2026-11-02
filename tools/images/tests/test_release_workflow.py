@@ -42,13 +42,19 @@ def test_release_workflow_verifies_source(
         Source-run or receipt corruption; None exercises acceptance.
     """
     root = Path(__file__).resolve().parents[3]
-    workflow = yaml.safe_load((root / ".github/workflows/release.yml").read_text(encoding="utf-8"))
+    workflow = yaml.safe_load(
+        (root / ".github/workflows/release.yml").read_text(encoding="utf-8")
+    )
     step = next(
         item
         for item in workflow["jobs"]["release"]["steps"]
         if item.get("name") == "Verify source run and download its receipt"
     )
-    script = step["run"].split("<<'VERIFY_PUBLICATION'\n", 1)[1].split("\nVERIFY_PUBLICATION", 1)[0]
+    script = (
+        step["run"]
+        .split("<<'VERIFY_PUBLICATION'\n", 1)[1]
+        .split("\nVERIFY_PUBLICATION", 1)[0]
+    )
     monkeypatch.chdir(tmp_path)
     for name, value in {
         "SOURCE_RUN_ID": "123",
@@ -106,7 +112,11 @@ def test_release_workflow_verifies_source(
             Source-run JSON.
         """
         calls.append(command)
-        assert command == ["gh", "api", "repos/DKUAV/images/actions/runs/123/attempts/2"]
+        assert command == [
+            "gh",
+            "api",
+            "repos/DKUAV/images/actions/runs/123/attempts/2",
+        ]
         return json.dumps(run)
 
     def download(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:

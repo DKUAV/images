@@ -79,7 +79,10 @@ def test_real_repository_contracts() -> None:
     common = "vendor/image-kit/assets/python-dev-requirements.txt"
     assert repo.affected([common]) == set(repo.variants)
     assert {
-        key[0] for key in repo.affected(["vendor/image-kit/scripts/python/ascend-pip-packages.sh"])
+        key[0]
+        for key in repo.affected(
+            ["vendor/image-kit/scripts/python/ascend-pip-packages.sh"]
+        )
     } == {"luciole-ascend"}
     plan = repo.make_plan(repo.select(family="luciole-cuda-dev"))
     assert [(item["name"], item["publish"]) for item in plan["targets"]] == [
@@ -118,7 +121,9 @@ def test_repository_wiring(tmp_path: Path, change: str, message: str) -> None:
         path.write_text(yaml.safe_dump(raw), encoding="utf-8")
         dockerfile = tmp_path / raw["dockerfile"]
         args = set(raw["variants"][0]["build_args"]) | {"BASE_IMAGE"}
-        dockerfile.write_text("\n".join(f"ARG {name}" for name in sorted(args)), encoding="utf-8")
+        dockerfile.write_text(
+            "\n".join(f"ARG {name}" for name in sorted(args)), encoding="utf-8"
+        )
     (tmp_path / "src/smoke.sh").write_text("true\n", encoding="utf-8")
     path = tmp_path / "src/luciole-cuda-dev/image.yml"
     raw = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -129,7 +134,8 @@ def test_repository_wiring(tmp_path: Path, change: str, message: str) -> None:
     else:
         dockerfile = tmp_path / raw["dockerfile"]
         dockerfile.write_text(
-            dockerfile.read_text() + "\nCOPY src/missing.sh /tmp/missing.sh\n", encoding="utf-8"
+            dockerfile.read_text() + "\nCOPY src/missing.sh /tmp/missing.sh\n",
+            encoding="utf-8",
         )
     path.write_text(yaml.safe_dump(raw), encoding="utf-8")
     with pytest.raises(RepositoryError, match=message):
