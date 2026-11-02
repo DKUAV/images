@@ -70,7 +70,7 @@ python -m image_kit test --plan build-plan.json --owner dkuav \
 
 ARM64 宿主机改用 `linux/arm64`。选择 dev 时也会构建和测试当前工作区的 base，但不会将 base 加入发布集合。`plan --all` 选择全部镜像，`plan --base <git-sha> --head <git-sha>` 按变更检测。上述命令均在仓库根目录执行。
 
-原有兼容入口继续可用：
+CUDA 原有兼容入口继续可用：
 
 ```bash
 cd src/luciole-cuda-dev
@@ -79,7 +79,7 @@ docker compose build
 docker build -f src/luciole-cuda-dev/Dockerfile -t luciole-cuda-dev .
 ```
 
-直接通过 Docker/Compose 构建最终镜像时，默认使用已发布的 base。验证当前工作区的完整依赖图时，使用上面的清单/Bake 流程。生成的计划和 Bake 文件已被 Git 忽略。
+直接通过 Docker/Compose 构建最终镜像时，默认使用已发布的 base。验证当前工作区的完整依赖图时，使用上面的清单/Bake 流程。Ascend Compose 仅运行已发布镜像，参见其[运行配置](src/luciole-ascend/README_zh.md#使用-npu)。生成的计划和 Bake 文件已被 Git 忽略。
 
 ## 构建配置与 CI
 

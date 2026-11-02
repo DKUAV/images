@@ -17,7 +17,7 @@ docker buildx bake -f docker-bake.load.json
 python -m image_kit test --plan build-plan.json --owner dkuav --revision "$(git rev-parse HEAD)" --platform linux/arm64
 ```
 
-Direct builds use the tagged vendor base by default and the repository root as context. Compose uses `context: ../..`. CI publishes explicit variant and batch-qualified build tags after all native checks pass. The required smoke test needs no NPU and does not verify hardware compatibility.
+Direct builds use the tagged vendor base by default and the repository root as context. Compose only runs published images and has no `build` section; use the manifest/Bake commands above to build and test this checkout. CI publishes explicit variant and batch-qualified build tags after all native checks pass. The required smoke test needs no NPU and does not verify hardware compatibility.
 
 ## Running with an NPU
 
@@ -31,12 +31,20 @@ docker run --rm -i --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disa
 
 The default user is `root`, HOME is `/root`, the work directory is `/work`, and the default command is Bash; the login shell is zsh. The default SSH mode is `key-only`; mount a nonempty `/root/.ssh/authorized_keys` before startup. Password authentication is disabled in this mode. Set `SSH_MODE=disabled` when SSH is unnecessary. Explicit password mode remains available and requires a nonempty runtime-mounted file referenced by `SSH_PASSWORD_FILE`. Root SSH grants full container privileges; publish port 22 only on a trusted interface. No password is stored in image layers.
 
-The Compose example maps port `2222:22` and mounts an existing SSH configuration directory read-only at `/root/.ssh`. Set `SSH_CONFIG_DIR` to its host path before `docker compose up`; Compose fails if the variable is unset or the source directory is missing. The directory and its `authorized_keys` must be root-owned, with modes `0700` and `0600` respectively. Use a dedicated container directory and copy the client's public key into `authorized_keys`; private keys used to log into this container stay on the client. Empty keys are rejected by default. For example, from the repository root on a Linux host:
+The Compose example selects `linux/arm64` and `runtime: ascend`, defaults `ASCEND_VISIBLE_DEVICES` to `0,1,2,3,4,5,6,7` when unset or empty, and allocates 8 GiB of shared memory. Override the list for hosts with fewer NPUs or to expose a subset (for example, `0` or `0,1`). The host Ascend runtime supplies the selected NPU devices and driver mounts. It mounts `src/luciole-ascend/mount/` at `/work`, runs `sleep infinity`, and restarts unless stopped. It also maps `host.docker.internal` to the host gateway and enables debugging with `SYS_PTRACE` and `seccomp:unconfined`.
+
+It maps port `2222:22` and mounts an existing SSH configuration directory read-only at `/root/.ssh`. Set `SSH_CONFIG_DIR` to its host path before `docker compose up`; Compose fails if the variable is unset or the source directory is missing. The directory and its `authorized_keys` must be root-owned, with modes `0700` and `0600` respectively. Use a dedicated container directory and copy the client's public key into `authorized_keys`; private keys used to log into this container stay on the client. Empty keys are rejected by default. For example, from the repository root on a Linux host:
 
 ```bash
+docker info --format '{{json .Runtimes}}'  # Confirm that ascend is registered.
 sudo install -d -m 0700 /srv/luciole-ascend/ssh
 sudo install -m 0600 ~/.ssh/id_ed25519.pub /srv/luciole-ascend/ssh/authorized_keys
-SSH_CONFIG_DIR=/srv/luciole-ascend/ssh docker compose -f src/luciole-ascend/docker-compose.yml up -d
+export SSH_CONFIG_DIR=/srv/luciole-ascend/ssh
+# Optional: export ASCEND_VISIBLE_DEVICES=0,1 to override the eight-NPU default.
+docker compose -f src/luciole-ascend/docker-compose.yml pull
+docker compose -f src/luciole-ascend/docker-compose.yml up -d
+docker compose -f src/luciole-ascend/docker-compose.yml exec app npu-smi info
+docker compose -f src/luciole-ascend/docker-compose.yml exec app zsh
 ```
 
 The host directory survives image updates and container replacement. Edit it on the host; the read-only mount prevents changes from inside the container, including updates to SSH client `known_hosts`. Server identity keys live under `/etc/ssh/ssh_host_*`, outside this mount, so preserving the server fingerprint requires separate persistence. Hardware device mounts and runtime registration are host responsibilities.

@@ -17,7 +17,7 @@ docker buildx bake -f docker-bake.load.json
 python -m image_kit test --plan build-plan.json --owner dkuav --revision "$(git rev-parse HEAD)" --platform linux/arm64
 ```
 
-直接构建默认使用带版本标签的厂商基础镜像，并以仓库根目录为构建上下文。Compose 使用 `context: ../..`。所有原生检查通过后，CI 发布显式 variant 和包含构建批次的标签。必过的冒烟测试不需要 NPU，也不证明硬件兼容。
+直接构建默认使用带版本标签的厂商基础镜像，并以仓库根目录为构建上下文。Compose 仅运行已发布镜像，不包含 `build` 字段；构建和测试当前工作区请使用上面的 manifest/Bake 命令。所有原生检查通过后，CI 发布显式 variant 和包含构建批次的标签。必过的冒烟测试不需要 NPU，也不证明硬件兼容。
 
 ## 使用 NPU
 
@@ -31,12 +31,20 @@ docker run --rm -i --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disa
 
 默认用户为 `root`，HOME 为 `/root`，工作目录为 `/work`，默认命令是 Bash，登录 shell 为 zsh。SSH 默认模式为 `key-only`，启动前需挂载非空的 `/root/.ssh/authorized_keys`，此模式关闭密码认证。不需要 SSH 时设置 `SSH_MODE=disabled`。显式选择 password 模式仍受支持，但必须在运行时挂载非空密码文件，并由 `SSH_PASSWORD_FILE` 指定容器内路径。root SSH 具有完整容器权限，仅向可信接口发布 22 端口。镜像层中不保存密码。
 
-Compose 示例映射 `2222:22`，将已有 SSH 配置目录只读挂载到 `/root/.ssh`。执行 `docker compose up` 前，将 `SSH_CONFIG_DIR` 设为该目录的宿主机路径；变量未设置或源目录不存在时 Compose 会报错。目录及其中的 `authorized_keys` 必须由 root 所有，权限分别为 `0700` 和 `0600`。使用容器专用目录，将客户端公钥复制到 `authorized_keys`；登录此容器所用的私钥保留在客户端。默认拒绝空公钥文件。例如，在 Linux 宿主机的仓库根目录执行：
+Compose 示例指定 `linux/arm64` 和 `runtime: ascend`，`ASCEND_VISIBLE_DEVICES` 未设置或为空时默认为 `0,1,2,3,4,5,6,7`，并分配 8 GiB 共享内存。宿主机 NPU 少于八张或只需使用部分设备时，请覆盖此列表（如 `0` 或 `0,1`）。宿主机 Ascend runtime 负责挂载选定的 NPU 设备及驱动。示例将 `src/luciole-ascend/mount/` 挂载到 `/work`，以 `sleep infinity` 保持运行，并在未手动停止时自动重启；同时将 `host.docker.internal` 指向宿主机网关，通过 `SYS_PTRACE` 和 `seccomp:unconfined` 支持调试。
+
+示例映射 `2222:22`，将已有 SSH 配置目录只读挂载到 `/root/.ssh`。执行 `docker compose up` 前，将 `SSH_CONFIG_DIR` 设为该目录的宿主机路径；变量未设置或源目录不存在时 Compose 会报错。目录及其中的 `authorized_keys` 必须由 root 所有，权限分别为 `0700` 和 `0600`。使用容器专用目录，将客户端公钥复制到 `authorized_keys`；登录此容器所用的私钥保留在客户端。默认拒绝空公钥文件。例如，在 Linux 宿主机的仓库根目录执行：
 
 ```bash
+docker info --format '{{json .Runtimes}}'  # 确认 ascend runtime 已注册。
 sudo install -d -m 0700 /srv/luciole-ascend/ssh
 sudo install -m 0600 ~/.ssh/id_ed25519.pub /srv/luciole-ascend/ssh/authorized_keys
-SSH_CONFIG_DIR=/srv/luciole-ascend/ssh docker compose -f src/luciole-ascend/docker-compose.yml up -d
+export SSH_CONFIG_DIR=/srv/luciole-ascend/ssh
+# 可选：export ASCEND_VISIBLE_DEVICES=0,1，覆盖默认的八张 NPU 配置。
+docker compose -f src/luciole-ascend/docker-compose.yml pull
+docker compose -f src/luciole-ascend/docker-compose.yml up -d
+docker compose -f src/luciole-ascend/docker-compose.yml exec app npu-smi info
+docker compose -f src/luciole-ascend/docker-compose.yml exec app zsh
 ```
 
 更新镜像或重建容器时，宿主机目录会保留。请在宿主机修改内容；只读挂载不允许容器内写入，包括更新 SSH 客户端的 `known_hosts`。服务端身份密钥位于 `/etc/ssh/ssh_host_*`，不在此挂载范围内；保持服务端指纹不变需要单独持久化。设备挂载和 runtime 注册由宿主机负责。

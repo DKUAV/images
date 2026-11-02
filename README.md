@@ -70,7 +70,7 @@ python -m image_kit test --plan build-plan.json --owner dkuav \
 
 Use `linux/arm64` on an ARM64 host. Selecting dev builds and tests the current checkout's base too, without selecting base for publication. Use `plan --all` to select every image or `plan --base <git-sha> --head <git-sha>` for change detection. Run the commands from the repository root.
 
-Existing compatibility entry points remain available:
+Existing CUDA compatibility entry points remain available:
 
 ```bash
 cd src/luciole-cuda-dev
@@ -79,7 +79,7 @@ docker compose build
 docker build -f src/luciole-cuda-dev/Dockerfile -t luciole-cuda-dev .
 ```
 
-Direct Docker/Compose builds of a final image use the published base by default. Use the manifest/Bake route above when validating the current checkout's complete dependency graph. Generated plans and Bake files are ignored by Git.
+Direct Docker/Compose builds of a final image use the published base by default. Use the manifest/Bake route above when validating the current checkout's complete dependency graph. Ascend Compose only runs published images; see its [runtime setup](src/luciole-ascend/README.md#running-with-an-npu). Generated plans and Bake files are ignored by Git.
 
 ## Build configuration and CI
 
