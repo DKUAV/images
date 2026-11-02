@@ -1,0 +1,29 @@
+services:
+  app:
+    image: ghcr.io/dkuav/ascend-peft:2.14.0-cann9.2.0-peft-910b-ubuntu22.04-py3.12
+    platform: linux/arm64
+    runtime: ascend
+    environment:
+      ASCEND_VISIBLE_DEVICES: "${ASCEND_VISIBLE_DEVICES:-0,1,2,3,4,5,6,7}"
+      SSH_MODE: key-only
+    shm_size: 8g
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    ports:
+      - "8101:22"
+    volumes:
+      - ./mount:/work
+      - type: bind
+        source: "${SSH_CONFIG_DIR:?Set SSH_CONFIG_DIR to an existing SSH directory}"
+        target: /root/.ssh
+        read_only: true
+        bind:
+          create_host_path: false
+    command: sleep infinity

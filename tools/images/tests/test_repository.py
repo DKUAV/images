@@ -71,7 +71,7 @@ def test_real_repository_contracts() -> None:
     """Validate real image graph, account, COPY and README contracts."""
     repo = ImageRepository(ROOT).load()
     repo.validate_documentation()
-    assert len(repo.families) == 4
+    assert len(repo.families) == 5
     ascend = repo.families["luciole-ascend"]
     assert ascend.platforms == ("linux/arm64",)
     assert ascend.variants[0].base_digest is None
@@ -81,6 +81,12 @@ def test_real_repository_contracts() -> None:
     assert not {"DEFAULT_UID", "DEFAULT_GID", "DEFAULT_GROUPS"} & set(
         ascend.variants[0].build_args
     )
+    peft = repo.families["ascend-peft"]
+    assert peft.platforms == ("linux/arm64",)
+    dependency = peft.variants[0].dependencies[0]
+    assert dependency.key == ascend.variants[0].key
+    assert dependency.context == "ascend_base"
+    assert all(test.policy == "required" for test in peft.variants[0].tests)
     plan = repo.make_plan(repo.variants)
     workers = plan["build_matrix"]["include"]
     assert len(workers) == 3
@@ -93,7 +99,7 @@ def test_real_repository_contracts() -> None:
             )
         }
         assert names in (
-            {"luciole-ascend"},
+            {"luciole-ascend", "ascend-peft"},
             {"luciole-cuda-base", "luciole-cuda-dev", "luciole-cuda-runtime"},
         )
     common = "vendor/image-kit/assets/python-dev-requirements.txt"
@@ -103,7 +109,19 @@ def test_real_repository_contracts() -> None:
         for key in repo.affected(
             ["vendor/image-kit/scripts/python/ascend-pip-packages.sh"]
         )
-    } == {"luciole-ascend"}
+    } == {"luciole-ascend", "ascend-peft"}
+    assert {key[0] for key in repo.affected(["src/ascend-peft/requirements.txt"])} == {
+        "ascend-peft"
+    }
+    assert {key[0] for key in repo.affected(["src/luciole-ascend/Dockerfile"])} == {
+        "luciole-ascend",
+        "ascend-peft",
+    }
+    plan = repo.make_plan(repo.select(family="ascend-peft"))
+    assert [(item["name"], item["publish"]) for item in plan["targets"]] == [
+        ("luciole-ascend", False),
+        ("ascend-peft", True),
+    ]
     plan = repo.make_plan(repo.select(family="luciole-cuda-dev"))
     assert [(item["name"], item["publish"]) for item in plan["targets"]] == [
         ("luciole-cuda-base", False),

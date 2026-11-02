@@ -27,7 +27,6 @@ done
 assert_cmd_contains "CMake 4.3.2" "cmake version 4.3.2" cmake --version
 assert_cmd "fzf installed" test -x "${HOME}/.fzf/bin/fzf"
 assert_cmd "Python package check" ascend-pip-check
-assert_cmd "Graphviz and torchview" python3 -c 'import graphviz, torchview; graphviz.Digraph().pipe(format="svg")'
 assert_cmd "vendor Python and TorchNPU metadata" python3 -c '
 from importlib.metadata import version
 from pathlib import Path

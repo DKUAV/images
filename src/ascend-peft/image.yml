@@ -1,0 +1,32 @@
+schema_version: 2
+name: ascend-peft
+description: ARM64 Ascend PEFT and model visualization environment derived from luciole-ascend.
+dockerfile: src/ascend-peft/Dockerfile
+context: .
+platforms:
+- linux/arm64
+inputs:
+- src/ascend-peft/requirements.txt
+- vendor/image-kit/scripts/python/ascend-python-packages.sh
+- vendor/image-kit/scripts/system/finalize-mirror.sh
+publish: true
+variants:
+- id: 2.14.0-cann9.2.0-peft-910b-ubuntu22.04-py3.12
+  base:
+    target: luciole-ascend/2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12
+    context: ascend_base
+  build_args: {}
+  tests:
+  - library: src/_tests/_lib.sh
+    script: src/_tests/smoke-ascend.sh
+    inputs:
+    - src/_tests/_lib.sh
+    - src/_tests/npu-ascend.sh
+    policy: required
+    entrypoint: bash
+  - library: src/_tests/_lib.sh
+    script: src/_tests/smoke-ascend-peft.sh
+    inputs:
+    - src/_tests/_lib.sh
+    policy: required
+    entrypoint: bash

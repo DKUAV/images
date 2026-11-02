@@ -6,14 +6,12 @@ context: .
 platforms:
 - linux/arm64
 inputs:
-- src/luciole-ascend/requirements.txt
 - src/_scripts/dev/luciole-dev-tools.sh
 - vendor/image-kit/scripts/system/system.sh
 - vendor/image-kit/scripts/python/python-install.sh
 - vendor/image-kit/assets/ascend-pip-check.sh
 - vendor/image-kit/assets/python-dev-requirements.txt
 - vendor/image-kit/scripts/python/ascend-pip-packages.sh
-- vendor/image-kit/scripts/python/ascend-python-packages.sh
 - vendor/image-kit/scripts/dev/dev-tools.sh
 - vendor/image-kit/scripts/dev/cmake.sh
 - vendor/image-kit/scripts/system/user.sh

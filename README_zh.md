@@ -12,6 +12,7 @@ graph TD
   B --> D["luciole-cuda-dev"]
   B --> R["luciole-cuda-runtime"]
   A["Ascend TorchNPU 2.14.0"] --> NPU["luciole-ascend"]
+  NPU --> PEFT["ascend-peft"]
 ```
 
 | 镜像 | 内容 | 平台 | 烟测策略 |
@@ -20,6 +21,7 @@ graph TD
 | [luciole-cuda-dev](src/luciole-cuda-dev/README_zh.md) | Base + ROS 2 Jazzy、LLVM 21、开发 shell、预缓存 pre-commit hooks | amd64 + arm64 | 必须通过 |
 | [luciole-cuda-runtime](src/luciole-cuda-runtime/README_zh.md) | Base + ROS 2 Jazzy；继承系统开发工具与 CMake | amd64 + arm64 | 必须通过 |
 | [luciole-ascend](src/luciole-ascend/README_zh.md) | 昇腾 910B TorchNPU、CANN 和 ARM64 开发工具 | arm64 | 必须通过 |
+| [ascend-peft](src/ascend-peft/README_zh.md) | Ascend 基础镜像 + PEFT 依赖及 Graphviz/torchview 模型可视化 | arm64 | 必须通过 |
 
 CUDA base 和昇腾镜像保持上游软件源。CUDA dev/runtime 在安装完所有软件包后，将持久化的 apt 和 pip 源切换到 Aliyun。Runtime 继承 base 的工具集，并非精简 CUDA runtime 镜像。昇腾基础镜像使用版本标签但不固定 digest；NPU 硬件检查需在兼容宿主机单独运行。
 
