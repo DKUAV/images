@@ -6,7 +6,7 @@
 
 镜像通过本镜像的 [requirements.txt](requirements.txt) 添加 `accelerate`、`huggingface-hub`、`peft`、`transformers`、`torchvision`、`graphviz>=0.20` 和 `torchview>=0.2.7`。
 
-TorchVision 使用官方 ARM64 CPU wheel `0.29.2+cpu`，通过 URL 和 SHA256 固定。PyPI 的 `0.29.2` ARM64 wheel 链接了父镜像 CPU Torch/TorchNPU 栈中不存在的 CUDA 库。CPU wheel 支持 Torch 2.14.0，并提供冒烟测试检查的 CPU NMS 算子；这不代表已验证 NPU NMS 支持。
+TorchVision 固定为 `0.29.2+cpu`。requirements 文件通过 `--extra-index-url` 添加 `https://download.pytorch.org/whl/cpu`，保留默认 PyPI 索引，并通过明确的 `+cpu` 版本选择 CPU wheel。附加索引作用于整次安装，父镜像的软件包约束仍然生效。PyPI 的 `0.29.2` ARM64 wheel 链接了父镜像 CPU Torch/TorchNPU 栈中不存在的 CUDA 库。CPU wheel 支持 Torch 2.14.0，并提供冒烟测试检查的 CPU NMS 算子；这不代表已验证 NPU NMS 支持。
 
 共享 Ascend 应用安装器依据父镜像记录的 `/opt/image-python/base-constraints.txt` 解析依赖，并运行 `ascend-pip-check`。依赖不兼容时构建失败，不会替换父镜像中受约束的 Torch/TorchNPU 包。包元数据检查沿用父镜像精确匹配的已知厂商例外，不代表 NPU 训练兼容性已经验证。镜像保持上游软件源。
 

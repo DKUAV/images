@@ -6,7 +6,7 @@ This ARM64 image derives from [luciole-ascend](../luciole-ascend/README.md) and 
 
 The image adds `accelerate`, `huggingface-hub`, `peft`, `transformers`, `torchvision`, `graphviz>=0.20` and `torchview>=0.2.7` through image-local [requirements.txt](requirements.txt).
 
-TorchVision uses the official ARM64 CPU wheel `0.29.2+cpu`, pinned by URL and SHA256. The PyPI `0.29.2` ARM64 wheel links CUDA libraries that are absent from the parent's CPU Torch/TorchNPU stack. The CPU wheel supports Torch 2.14.0 and provides the CPU NMS operator checked by smoke tests; it does not establish NPU NMS support.
+TorchVision is pinned to `0.29.2+cpu`. The requirements file adds `https://download.pytorch.org/whl/cpu` with `--extra-index-url`, keeping the default PyPI index available; the explicit `+cpu` version selects the CPU wheel. The extra index applies to the entire installation, while the parent's package constraints remain enforced. The PyPI `0.29.2` ARM64 wheel links CUDA libraries that are absent from the parent's CPU Torch/TorchNPU stack. The CPU wheel supports Torch 2.14.0 and provides the CPU NMS operator checked by smoke tests; it does not establish NPU NMS support.
 
 The shared Ascend application installer resolves these packages against `/opt/image-python/base-constraints.txt` recorded by the parent and runs `ascend-pip-check`. An incompatible dependency resolution fails the build instead of replacing the parent's constrained Torch/TorchNPU packages. Package metadata checks retain the parent's exact known vendor exceptions; they do not establish NPU training compatibility. The image keeps upstream package sources.
 

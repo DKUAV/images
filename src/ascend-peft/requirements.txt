@@ -1,10 +1,12 @@
 # Resolve application packages within the parent image's vendor constraints.
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 accelerate
 huggingface-hub
 peft
 transformers
 # The PyPI ARM64 wheel links CUDA libraries absent from the vendor CPU Torch stack.
-torchvision @ https://download-r2.pytorch.org/whl/cpu/torchvision-0.29.2%2Bcpu-py3-none-manylinux_2_28_aarch64.whl#sha256=0be2f85933012cb487f844c7483665191653ee8684da89d6d0e34fd63c3a0a88
+torchvision==0.29.2+cpu
 graphviz>=0.20
 torchview>=0.2.7
 torchmetrics
