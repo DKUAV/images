@@ -26,6 +26,77 @@ for package in ("accelerate", "huggingface-hub", "peft", "transformers", "torchv
     print(f"{package}=={version(package)}")
 '
 
+header "TorchVision CPU operators"
+assert_import "TorchVision imports" torchvision
+assert_cmd "TorchVision CPU NMS" python3 -c '
+import torch
+from torchvision.ops import nms
+
+boxes = torch.tensor([[0., 0., 10., 10.], [1., 1., 9., 9.], [20., 20., 30., 30.]])
+scores = torch.tensor([0.9, 0.8, 0.7])
+assert nms(boxes, scores, 0.5).tolist() == [0, 2]
+'
+
+header "Python packaging and editable installs"
+assert_cmd "pip uses the vendor Python environment" python3 -c '
+import subprocess
+import sys
+
+expected = subprocess.check_output([sys.executable, "-m", "pip", "--version"], text=True)
+actual = subprocess.check_output(["pip", "--version"], text=True)
+print(f"Python: {sys.executable}\npip: {actual.strip()}", flush=True)
+assert actual == expected, f"pip environment differs: {actual!r} != {expected!r}"
+'
+assert_cmd "setuptools metadata and imported version agree" python3 -c '
+from importlib.metadata import version
+import setuptools
+
+metadata_version = version("setuptools")
+print(f"setuptools metadata: {metadata_version}")
+print(f"setuptools import: {setuptools.__version__} from {setuptools.__file__}")
+assert setuptools.__version__ == metadata_version
+'
+for build_mode in isolated no-build-isolation; do
+    assert_cmd "setuptools editable install (${build_mode})" python3 - "${build_mode}" <<'PYTHON'
+from pathlib import Path
+import subprocess
+import sys
+from tempfile import TemporaryDirectory
+
+with TemporaryDirectory(prefix="ascend-editable-smoke-") as temporary:
+    root = Path(temporary)
+    project = root / "project"
+    project.mkdir()
+    (project / "pyproject.toml").write_text(
+        '[build-system]\nrequires = ["setuptools>=64", "wheel"]\n'
+        'build-backend = "setuptools.build_meta"\n\n'
+        '[project]\nname = "ascend-editable-smoke"\nversion = "0.0.0"\n'
+        '[tool.setuptools]\npy-modules = ["ascend_editable_smoke"]\n',
+        encoding="utf-8",
+    )
+    module = project / "ascend_editable_smoke.py"
+    module.write_text("VALUE = 1\n", encoding="utf-8")
+    command = [sys.executable, "-m", "pip", "install", "--no-deps", "--editable", "."]
+    if sys.argv[1] == "no-build-isolation":
+        command.append("--no-build-isolation")
+    try:
+        subprocess.run(command, cwd=project, check=True)
+        for value in (1, 200):
+            module.write_text(f"VALUE = {value}\n", encoding="utf-8")
+            subprocess.run(
+                [sys.executable, "-c", f"import ascend_editable_smoke as m; assert m.VALUE == {value}"],
+                cwd=root,
+                check=True,
+            )
+    finally:
+        subprocess.run(
+            [sys.executable, "-m", "pip", "uninstall", "--yes", "ascend-editable-smoke"],
+            cwd=root,
+            check=True,
+        )
+PYTHON
+done
+
 header "Model visualization"
 assert_cmd "Graphviz system tool" dot -V
 assert_cmd "Graphviz renders SVG" python3 -c 'import graphviz; assert b"<svg" in graphviz.Digraph().pipe(format="svg")'
