@@ -113,7 +113,7 @@ See [build architecture](docs/build-architecture.md), [manifest reference](docs/
 3. Keep independent scripts in adjacent `COPY + RUN` pairs. Add the smoke script under `src/_tests` and declare the shared helper as an input.
 4. Run `python -m image_kit validate`, `python -m tools.check_repository`, `python -m pytest`, `python -m pytest vendor/image-kit/tests`, and native builds/tests for affected platforms.
 
-Current OpenCV replacement is disabled; existing OpenCV assertions remain in place and may expose upstream differences. Historical [OpenCV analysis](docs/opencv-status.md) and [linker diagnostics](docs/ld-cache-notes.md) retain their original evidence; they do not certify current image behavior.
+Current OpenCV replacement is disabled. The CUDA base smoke test requires CMake to resolve an apt-owned OpenCV configuration, then compiles and runs a C++ probe to check matching CMake, header and runtime versions. It does not pin a historical Ubuntu OpenCV version. Historical [OpenCV analysis](docs/opencv-status.md) and [linker diagnostics](docs/ld-cache-notes.md) retain their original evidence; they do not certify current image behavior.
 
 ## Shared component
 
@@ -129,4 +129,4 @@ This repository uses image-kit's unified v2 schema and build engine, retaining d
 
 Publication uses YAML `name` independently of the directory and explicit variant channels. Verified build tags are `<variant>-<sha12>-<run-id>-<attempt>`; formal `<variant>-vMAJOR.MINOR.PATCH` tags promote an existing successful main publication receipt. All required native workers must pass before public tags advance. Historical tags remain available.
 
-CI assigns one worker to each independent dependency component and native platform. Each worker retains internal parents, passes the generated `--component`, and uses `worker_id` in artifact names. Final merge checks the complete original plan across all workers. Collection resolves the published native manifest by immutable registry digest and compares its config digest with the loaded smoke-test image; it does not require optional Buildx config-digest metadata or download image layers.
+CI assigns one worker to each independent dependency component and native platform. Each worker retains internal parents, passes the generated `--component`, and uses `worker_id` in artifact names. Final merge checks the complete original plan across all workers. After digest export, `test --metadata` pulls the immutable published images and repeats smoke tests, so a second Bake solve cannot publish untested content through public tags. This may download additional image layers. Collection then resolves the published native manifest and compares its config digest with the loaded smoke-test image; it does not require optional Buildx config-digest metadata.

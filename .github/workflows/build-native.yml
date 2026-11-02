@@ -118,6 +118,12 @@ jobs:
           const fs = require('node:fs');
           fs.writeFileSync('build-metadata.json', ${{ toJSON(steps.publish.outputs.metadata) }});
           WRITE_BUILD_METADATA
+          # Publication can re-solve layers. Test the immutable exported images
+          # before collecting digests or allowing public tags to advance.
+          python -m image_kit test --plan build-plan.json \
+            --owner "$IMAGE_OWNER" --revision "$IMAGE_REVISION" --build-id "$IMAGE_BUILD_ID" \
+            --repository "$IMAGE_REPOSITORY" --platform "$IMAGE_PLATFORM" --component "$IMAGE_COMPONENT" \
+            --metadata build-metadata.json
           python -m image_kit collect --plan build-plan.json \
             --owner "$IMAGE_OWNER" --revision "$IMAGE_REVISION" --build-id "$IMAGE_BUILD_ID" \
             --repository "$IMAGE_REPOSITORY" --platform "$IMAGE_PLATFORM" --component "$IMAGE_COMPONENT" --metadata build-metadata.json \

@@ -113,7 +113,7 @@ graph LR
 3. 独立脚本使用相邻的 `COPY + RUN`。烟测脚本放在 `src/_tests`，将共享 helper 声明为输入。
 4. 运行 `python -m image_kit validate`、`python -m tools.check_repository`、`python -m pytest`、`python -m pytest vendor/image-kit/tests`，以及受影响平台的原生构建与烟测。
 
-当前 OpenCV 替换未启用；已有 OpenCV 断言继续保留，可能暴露上游差异。历史 [OpenCV 分析](docs/opencv-status.md)与[链接器诊断](docs/ld-cache-notes.md)保留原始证据，不代表当前镜像行为已被验证。
+当前 OpenCV 替换未启用。CUDA base 烟测要求 CMake 解析到 apt 包所属的 OpenCV 配置，再编译、运行 C++ 探针，检查 CMake、头文件与运行库版本一致；不固定历史 Ubuntu OpenCV 版本。历史 [OpenCV 分析](docs/opencv-status.md)与[链接器诊断](docs/ld-cache-notes.md)保留原始证据，不代表当前镜像行为已被验证。
 
 ## 共享组件
 
@@ -129,4 +129,4 @@ git submodule update --init --recursive
 
 发布名称由 YAML `name` 决定，不要求与目录名相同，并使用显式 variant 通道。已验证构建标签为 `<variant>-<sha12>-<run-id>-<attempt>`；正式 `<variant>-vMAJOR.MINOR.PATCH` 标签从成功的 main 发布收据提升。所有必需原生任务通过后才更新公开标签，历史制品保留。
 
-CI 按独立依赖组件和原生平台分配 worker。每个 worker 保留内部父镜像，传入生成的 `--component`，并在产物名称中使用 `worker_id`。最终合并仍核对所有 worker 覆盖的完整原始计划。收集阶段按 registry 不可变 digest 读取已发布的原生 manifest，将配置摘要与本地烟测镜像比较；不依赖 Buildx 可选的配置摘要字段，也不下载镜像层。
+CI 按独立依赖组件和原生平台分配 worker。每个 worker 保留内部父镜像，传入生成的 `--component`，并在产物名称中使用 `worker_id`。最终合并仍核对所有 worker 覆盖的完整原始计划。按 digest 导出后，`test --metadata` 拉取不可变的已推送镜像并重新烟测，避免第二次 Bake 求解产生的未测试内容进入公开标签；这可能额外下载镜像层。收集阶段再读取原生 manifest，将配置摘要与本地烟测镜像比较，不依赖 Buildx 可选的配置摘要字段。

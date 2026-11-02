@@ -45,7 +45,13 @@ container startup, missing scripts and Docker errors remain fatal. Hardware chec
 
 PRs have read-only contents access and never log in, push images or export caches. Main and
 manual publications first complete validation and native smoke tests, push selected targets
-by digest, and collect file-loaded Bake metadata. Full provenance is transferred through
+by digest, retest the immutable published images, and collect file-loaded Bake metadata.
+`test --metadata build-metadata.json` validates all selected digests, pulls them for the native
+platform and tags them under the local smoke references before repeating the worker's smoke
+tests. Unpublished ancestors retain their original local images. A second Bake solve can
+re-execute installation layers, so its output must pass smoke tests even after the load graph
+passed. Pulling these exports can require additional disk space and network transfer.
+Full provenance is transferred through
 `toJSON` inside a quoted Node heredoc, never an environment variable or command argument.
 Build ID is `<run-id>-<attempt>` and is passed unchanged through every pipeline stage.
 

@@ -96,7 +96,7 @@ SSH follows the explicitly selected `DEFAULT_USER`: selecting `root` permits key
 
 ## Known upstream issues
 
-`opencv.sh` is currently disabled. Apt OpenCV is installed by dev-tools, but the Dockerfile does not quarantine NVIDIA's installation or guarantee that `find_package(OpenCV)` resolves to apt. Python packages are installed separately. The existing smoke assertions are preserved and may report differences.
+`opencv.sh` is currently disabled. Apt OpenCV is installed by dev-tools, but the Dockerfile does not quarantine NVIDIA's installation or guarantee that `find_package(OpenCV)` resolves to apt. Python packages are installed separately. The advisory smoke test requires an apt-owned CMake configuration and compiles, links and runs a C++ probe, checking that CMake, headers and the runtime report the same version. It accepts the installed apt version rather than requiring the historical 4.5.x release. Python `cv2` import is checked separately.
 
 Historical [OpenCV analysis](../../docs/opencv-status.md) and [linker diagnostics](../../docs/ld-cache-notes.md) contain evidence from specific older builds. This base Dockerfile currently has no HPC-X fixup step. The manual diagnostic workflow remains available; this build migration does not resolve upstream compatibility issues.
 

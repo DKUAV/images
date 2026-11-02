@@ -162,13 +162,16 @@ def test_repository_wiring(tmp_path: Path, change: str, message: str) -> None:
         ImageRepository(tmp_path).load()
 
 
-def test_large_workflow_metadata(tmp_path: Path) -> None:
-    """Transfer real workflow provenance through stdin without shell interpolation.
+@pytest.mark.parametrize("smoke_exit", [0, 2])
+def test_large_workflow_metadata(tmp_path: Path, smoke_exit: int) -> None:
+    """Transfer provenance safely and require exported smoke success before collection.
 
     Parameters
     ----------
     tmp_path:
         Output directory for workflow artifacts.
+    smoke_exit:
+        Simulated exit status from testing the immutable published images.
     """
     bash = shutil.which("bash")
     if bash is None or shutil.which("node") is None:
@@ -190,17 +193,25 @@ def test_large_workflow_metadata(tmp_path: Path) -> None:
     }
     metadata = json.dumps(payload)
     script = (
-        step["run"]
-        .split("python -m image_kit collect", 1)[0]
-        .replace("${{ toJSON(steps.publish.outputs.metadata) }}", json.dumps(metadata))
+        "python() {\n"
+        '  printf "%s\\n" "$3" >> commands.log\n'
+        f'  if [[ "$3" == test ]]; then return {smoke_exit}; fi\n'
+        "  return 0\n}\n"
+        + step["run"].replace(
+            "${{ toJSON(steps.publish.outputs.metadata) }}", json.dumps(metadata)
+        )
     )
-    subprocess.run(
+    result = subprocess.run(
         [bash, "--noprofile", "--norc", "-e"],
         input=script,
         text=True,
         cwd=tmp_path,
         capture_output=True,
-        check=True,
+        check=False,
+    )
+    assert result.returncode == smoke_exit, result.stderr
+    assert (tmp_path / "commands.log").read_text().splitlines() == (
+        ["test", "collect"] if smoke_exit == 0 else ["test"]
     )
     assert (tmp_path / "build-metadata.json").read_text() == metadata
     assert not (tmp_path / "injected").exists()

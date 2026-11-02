@@ -62,6 +62,76 @@ def run_script(
 
 
 @pytest.mark.parametrize(
+    "version,mode",
+    [
+        ("4.5.4", "ok"),
+        ("4.6.0", "ok"),
+        ("4.7.0", "foreign-config"),
+        ("4.6.0", "configure-failure"),
+        ("4.6.0", "build-failure"),
+        ("4.6.0", "runtime-failure"),
+        ("4.6.0", "version-mismatch"),
+    ],
+)
+def test_opencv_smoke(bash: str, tmp_path: Path, version: str, mode: str) -> None:
+    """Accept apt versions while rejecting configuration, link and runtime failures.
+
+    Parameters
+    ----------
+    bash:
+        Bash executable.
+    tmp_path:
+        Isolated probe directory.
+    version:
+        Version reported by CMake.
+    mode:
+        Simulated OpenCV integration outcome.
+    """
+    smoke = (ROOT / "src/_tests/smoke-base.sh").read_text(encoding="utf-8")
+    section = smoke.split('    header "OpenCV — C++', 1)[1]
+    section = (
+        '    header "OpenCV — C++' + section.split('    header "Mirror policy', 1)[0]
+    )
+    preamble = r"""
+export TMPDIR="$1"; mode="$2"; version="$3"; shift 3
+failures=0
+header() { :; }
+ok() { echo "$1"; }
+fail() { echo "$1"; failures=$((failures + 1)); }
+dpkg-query() {
+    [[ "$mode" != foreign-config ]] || return 1
+    printf 'libopencv-dev:amd64: %s\n' "$2"
+}
+cmake() {
+    if [[ "$1" == --build ]]; then
+        [[ "$mode" != build-failure ]] || return 1
+        printf '#!/bin/bash\nprintf "%%s\\n" "%s"\nexit %s\n' \
+            "$([[ "$mode" == version-mismatch ]] && echo 0.0.0 || echo "$version")" \
+            "$([[ "$mode" == runtime-failure ]] && echo 1 || echo 0)" \
+            > "$2/opencv_probe"
+        chmod +x "$2/opencv_probe"
+    else
+        [[ "$mode" != configure-failure ]] || return 1
+        mkdir -p "$4"
+        printf -- '-- OPENCV_VERSION=%s\n' "$version"
+        echo '-- OPENCV_CONFIG=/usr/lib/cmake/opencv4/OpenCVConfig.cmake'
+    fi
+}
+probe_main() {
+"""
+    result = run_script(
+        bash,
+        preamble + section + '\n}\nprobe_main\nexit "$failures"\n',
+        [tmp_path.as_posix(), mode, version],
+    )
+    assert result.returncode == (0 if mode == "ok" else 1), result.stderr
+    if mode == "ok":
+        assert f"{version} (apt config, headers and runtime agree)" in result.stdout
+    else:
+        assert "apt config, headers and runtime agree" not in result.stdout
+
+
+@pytest.mark.parametrize(
     "relative,option",
     [
         ("system/user.sh", "--groups"),

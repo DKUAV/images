@@ -23,6 +23,7 @@
 - Keep common Python development tools in `vendor/image-kit/assets/python-dev-requirements.txt`. CUDA and Ascend consume that file through separate pip installers because CUDA extras and Ascend vendor constraints differ.
 - Preserve capability order in CUDA base: system, dev-tools, WSLg, pip, CMake, networking libraries, user and SSH. Python is supplied by NVIDIA. Ascend is a separate ARM64 image built from the vendor TorchNPU base; preserve vendor Python and CANN.
 - `opencv.sh` is currently disabled. Do not claim the NVIDIA OpenCV installation is quarantined or promise a particular apt OpenCV version without verifying a built image.
+- CUDA base OpenCV smoke verifies an apt-owned CMake configuration and compiles/runs a probe with matching CMake, header and runtime versions; do not hardcode a historical Ubuntu package version. Keep Python cv2 import separate and retain advisory policy.
 - ROS 2 is added in both final images. LLVM, devshell and cached pre-commit hooks are dev-only.
 - Run devshell/precommit as the target user, then return to root for mirror configuration and cleanup. Select correct binaries for amd64/arm64.
 - Run `finalize-mirror.sh` as root after all apt/pip installation. CUDA dev/runtime select Aliyun; Ascend selects upstream.
@@ -42,6 +43,7 @@
 - Plan changes through actual copied inputs and smoke dependencies, then propagate to downstream consumers. README and Compose changes do not trigger image builds; tooling/schema/workflow changes do.
 - PR jobs have contents:read only, never log in to GHCR, and never push images or caches. Publishing jobs have contents:read and packages:write.
 - The reusable native workflow builds, loads and tests a same-commit graph before pushing selected images by digest. All native workers must succeed before merging public manifests.
+- After digest export, run `test --metadata` to pull the immutable published images and repeat the native smoke tests before `collect`. Publication can re-solve layers; cache reuse does not prove that the export matches the first tested image. Retain the collection config-digest comparison.
 - Native workers must free unused hosted-runner SDKs and preloaded Docker images before creating Buildx, retain host Python/Node/Docker, limit BuildKit solver parallelism to one, and report disk usage even on failure. Account for both BuildKit cache and locally loaded smoke-test images when changing the graph.
 - Every smoke script lives in `src/_tests`, uses `_lib.sh`, and explicitly declares `variants[].tests[].library`, `variants[].tests[].script` and its inputs in the manifest. CUDA base is advisory; CUDA dev/runtime and Ascend are required. Ascend hardware checks are separate and must run on a compatible NPU host. Missing scripts/build/container failures are always fatal. Pass SMOKE_HARD_GATE explicitly.
 - Preserve the separate manual linker-diagnostic workflow and historical evidence; existing upstream issues are outside this migration.

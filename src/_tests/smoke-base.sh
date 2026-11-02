@@ -6,7 +6,7 @@
 #   - Python entrypoint, PyTorch importable
 #   - pip packages installed by cuda-pip-packages.sh import cleanly
 #   - OpenCV dual setup:
-#       * C++ find_package(OpenCV) resolves to apt 4.5.4 (NOT NVIDIA's 4.7.0)
+#       * C++ find_package(OpenCV) resolves to an apt-owned config and links cleanly
 #       * Python cv2 importable (pip wheel)
 #   - Aliyun mirror is NOT applied in base (it's a Tier-2-final concern)
 #
@@ -61,9 +61,9 @@ base_main() {
     header "OpenCV — Python (pip opencv-contrib-python wheel)"
     assert_import "cv2 importable" cv2
 
-    header "OpenCV — C++ find_package(OpenCV) resolves to apt 4.5.4, not NVIDIA 4.7.0"
-    # Minimal CMake probe in a temp project: require OpenCV and print its version.
-    # This is exactly the failure mode the opencv.sh quarantine defends against.
+    header "OpenCV — C++ apt configuration, compilation and runtime"
+    # Apt versions differ across Ubuntu releases. Verify package ownership and
+    # matching CMake/header/runtime versions instead of a historical version.
     local probe_dir
     probe_dir=$(mktemp -d)
     cat > "$probe_dir/CMakeLists.txt" <<'EOF'
@@ -71,22 +71,46 @@ cmake_minimum_required(VERSION 3.16)
 project(opencv_probe LANGUAGES CXX)
 find_package(OpenCV REQUIRED)
 message(STATUS "OPENCV_VERSION=${OpenCV_VERSION}")
+message(STATUS "OPENCV_CONFIG=${OpenCV_CONFIG}")
+add_executable(opencv_probe main.cpp)
+target_include_directories(opencv_probe PRIVATE ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(opencv_probe PRIVATE ${OpenCV_LIBS})
 EOF
-    if (cd "$probe_dir" && cmake -S . -B build >/tmp/cmake_probe.log 2>&1); then
-        local ver
-        ver=$(grep -oP 'OPENCV_VERSION=\K[0-9.]+' /tmp/cmake_probe.log || true)
-        if [ -n "$ver" ] && [[ "$ver" == 4.5.* ]]; then
-            ok "find_package(OpenCV) → ${ver} (apt 4.5.x, correct)"
-        elif [ -n "$ver" ]; then
-            fail "find_package(OpenCV) → ${ver}, expected 4.5.x (NVIDIA 4.7.0 leak?)" \
-                 "see opencv.sh / docs/opencv-status.md"
-        else
+    cat > "$probe_dir/main.cpp" <<'EOF'
+#include <iostream>
+#include <string>
+#include <opencv2/core.hpp>
+
+/** Report the runtime version and require matching installed headers. */
+int main() {
+    const std::string runtimeVersion = cv::getVersionString();
+    std::cout << runtimeVersion << '\n';
+    return runtimeVersion == CV_VERSION ? 0 : 1;
+}
+EOF
+    if cmake -S "$probe_dir" -B "$probe_dir/build" >"$probe_dir/configure.log" 2>&1; then
+        local ver config owner runtime_ver
+        ver=$(sed -n 's/^-- OPENCV_VERSION=//p' "$probe_dir/configure.log")
+        config=$(sed -n 's/^-- OPENCV_CONFIG=//p' "$probe_dir/configure.log")
+        owner=$(dpkg-query -S "$config" 2>/dev/null || true)
+        if [ -z "$ver" ]; then
             fail "find_package(OpenCV) succeeded but version not reported"
-            sed 's/^/       /' /tmp/cmake_probe.log >&2 || true
+        elif [[ "$owner" != libopencv-dev:* ]]; then
+            fail "find_package(OpenCV) → ${ver}, config is not owned by apt libopencv-dev" \
+                 "resolved config: ${config}"
+        elif ! cmake --build "$probe_dir/build" >"$probe_dir/build.log" 2>&1; then
+            fail "OpenCV ${ver} C++ compile/link failed"
+            sed 's/^/       /' "$probe_dir/build.log" >&2 || true
+        elif runtime_ver=$("$probe_dir/build/opencv_probe" 2>"$probe_dir/runtime.log") \
+             && [ "$runtime_ver" = "$ver" ]; then
+            ok "find_package(OpenCV) → ${ver} (apt config, headers and runtime agree)"
+        else
+            fail "OpenCV ${ver} runtime failed or version mismatch: ${runtime_ver}"
+            sed 's/^/       /' "$probe_dir/runtime.log" >&2 || true
         fi
     else
         fail "find_package(OpenCV) FAILED"
-        sed 's/^/       /' /tmp/cmake_probe.log >&2 || true
+        sed 's/^/       /' "$probe_dir/configure.log" >&2 || true
     fi
     rm -rf "$probe_dir"
 

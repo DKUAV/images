@@ -96,7 +96,7 @@ SSH 使用显式选择的 `DEFAULT_USER`：选择 `root` 后，公钥模式默�
 
 ## 已知上游问题
 
-`opencv.sh` 当前未启用。Dev-tools 安装 apt OpenCV，但 Dockerfile 不隔离 NVIDIA 安装，也不保证 `find_package(OpenCV)` 解析到 apt。Python 包单独安装。已有烟测断言保留，可能报告差异。
+`opencv.sh` 当前未启用。Dev-tools 安装 apt OpenCV，但 Dockerfile 不隔离 NVIDIA 安装，也不保证 `find_package(OpenCV)` 解析到 apt。Python 包单独安装。Advisory 烟测要求 CMake 配置属于 apt 包，并编译、链接、运行 C++ 探针，检查 CMake、头文件与运行库报告相同版本。检查接受已安装的 apt 版本，不再要求历史 4.5.x 版本；Python `cv2` 导入单独检查。
 
 历史 [OpenCV 分析](../../docs/opencv-status.md)和[链接器诊断](../../docs/ld-cache-notes.md)包含特定旧构建的证据。当前 base Dockerfile 没有 HPC-X 修复步骤。手动诊断工作流继续保留，本次构建迁移不解决上游兼容问题。
 
