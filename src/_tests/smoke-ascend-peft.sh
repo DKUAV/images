@@ -57,7 +57,7 @@ print(f"setuptools metadata: {metadata_version}")
 print(f"setuptools import: {setuptools.__version__} from {setuptools.__file__}")
 assert setuptools.__version__ == metadata_version
 '
-for backend in setuptools hatch-vcs; do
+for backend in setuptools setuptools-scm hatch-vcs uv_build; do
     for build_mode in isolated no-build-isolation; do
         assert_cmd "${backend} editable install (${build_mode})" python3 - "${build_mode}" "${backend}" <<'PYTHON'
 from pathlib import Path
@@ -78,6 +78,21 @@ with TemporaryDirectory(prefix="ascend-editable-smoke-") as temporary:
             '[tool.hatch.version]\nsource = "vcs"\nfallback-version = "0.0.0"\n'
             '[tool.hatch.build.hooks.vcs]\nversion-file = "src/ascend_editable_smoke/_version.py"\n'
         )
+    elif sys.argv[2] == "setuptools-scm":
+        configuration = (
+            '[build-system]\nrequires = ["setuptools>=80", "setuptools-scm>=8"]\n'
+            'build-backend = "setuptools.build_meta"\n\n'
+            '[project]\nname = "ascend-editable-smoke"\ndynamic = ["version"]\n'
+            '[tool.setuptools.packages.find]\nwhere = ["src"]\n'
+            '[tool.setuptools_scm]\nfallback_version = "0.0.0"\n'
+            'version_file = "src/ascend_editable_smoke/_version.py"\n'
+        )
+    elif sys.argv[2] == "uv_build":
+        configuration = (
+            '[build-system]\nrequires = ["uv_build"]\n'
+            'build-backend = "uv_build"\n\n'
+            '[project]\nname = "ascend-editable-smoke"\nversion = "0.0.0"\n'
+        )
     else:
         configuration = (
             '[build-system]\nrequires = ["setuptools>=64", "wheel"]\n'
@@ -95,7 +110,7 @@ with TemporaryDirectory(prefix="ascend-editable-smoke-") as temporary:
         command.extend(["--no-build-isolation", "--no-index"])
     try:
         subprocess.run(command, cwd=project, check=True)
-        if sys.argv[2] == "hatch-vcs":
+        if sys.argv[2] in ("hatch-vcs", "setuptools-scm"):
             assert (package / "_version.py").is_file()
             subprocess.run(
                 [sys.executable, "-c", "from ascend_editable_smoke._version import __version__; from importlib.metadata import version; assert __version__ == version(\"ascend-editable-smoke\")"],

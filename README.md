@@ -25,7 +25,7 @@ graph TD
 
 The CUDA base and Ascend image keep upstream package sources. CUDA dev/runtime switch persisted apt and pip sources to Aliyun after all package installation. The runtime image inherits the base toolset; it is not a minimal CUDA runtime image. Ascend uses a tagged external base without a pinned digest; run its separate NPU check on a compatible host.
 
-CUDA and Ascend use the same Python development requirements for tools such as uv, ty and Ruff, plus setuptools, Hatchling, hatch-vcs and editables for Python builds and editable installs. Their pip installers retain CUDA-specific vision packages and Ascend vendor constraints separately.
+CUDA and Ascend use the same Python development requirements for tools such as uv, ty and Ruff, plus setuptools, setuptools-scm, Hatchling, hatch-vcs, editables and uv_build for Python builds and editable installs. Their pip installers retain CUDA-specific vision packages and Ascend vendor constraints separately.
 
 ## Use an image
 

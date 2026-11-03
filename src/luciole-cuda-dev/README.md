@@ -14,7 +14,7 @@ Main advances the explicit variant channel. Build tags include variant, SHA12 an
 | Category | Details |
 | --- | --- |
 | Base | [luciole-cuda-base](../luciole-cuda-base/README.md): PyTorch/CUDA, tools, pip packages, CMake, networking libraries and user |
-| Python build tools | Inherited setuptools, Hatchling, hatch-vcs and editables |
+| Python build tools | Inherited setuptools, setuptools-scm, Hatchling, hatch-vcs, editables and uv_build |
 | ROS 2 | Jazzy `ros-base`, colcon, rosdep and rosinstall-generator |
 | Mirrors | Aliyun apt/pip sources applied after all package installation; builds use upstream sources |
 | SSH / GUI | SSH server and WSLg dependencies inherited from base |

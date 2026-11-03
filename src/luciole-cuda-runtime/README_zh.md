@@ -14,7 +14,7 @@ Main 更新显式 variant 通道。构建标签包含 variant、SHA12 和运行�
 | 类别 | 说明 |
 | --- | --- |
 | 基础 | [luciole-cuda-base](../luciole-cuda-base/README_zh.md)：PyTorch/CUDA、工具、pip 包、CMake、网络库与用户 |
-| Python 构建工具 | 继承 setuptools、Hatchling、hatch-vcs 和 editables |
+| Python 构建工具 | 继承 setuptools、setuptools-scm、Hatchling、hatch-vcs、editables 和 uv_build |
 | ROS 2 | Jazzy `ros-base`、colcon、rosdep 和 rosinstall-generator |
 | 软件源 | 所有软件安装完成后切换至 Aliyun apt/pip 源；构建过程使用上游源 |
 | SSH / GUI | 从 base 继承 SSH 服务端和 WSLg 依赖 |
