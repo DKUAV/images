@@ -22,7 +22,7 @@ for package in ("torch", "torch-npu"):
     expected = base_versions[package]
     actual = version(package)
     assert actual == expected, f"{package}: expected parent version {expected}, got {actual}"
-for package in ("accelerate", "huggingface-hub", "peft", "transformers", "torchvision", "graphviz", "torchview"):
+for package in ("accelerate", "huggingface-hub", "peft", "transformers", "torchvision", "graphviz", "torchview", "openai"):
     print(f"{package}=={version(package)}")
 '
 
@@ -38,6 +38,7 @@ assert nms(boxes, scores, 0.5).tolist() == [0, 2]
 '
 
 header "Python packaging and editable installs"
+assert_import "OpenAI SDK imports" openai
 assert_cmd "pip uses the vendor Python environment" python3 -c '
 import subprocess
 import sys
@@ -56,8 +57,9 @@ print(f"setuptools metadata: {metadata_version}")
 print(f"setuptools import: {setuptools.__version__} from {setuptools.__file__}")
 assert setuptools.__version__ == metadata_version
 '
-for build_mode in isolated no-build-isolation; do
-    assert_cmd "setuptools editable install (${build_mode})" python3 - "${build_mode}" <<'PYTHON'
+for backend in setuptools hatch-vcs; do
+    for build_mode in isolated no-build-isolation; do
+        assert_cmd "${backend} editable install (${build_mode})" python3 - "${build_mode}" "${backend}" <<'PYTHON'
 from pathlib import Path
 import subprocess
 import sys
@@ -67,20 +69,39 @@ with TemporaryDirectory(prefix="ascend-editable-smoke-") as temporary:
     root = Path(temporary)
     project = root / "project"
     project.mkdir()
-    (project / "pyproject.toml").write_text(
-        '[build-system]\nrequires = ["setuptools>=64", "wheel"]\n'
-        'build-backend = "setuptools.build_meta"\n\n'
-        '[project]\nname = "ascend-editable-smoke"\nversion = "0.0.0"\n'
-        '[tool.setuptools]\npy-modules = ["ascend_editable_smoke"]\n',
-        encoding="utf-8",
-    )
-    module = project / "ascend_editable_smoke.py"
+    if sys.argv[2] == "hatch-vcs":
+        configuration = (
+            '[build-system]\nrequires = ["hatchling", "hatch-vcs"]\n'
+            'build-backend = "hatchling.build"\n\n'
+            '[project]\nname = "ascend-editable-smoke"\ndynamic = ["version"]\n'
+            '[tool.hatch.build.targets.wheel]\npackages = ["src/ascend_editable_smoke"]\n'
+            '[tool.hatch.version]\nsource = "vcs"\nfallback-version = "0.0.0"\n'
+            '[tool.hatch.build.hooks.vcs]\nversion-file = "src/ascend_editable_smoke/_version.py"\n'
+        )
+    else:
+        configuration = (
+            '[build-system]\nrequires = ["setuptools>=64", "wheel"]\n'
+            'build-backend = "setuptools.build_meta"\n\n'
+            '[project]\nname = "ascend-editable-smoke"\nversion = "0.0.0"\n'
+            '[tool.setuptools.packages.find]\nwhere = ["src"]\n'
+        )
+    (project / "pyproject.toml").write_text(configuration, encoding="utf-8")
+    package = project / "src/ascend_editable_smoke"
+    package.mkdir(parents=True)
+    module = package / "__init__.py"
     module.write_text("VALUE = 1\n", encoding="utf-8")
     command = [sys.executable, "-m", "pip", "install", "--no-deps", "--editable", "."]
     if sys.argv[1] == "no-build-isolation":
-        command.append("--no-build-isolation")
+        command.extend(["--no-build-isolation", "--no-index"])
     try:
         subprocess.run(command, cwd=project, check=True)
+        if sys.argv[2] == "hatch-vcs":
+            assert (package / "_version.py").is_file()
+            subprocess.run(
+                [sys.executable, "-c", "from ascend_editable_smoke._version import __version__; from importlib.metadata import version; assert __version__ == version(\"ascend-editable-smoke\")"],
+                cwd=root,
+                check=True,
+            )
         for value in (1, 200):
             module.write_text(f"VALUE = {value}\n", encoding="utf-8")
             subprocess.run(
@@ -95,6 +116,7 @@ with TemporaryDirectory(prefix="ascend-editable-smoke-") as temporary:
             check=True,
         )
 PYTHON
+    done
 done
 
 header "Model visualization"

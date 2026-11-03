@@ -57,6 +57,7 @@ base_main() {
     assert_import "numpy importable"  numpy
     assert_import "pandas importable" pandas
     assert_import "torch importable"  torch
+    assert_cmd "Python build backends import" python3 -c 'import hatchling.build, hatch_vcs, editables'
 
     header "OpenCV — Python (pip opencv-contrib-python wheel)"
     assert_import "cv2 importable" cv2
