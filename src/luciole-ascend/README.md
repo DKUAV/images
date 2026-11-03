@@ -4,7 +4,7 @@ This ARM64 image builds on `ascendai/torch-npu:2.14.0-cann9.2.0-910b-ubuntu22.04
 
 ## Contents and build
 
-The vendor base supplies Python 3.12, PyTorch 2.14, TorchNPU 2.14 and CANN. Shared scripts install system tools, CMake 4.3.2, SSH and the development shell. The image retains the vendor root account and uses `/root` as HOME so root-owned CANN scripts remain readable. Both image families install the shared `vendor/image-kit/assets/python-dev-requirements.txt`, including uv, ty and Ruff, through separate pip scripts. Ascend's script preserves the vendor Python environment with constraints generated from every preinstalled package and restores CANN in login shells and the entrypoint. CUDA-specific vision packages, ROS 2 and networking library steps are not included.
+The vendor base supplies Python 3.12, PyTorch 2.14, TorchNPU 2.14 and CANN. Shared scripts install system tools, CMake 4.3.2, SSH and the development shell. The image retains the vendor root account and uses `/root` as HOME so root-owned CANN scripts remain readable. Both image families install the shared `vendor/image-kit/assets/python-dev-requirements.txt`, including uv, ty, Ruff, setuptools, setuptools-scm, Hatchling, hatch-vcs, editables, uv_build, wheel and packaging, through separate pip scripts. Ascend's script preserves the vendor Python environment with constraints generated from every preinstalled package and restores CANN in login shells and the entrypoint. CUDA-specific vision packages, ROS 2 and networking library steps are not included.
 
 The shared developer tools include the Graphviz system executable. PEFT dependencies and the `graphviz` and `torchview` Python packages are installed in the derived [ascend-peft image](../ascend-peft/README.md).
 

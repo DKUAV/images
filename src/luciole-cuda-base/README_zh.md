@@ -15,7 +15,7 @@ Main 更新显式 variant 通道。构建标签包含 variant、SHA12 和运行�
 | --- | --- |
 | 基础 | `nvcr.io/nvidia/pytorch:26.06-py3`，Python、PyTorch 和 CUDA 由上游提供 |
 | 系统 / 构建 | vim、Git/LFS、tmux、ripgrep、fd、bat、ffmpeg、GCC、Ninja、GDB、CMake 4.3.2 |
-| Python 包 | 共用[开发依赖清单](../../vendor/image-kit/assets/python-dev-requirements.txt)，包括 uv、ty 和 Ruff；CUDA 专属 OpenCV 与视觉包由 [luciole-cuda-pip-packages.sh](../_scripts/python/luciole-cuda-pip-packages.sh) 安装。CUDA 保留 `numpy<2.0.0`。 |
+| Python 包 | 共用[开发依赖清单](../../vendor/image-kit/assets/python-dev-requirements.txt)，包括 uv、ty、Ruff、setuptools、setuptools-scm、Hatchling、hatch-vcs、editables、uv_build、wheel 和 packaging；CUDA 专属 OpenCV 与视觉包由 [luciole-cuda-pip-packages.sh](../_scripts/python/luciole-cuda-pip-packages.sh) 安装。CUDA 保留 `numpy<2.0.0`。 |
 | 网络库 | libdatachannel v0.24.5、rpclib v2.3.0、iceoryx v2.0.8 |
 | GUI | WSLg 依赖、D-Bus、CJK 字体、Mesa 和 PulseAudio |
 | OpenCV | apt `libopencv-dev` 与 pip 包；`opencv.sh` 未启用，当前 Dockerfile 不隔离 NVIDIA OpenCV |

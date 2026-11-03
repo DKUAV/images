@@ -15,7 +15,7 @@ Main advances the explicit variant channel. Build tags include variant, SHA12 an
 | --- | --- |
 | Base | `nvcr.io/nvidia/pytorch:26.06-py3`, with Python, PyTorch and CUDA supplied upstream |
 | System / build | vim, Git/LFS, tmux, ripgrep, fd, bat, ffmpeg, GCC, Ninja, GDB, CMake 4.3.2 |
-| Python packages | Shared [development requirements](../../vendor/image-kit/assets/python-dev-requirements.txt), including uv, ty and Ruff; CUDA-specific OpenCV and vision packages use [luciole-cuda-pip-packages.sh](../_scripts/python/luciole-cuda-pip-packages.sh). CUDA retains `numpy<2.0.0`. |
+| Python packages | Shared [development requirements](../../vendor/image-kit/assets/python-dev-requirements.txt), including uv, ty, Ruff, setuptools, setuptools-scm, Hatchling, hatch-vcs, editables, uv_build, wheel and packaging; CUDA-specific OpenCV and vision packages use [luciole-cuda-pip-packages.sh](../_scripts/python/luciole-cuda-pip-packages.sh). CUDA retains `numpy<2.0.0`. |
 | Networking libraries | libdatachannel v0.24.5, rpclib v2.3.0, iceoryx v2.0.8 |
 | GUI | WSLg dependencies, D-Bus, CJK fonts, Mesa and PulseAudio |
 | OpenCV | apt `libopencv-dev` plus pip packages; `opencv.sh` is disabled, so NVIDIA OpenCV is not quarantined by this Dockerfile |
