@@ -25,7 +25,7 @@ graph TD
 
 CUDA base 和昇腾镜像保持上游软件源。CUDA dev/runtime 在安装完所有软件包后，将持久化的 apt 和 pip 源切换到 Aliyun。Runtime 继承 base 的工具集，并非精简 CUDA runtime 镜像。昇腾基础镜像使用版本标签但不固定 digest；NPU 硬件检查需在兼容宿主机单独运行。
 
-CUDA 与昇腾共用 Python 开发依赖清单，包括 uv、ty、Ruff 等基础工具，以及用于 Python 构建和 editable 安装的 setuptools、setuptools-scm、Hatchling、hatch-vcs、editables 和 uv_build；两侧的 pip 安装脚本分别处理 CUDA 专属视觉包和昇腾厂商约束。
+CUDA 与昇腾共用 Python 开发依赖清单，包括 uv、ty、Ruff 等基础工具，以及用于 Python 构建和 editable 安装的 setuptools、setuptools-scm、Hatchling、hatch-vcs、editables、uv_build、wheel 和 packaging；两侧的 pip 安装脚本分别处理 CUDA 专属视觉包和昇腾厂商约束。
 
 ## 使用镜像
 

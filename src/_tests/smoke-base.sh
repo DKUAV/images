@@ -57,7 +57,7 @@ base_main() {
     assert_import "numpy importable"  numpy
     assert_import "pandas importable" pandas
     assert_import "torch importable"  torch
-    assert_cmd "Python build backends import" python3 -c 'import hatchling.build, hatch_vcs, editables, setuptools_scm, uv_build'
+    assert_cmd "Python build tools import" python3 -c 'import build, packaging, wheel, hatchling.build, hatch_vcs, editables, setuptools_scm, uv_build'
     assert_cmd "uv-build executable" command -v uv-build
 
     header "OpenCV — Python (pip opencv-contrib-python wheel)"

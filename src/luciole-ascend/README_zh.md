@@ -4,7 +4,7 @@
 
 ## 内容与构建
 
-厂商基础镜像提供 Python 3.12、PyTorch 2.14、TorchNPU 2.14 和 CANN。共享脚本安装系统工具、CMake 4.3.2、SSH 与开发 shell。镜像保留厂商 root 账号，HOME 为 `/root`，以读取仅 root 可访问的 CANN 脚本。两类镜像通过各自的 pip 安装脚本使用共用的 `vendor/image-kit/assets/python-dev-requirements.txt`，其中包括 uv、ty、Ruff、setuptools、setuptools-scm、Hatchling、hatch-vcs、editables 和 uv_build。昇腾脚本依据所有预装包生成的约束保留厂商 Python 环境，并在登录 shell 和入口脚本中恢复 CANN 环境。本镜像不安装 CUDA 专属视觉包、ROS 2 和网络库步骤。
+厂商基础镜像提供 Python 3.12、PyTorch 2.14、TorchNPU 2.14 和 CANN。共享脚本安装系统工具、CMake 4.3.2、SSH 与开发 shell。镜像保留厂商 root 账号，HOME 为 `/root`，以读取仅 root 可访问的 CANN 脚本。两类镜像通过各自的 pip 安装脚本使用共用的 `vendor/image-kit/assets/python-dev-requirements.txt`，其中包括 uv、ty、Ruff、setuptools、setuptools-scm、Hatchling、hatch-vcs、editables、uv_build、wheel 和 packaging。昇腾脚本依据所有预装包生成的约束保留厂商 Python 环境，并在登录 shell 和入口脚本中恢复 CANN 环境。本镜像不安装 CUDA 专属视觉包、ROS 2 和网络库步骤。
 
 共享开发工具包含 Graphviz 系统命令。PEFT 依赖以及 `graphviz`、`torchview` Python 包安装在派生的 [ascend-peft 镜像](../ascend-peft/README_zh.md)中。
 

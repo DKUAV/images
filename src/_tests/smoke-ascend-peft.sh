@@ -59,7 +59,8 @@ assert setuptools.__version__ == metadata_version
 '
 for backend in setuptools setuptools-scm hatch-vcs uv_build; do
     for build_mode in isolated no-build-isolation; do
-        assert_cmd "${backend} editable install (${build_mode})" python3 - "${build_mode}" "${backend}" <<'PYTHON'
+        assert_cmd "${backend} packaging (${build_mode})" python3 - "${build_mode}" "${backend}" <<'PYTHON'
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -69,6 +70,7 @@ with TemporaryDirectory(prefix="ascend-editable-smoke-") as temporary:
     root = Path(temporary)
     project = root / "project"
     project.mkdir()
+    (project / "README.md").write_text("Packaging smoke fixture.\n", encoding="utf-8")
     if sys.argv[2] == "hatch-vcs":
         configuration = (
             '[build-system]\nrequires = ["hatchling", "hatch-vcs"]\n'
@@ -91,13 +93,13 @@ with TemporaryDirectory(prefix="ascend-editable-smoke-") as temporary:
         configuration = (
             '[build-system]\nrequires = ["uv_build"]\n'
             'build-backend = "uv_build"\n\n'
-            '[project]\nname = "ascend-editable-smoke"\nversion = "0.0.0"\n'
+            '[project]\nname = "ascend-editable-smoke"\nversion = "1.2.3"\n'
         )
     else:
         configuration = (
             '[build-system]\nrequires = ["setuptools>=64", "wheel"]\n'
             'build-backend = "setuptools.build_meta"\n\n'
-            '[project]\nname = "ascend-editable-smoke"\nversion = "0.0.0"\n'
+            '[project]\nname = "ascend-editable-smoke"\nversion = "1.2.3"\n'
             '[tool.setuptools.packages.find]\nwhere = ["src"]\n'
         )
     (project / "pyproject.toml").write_text(configuration, encoding="utf-8")
@@ -105,15 +107,36 @@ with TemporaryDirectory(prefix="ascend-editable-smoke-") as temporary:
     package.mkdir(parents=True)
     module = package / "__init__.py"
     module.write_text("VALUE = 1\n", encoding="utf-8")
-    command = [sys.executable, "-m", "pip", "install", "--no-deps", "--editable", "."]
+    vcs_backend = sys.argv[2] in ("hatch-vcs", "setuptools-scm")
+    version_check = (
+        "from ascend_editable_smoke._version import __version__; "
+        "from importlib.metadata import version; "
+        "assert __version__ == version(\"ascend-editable-smoke\") == \"1.2.3\""
+    )
+    if vcs_backend:
+        (project / ".gitignore").write_text(
+            "src/ascend_editable_smoke/_version.py\n__pycache__/\n*.egg-info/\nbuild/\n",
+            encoding="utf-8",
+        )
+        for arguments in (
+            ["init", "--quiet"],
+            ["add", "."],
+            ["-c", "user.name=Image smoke", "-c", "user.email=smoke@example.invalid",
+             "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null",
+             "commit", "--quiet", "-m", "Create packaging fixture"],
+            ["-c", "tag.gpgsign=false", "tag", "v1.2.3"],
+        ):
+            subprocess.run(["git", *arguments], cwd=project, check=True)
+    command = [sys.executable, "-m", "pip", "install", "--no-deps",
+               "--check-build-dependencies", "--editable", "."]
     if sys.argv[1] == "no-build-isolation":
         command.extend(["--no-build-isolation", "--no-index"])
     try:
         subprocess.run(command, cwd=project, check=True)
-        if sys.argv[2] in ("hatch-vcs", "setuptools-scm"):
+        if vcs_backend:
             assert (package / "_version.py").is_file()
             subprocess.run(
-                [sys.executable, "-c", "from ascend_editable_smoke._version import __version__; from importlib.metadata import version; assert __version__ == version(\"ascend-editable-smoke\")"],
+                [sys.executable, "-c", version_check],
                 cwd=root,
                 check=True,
             )
@@ -130,6 +153,44 @@ with TemporaryDirectory(prefix="ascend-editable-smoke-") as temporary:
             cwd=root,
             check=True,
         )
+    if sys.argv[1] == "no-build-isolation":
+        module.write_text("VALUE = 1\n", encoding="utf-8")
+        environment = os.environ.copy()
+        environment["PIP_NO_INDEX"] = "1"
+        artifacts = root / "dist"
+        subprocess.run(
+            [sys.executable, "-m", "build", "--no-isolation", "--outdir", str(artifacts)],
+            cwd=project,
+            env=environment,
+            check=True,
+        )
+        assert len(list(artifacts.glob("*.tar.gz"))) == 1
+        wheels = list(artifacts.glob("*.whl"))
+        assert len(wheels) == 1
+        try:
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", "--no-index", "--no-deps", str(wheels[0])],
+                cwd=root,
+                check=True,
+            )
+            subprocess.run(
+                [sys.executable, "-c",
+                 "from pathlib import Path; import sys; import ascend_editable_smoke as m; "
+                 "from importlib.metadata import version; assert m.VALUE == 1; "
+                 "assert version(\"ascend-editable-smoke\") == \"1.2.3\"; "
+                 "assert not Path(m.__file__).resolve().is_relative_to(Path(sys.argv[1]))",
+                 str(project)],
+                cwd=root,
+                check=True,
+            )
+            if vcs_backend:
+                subprocess.run([sys.executable, "-c", version_check], cwd=root, check=True)
+        finally:
+            subprocess.run(
+                [sys.executable, "-m", "pip", "uninstall", "--yes", "ascend-editable-smoke"],
+                cwd=root,
+                check=True,
+            )
 PYTHON
     done
 done
