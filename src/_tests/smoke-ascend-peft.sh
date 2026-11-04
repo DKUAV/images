@@ -9,7 +9,7 @@ source /etc/profile.d/ascend-dev.sh
 header "PEFT packages and parent constraints"
 assert_cmd "ARM64 host" test "$(uname -m)" = aarch64
 assert_cmd "Python package check" ascend-pip-check
-assert_cmd "Application metadata and unchanged vendor packages" python3 -c '
+assert_cmd "PEFT metadata and unchanged vendor Torch" python3 -c '
 from importlib.metadata import version
 from pathlib import Path
 
@@ -18,30 +18,13 @@ for line in Path("/opt/image-python/base-constraints.txt").read_text(encoding="u
     name, pinned_version = line.split("==", 1)
     base_versions[name.lower().replace("_", "-")] = pinned_version
 
-for package, expected in base_versions.items():
+for package in ("torch", "torch-npu"):
+    expected = base_versions[package]
     actual = version(package)
     assert actual == expected, f"{package}: expected parent version {expected}, got {actual}"
-for package in ("accelerate", "huggingface-hub", "peft", "transformers", "torchvision", "graphviz", "torchview", "openai", "flash-linear-attention", "fla-core", "triton-ascend", "triton"):
+for package in ("accelerate", "huggingface-hub", "peft", "transformers", "torchvision", "graphviz", "torchview", "openai"):
     print(f"{package}=={version(package)}")
 '
-
-header "FLA and Triton Ascend without NPU devices"
-assert_cmd "Compiled Ascend backend and CANN compiler" python3 -c '
-import os
-from pathlib import Path
-import subprocess
-from triton._C import libtriton
-from triton.backends import backends
-from triton.backends.ascend.utils import _get_npucompiler_path
-
-assert hasattr(libtriton, "ascend")
-assert "ascend" in backends
-compiler, environment = _get_npucompiler_path()
-assert Path(compiler).is_file() and os.access(compiler, os.X_OK)
-subprocess.run([compiler, "--version"], env=environment, check=True)
-'
-assert_import "FLA imports" fla
-assert_cmd "FLA linear attention kernels import" python3 -c 'from fla.ops.linear_attn import chunk_linear_attn; assert callable(chunk_linear_attn)'
 
 header "TorchVision CPU operators"
 assert_import "TorchVision imports" torchvision

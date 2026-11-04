@@ -4,39 +4,11 @@
 
 ## 软件包
 
-镜像通过本镜像的 [requirements.txt](requirements.txt) 添加 `accelerate`、`huggingface-hub`、`peft`、`transformers`、`torchvision`、`openai>=1.0`、`graphviz>=0.20`、`torchview>=0.2.7`、`torchmetrics`、`pillow`、`opencv-python`、`einops` 和 `flash-linear-attention>=0.5`。setuptools、setuptools-scm、Hatchling、hatch-vcs、editables、uv_build、wheel 和 packaging 继承自父镜像的共享 Python 开发依赖。
+镜像通过本镜像的 [requirements.txt](requirements.txt) 添加 `accelerate`、`huggingface-hub`、`peft`、`transformers`、`torchvision`、`openai>=1.0`、`graphviz>=0.20` 和 `torchview>=0.2.7`。setuptools、setuptools-scm、Hatchling、hatch-vcs、editables、uv_build、wheel 和 packaging 继承自父镜像的共享 Python 开发依赖。
 
 TorchVision 固定为 `0.29.0+cpu`，与父镜像的 Torch 2.14.0 及 Minifly 的 Ascend extra 对齐。requirements 文件通过 `--extra-index-url` 添加 `https://download.pytorch.org/whl/cpu`，保留默认 PyPI 索引，并通过明确的 `+cpu` 版本选择 CPU wheel。附加索引作用于整次安装，父镜像的软件包约束仍然生效。此 CPU Torch/TorchNPU 栈需要使用 CPU wheel；CPU NMS 冒烟不代表已验证 NPU NMS 支持。
 
 共享 Ascend 应用安装器依据父镜像记录的 `/opt/image-python/base-constraints.txt` 解析依赖，并运行 `ascend-pip-check`。依赖不兼容时构建失败，不会替换父镜像中受约束的 Torch/TorchNPU 包。包元数据检查沿用父镜像精确匹配的已知厂商例外，不代表 NPU 训练兼容性已经验证。镜像保持上游软件源。
-
-### Flash Linear Attention
-
-[install-triton-ascend.sh](install-triton-ascend.sh) 从上游固定提交 [`b3c899b8de4a1061d93f710262ef46e61e4ab4a0`](https://github.com/triton-lang/triton-ascend/commit/b3c899b8de4a1061d93f710262ef46e61e4ab4a0) 构建 Triton Ascend，并使用该提交固定的 AscendNPU-IR 方言源码。此提交放宽了运行依赖版本，避免已发布的 3.6.0.post2 wheel 与父镜像中的 attrs、NumPy 等包发生版本冲突。源码 wheel 安装时正常解析依赖，应用父镜像的完整约束，随后运行 `ascend-pip-check`。其上游依赖 `triton==3.6.0` 先安装，再安装 Ascend 后端，由后者提供最终的 `triton` 模块文件。
-
-构建使用 Clang/LLD 15，编译并行数为二、链接并行数为一，并在临时 PEP 517 构建环境中安装 CMake 3.x；镜像仍保留 CMake 4.3.2。安装后删除源码、构建目录及下载的 LLVM 工具。原生 ARM64 构建需要访问 GitHub、GitCode、PyPI 和上游 LLVM 产物站点。运行时编译使用父镜像 CANN 环境中的 `bishengir-compile`，不重新构建完整的 AscendNPU-IR 编译器。
-
-FLA 不启用后端 extra，因为[上游 NPU extra](https://github.com/fla-org/flash-linear-attention/blob/main/INSTALL.md#ascend-npu) 固定了 Torch 2.10.0、TorchNPU 2.10.0.post7 和 TorchVision 0.25.0。镜像显式提供现有的 Torch 2.14.0/TorchNPU 2.14.0/CANN 9.2.0 栈及源码构建的后端；`>=0.5` 下限排除隐式依赖 CUDA 的旧版 FLA。此组合不在上游 FLA 文档给出的 NPU 组合中，需要在目标 NPU 宿主机验证。
-
-必过烟测在无 NPU 设备时检查父镜像记录的所有包版本、已编译的 Ascend 后端、CANN 编译器可执行文件以及 FLA 和算子导入，不执行 NPU 注意力内核。在兼容的 NPU 宿主机先运行下文硬件检查，再执行小规模 FLA 前向和反向测试：
-
-```bash
-docker run --rm -i --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disabled "$IMAGE" python3 - <<'PYTHON'
-import torch
-import torch_npu
-from fla.ops.linear_attn import chunk_linear_attn
-
-q, k, v = [torch.randn(1, 128, 2, 32, device="npu", dtype=torch.float16,
-                       requires_grad=True) for _ in range(3)]
-output, _ = chunk_linear_attn(q, k, v, normalize=False)
-assert torch.isfinite(output).all()
-output.float().square().mean().backward()
-torch.npu.synchronize()
-for tensor in (q, k, v):
-    assert tensor.grad is not None and torch.isfinite(tensor.grad).all()
-print("FLA NPU forward/backward passed")
-PYTHON
-```
 
 镜像从父镜像的共享开发工具继承 Graphviz 的 `dot` 命令，Python 绑定支持 SVG 渲染，torchview 提供模型结构图。必过烟测会复跑父镜像的开发工具和 SSH 检查，将 Torch/TorchNPU 已安装版本与父级约束比较，检查应用包元数据，导入 TorchVision 并执行 CPU NMS，导入 OpenAI SDK，检查 pip 和 setuptools 一致性，在开启和关闭构建隔离时分别以 editable 模式安装临时 setuptools、setuptools-scm、Hatch/VCS 和 uv_build 项目，渲染 Graphviz SVG，并通过 torchview 绘制一个小型 CPU 模型。Editable 检查会从源码目录外导入模块，并验证源码修改能够生效；Hatch/VCS 和 setuptools-scm 项目会创建 Git 提交及 `v1.2.3` 标签，要求生成的版本文件和安装元数据均报告 `1.2.3`。非隔离检查显式校验构建依赖并关闭软件包索引，以验证预装工具能够离线工作。每种后端还会构建 sdist、从该 sdist 构建 wheel，再离线安装 wheel；导入必须来自源码目录之外，且版本符合预期。隔离构建需要访问索引获取构建依赖。这些检查无需 NPU；独立的[硬件检查](../_tests/npu-ascend.sh)需在兼容的 NPU 宿主机上运行。
 
