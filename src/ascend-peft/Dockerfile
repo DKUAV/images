@@ -7,6 +7,7 @@ FROM ${BASE_IMAGE}
 USER root
 
 COPY src/ascend-peft/requirements.txt /tmp/image-scripts/peft-requirements.txt
+COPY vendor/image-kit/assets/python-dev-requirements.txt /tmp/image-scripts/python-dev-requirements.txt
 # Only these five auxiliary packages may change from the recorded vendor versions.
 RUN --mount=type=cache,target=/tmp/pip-cache,mode=0777 \
     awk -F '==' 'tolower($1) !~ /^(attrs|numpy|scipy|decorator|psutil)$/' \
@@ -14,6 +15,7 @@ RUN --mount=type=cache,target=/tmp/pip-cache,mode=0777 \
     && PIP_CACHE_DIR=/tmp/pip-cache python3 -m pip install --break-system-packages \
         --constraint /opt/image-python/peft-constraints.txt \
         --requirement /tmp/image-scripts/peft-requirements.txt \
+        --requirement /tmp/image-scripts/python-dev-requirements.txt \
     && /usr/local/bin/ascend-pip-check
 
 COPY --chmod=0755 vendor/image-kit/scripts/system/finalize-mirror.sh /tmp/image-scripts/finalize-mirror.sh

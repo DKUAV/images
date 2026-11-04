@@ -22,7 +22,7 @@ Dockerfile 根据父镜像的 `/opt/image-python/base-constraints.txt` 生成 `/
 | decorator | 5.1.1 |
 | psutil | 6.0.0 |
 
-requirements 添加 Triton Ascend 官方索引，固定 `triton-ascend==3.6.0`，并选择 FLA 的 `[npu]` extra。解析器还会在必要时为 OpenCV、pandas、pytest 等应用或继承的开发依赖选择兼容版本，不使用 `--no-deps` 跳过依赖检查。[FLA 安装文档](https://github.com/fla-org/flash-linear-attention/blob/main/INSTALL.md)测试的 A2 软件栈为 Torch 2.10.0、TorchNPU 2.10.0.post7、TorchVision 0.25.0、Triton Ascend 3.6.0 和 CANN 9.1.0。本镜像保留 CANN 9.2.0，此组合仍需验证原生构建与 NPU 执行。
+requirements 添加 Triton Ascend 官方索引，固定 `triton-ascend==3.6.0`，并选择 FLA 的 `[npu]` extra。安装时将应用依赖和父镜像的共享开发依赖一起交给同一次 pip 解析，以便为 IPython、contourpy 等继承的工具及其依赖选择兼容较旧 psutil、NumPy 的版本；仅传入应用列表时，pip 不会自动修复无关的已安装包。其余父级约束和 `ascend-pip-check` 仍然生效，不使用 `--no-deps` 跳过依赖检查。[FLA 安装文档](https://github.com/fla-org/flash-linear-attention/blob/main/INSTALL.md)测试的 A2 软件栈为 Torch 2.10.0、TorchNPU 2.10.0.post7、TorchVision 0.25.0、Triton Ascend 3.6.0 和 CANN 9.1.0。本镜像保留 CANN 9.2.0，此组合仍需验证原生构建与 NPU 执行。
 
 必过烟测会比较所有已记录的父级包版本，仅允许上述 5 个辅助包使用表中精确版本，并在无 NPU 设备时检查 Triton 版本、Ascend 后端和 FLA 线性注意力导入。这些检查不编译或执行 NPU kernel。在运行章节的硬件检查通过后，可在兼容的 NPU 宿主机上验证 FLA：
 

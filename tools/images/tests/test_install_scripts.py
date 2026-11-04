@@ -59,6 +59,9 @@ mock_check() {{ echo dependency-check; return {check_status}; }}
     )
     assert f"--constraint\n{tmp_path.as_posix()}/peft-constraints.txt" in result.stdout
     assert "--requirement\n/tmp/image-scripts/peft-requirements.txt" in result.stdout
+    assert (
+        "--requirement\n/tmp/image-scripts/python-dev-requirements.txt" in result.stdout
+    )
     assert "--no-deps" not in result.stdout
     assert ("dependency-check" in result.stdout) == (install_status == 0)
 

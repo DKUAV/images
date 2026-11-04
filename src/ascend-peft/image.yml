@@ -7,6 +7,7 @@ platforms:
 - linux/arm64
 inputs:
 - src/ascend-peft/requirements.txt
+- vendor/image-kit/assets/python-dev-requirements.txt
 - vendor/image-kit/scripts/system/finalize-mirror.sh
 publish: true
 variants:
