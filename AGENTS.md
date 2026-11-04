@@ -10,7 +10,7 @@
 - Each manifest declares a published name and explicit variants. Preserve package names; publish variant channels, `<variant>-<sha12>-<run-id>-<attempt>` build tags and receipt-promoted `<variant>-vMAJOR.MINOR.PATCH` releases. Do not maintain old global aliases or delete historical tags.
 - All Dockerfiles use the repository root as build context. CUDA Compose builds use `context: ../..`; Ascend Compose only runs published images, with builds handled by manifest/Bake.
 - Internal bases use `base.target` and `base.context` and same-checkout Bake named contexts. The planner adds build ancestors without selecting them for publication. Child platforms must be supported by their parent.
-- External bases need an explicit version tag and an explicit digest value or null. CUDA uses `nvcr.io/nvidia/pytorch:26.06-py3`; Ascend uses `ascendai/torch-npu:2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12` with a null digest.
+- External bases need an explicit version tag and an explicit digest value or null. CUDA uses `nvcr.io/nvidia/pytorch:26.06-py3`; Ascend uses `ascendai/torch-npu:2.10.0.post7-cann9.2.0-910b-ubuntu22.04-py3.12` with a null digest.
 - `BASE_IMAGE` is injected by the build tool. Direct Docker/Compose builds retain Dockerfile defaults and final-image `BASE_TAG` compatibility; these use the published base by default.
 
 ## Shared scripts and Dockerfiles

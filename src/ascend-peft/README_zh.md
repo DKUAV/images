@@ -22,7 +22,7 @@ TorchVision 固定为 `0.29.0+cpu`，与父镜像的 Torch 2.14.0 及 Minifly �
 git submodule update --init --recursive
 uv sync --locked --extra dev
 source .venv/bin/activate
-python -m image_kit plan --target ascend-peft/2.14.0-cann9.2.0-peft-910b-ubuntu22.04-py3.12 --output build-plan.json
+python -m image_kit plan --target ascend-peft/2.10.0.post7-cann9.2.0-peft-910b-ubuntu22.04-py3.12 --output build-plan.json
 python -m image_kit bake --plan build-plan.json --owner dkuav --revision "$(git rev-parse HEAD)" --platform linux/arm64 --mode load --output docker-bake.load.json
 docker buildx bake -f docker-bake.load.json
 python -m image_kit test --plan build-plan.json --owner dkuav --revision "$(git rev-parse HEAD)" --platform linux/arm64
@@ -36,14 +36,14 @@ python -m image_kit test --plan build-plan.json --owner dkuav --revision "$(git 
 docker build -f src/ascend-peft/Dockerfile -t ascend-peft .
 ```
 
-可通过 `BASE_TAG` 选择其他已发布的父镜像标签。发布使用 variant 通道 `2.14.0-cann9.2.0-peft-910b-ubuntu22.04-py3.12`、不可覆盖的 `<variant>-<sha12>-<run-id>-<attempt>` 构建标签，以及从收据提升的 `<variant>-vMAJOR.MINOR.PATCH` 正式版本。
+可通过 `BASE_TAG` 选择其他已发布的父镜像标签。发布使用 variant 通道 `2.10.0.post7-cann9.2.0-peft-910b-ubuntu22.04-py3.12`、不可覆盖的 `<variant>-<sha12>-<run-id>-<attempt>` 构建标签，以及从收据提升的 `<variant>-vMAJOR.MINOR.PATCH` 正式版本。
 
 ## 运行
 
 镜像继承 root、`HOME=/root`、`/work`、Bash、Ascend 入口和公钥 SSH 策略。无需 SSH 的交互会话：
 
 ```bash
-IMAGE=ghcr.io/dkuav/ascend-peft:2.14.0-cann9.2.0-peft-910b-ubuntu22.04-py3.12
+IMAGE=ghcr.io/dkuav/ascend-peft:2.10.0.post7-cann9.2.0-peft-910b-ubuntu22.04-py3.12
 docker run --rm -it --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disabled "$IMAGE"
 docker run --rm -i --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disabled "$IMAGE" bash -s < src/_tests/npu-ascend.sh
 ```

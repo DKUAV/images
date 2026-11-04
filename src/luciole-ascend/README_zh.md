@@ -1,6 +1,6 @@
 # Luciole 昇腾开发镜像
 
-本 ARM64 镜像基于 `ascendai/torch-npu:2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12`，发布为 `ghcr.io/dkuav/luciole-ascend`。基础镜像固定版本标签，但按要求不固定 digest。英文说明见 [README.md](README.md)。
+本 ARM64 镜像基于 `ascendai/torch-npu:2.10.0.post7-cann9.2.0-910b-ubuntu22.04-py3.12`，发布为 `ghcr.io/dkuav/luciole-ascend`。基础镜像固定版本标签，但按要求不固定 digest。英文说明见 [README.md](README.md)。
 
 ## 内容与构建
 
@@ -13,7 +13,7 @@
 在原生 ARM64 主机上构建和运行冒烟测试：
 
 ```bash
-python -m image_kit plan --target luciole-ascend/2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12 --output build-plan.json
+python -m image_kit plan --target luciole-ascend/2.10.0.post7-cann9.2.0-910b-ubuntu22.04-py3.12 --output build-plan.json
 python -m image_kit bake --plan build-plan.json --owner dkuav --revision "$(git rev-parse HEAD)" --platform linux/arm64 --mode load --output docker-bake.load.json
 docker buildx bake -f docker-bake.load.json
 python -m image_kit test --plan build-plan.json --owner dkuav --revision "$(git rev-parse HEAD)" --platform linux/arm64
@@ -26,7 +26,7 @@ python -m image_kit test --plan build-plan.json --owner dkuav --revision "$(git 
 宿主机需要 ARM64、兼容的昇腾 910B 驱动及 Ascend Docker Runtime。请依据[厂商配套信息](https://www.hiascend.com/developer/download/compatibility)核对宿主机驱动和 CANN 版本。注册 `ascend` runtime 后，例如：
 
 ```bash
-IMAGE=ghcr.io/dkuav/luciole-ascend:2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12
+IMAGE=ghcr.io/dkuav/luciole-ascend:2.10.0.post7-cann9.2.0-910b-ubuntu22.04-py3.12
 docker run --rm -it --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disabled "$IMAGE"
 docker run --rm -i --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disabled "$IMAGE" bash -s < src/_tests/npu-ascend.sh
 ```

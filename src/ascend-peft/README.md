@@ -22,7 +22,7 @@ Run from the repository root on a native ARM64 host:
 git submodule update --init --recursive
 uv sync --locked --extra dev
 source .venv/bin/activate
-python -m image_kit plan --target ascend-peft/2.14.0-cann9.2.0-peft-910b-ubuntu22.04-py3.12 --output build-plan.json
+python -m image_kit plan --target ascend-peft/2.10.0.post7-cann9.2.0-peft-910b-ubuntu22.04-py3.12 --output build-plan.json
 python -m image_kit bake --plan build-plan.json --owner dkuav --revision "$(git rev-parse HEAD)" --platform linux/arm64 --mode load --output docker-bake.load.json
 docker buildx bake -f docker-bake.load.json
 python -m image_kit test --plan build-plan.json --owner dkuav --revision "$(git rev-parse HEAD)" --platform linux/arm64
@@ -36,14 +36,14 @@ Direct builds use the published parent by default and the repository root as con
 docker build -f src/ascend-peft/Dockerfile -t ascend-peft .
 ```
 
-Override `BASE_TAG` to select another published parent tag. Publication uses the variant channel `2.14.0-cann9.2.0-peft-910b-ubuntu22.04-py3.12`, immutable `<variant>-<sha12>-<run-id>-<attempt>` build tags, and receipt-promoted `<variant>-vMAJOR.MINOR.PATCH` releases.
+Override `BASE_TAG` to select another published parent tag. Publication uses the variant channel `2.10.0.post7-cann9.2.0-peft-910b-ubuntu22.04-py3.12`, immutable `<variant>-<sha12>-<run-id>-<attempt>` build tags, and receipt-promoted `<variant>-vMAJOR.MINOR.PATCH` releases.
 
 ## Run
 
 The image inherits root, `HOME=/root`, `/work`, Bash, the Ascend entrypoint and key-only SSH. For an interactive session without SSH:
 
 ```bash
-IMAGE=ghcr.io/dkuav/ascend-peft:2.14.0-cann9.2.0-peft-910b-ubuntu22.04-py3.12
+IMAGE=ghcr.io/dkuav/ascend-peft:2.10.0.post7-cann9.2.0-peft-910b-ubuntu22.04-py3.12
 docker run --rm -it --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disabled "$IMAGE"
 docker run --rm -i --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disabled "$IMAGE" bash -s < src/_tests/npu-ascend.sh
 ```

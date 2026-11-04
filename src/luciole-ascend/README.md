@@ -1,6 +1,6 @@
 # Luciole Ascend development image
 
-This ARM64 image builds on `ascendai/torch-npu:2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12` and publishes as `ghcr.io/dkuav/luciole-ascend`. The base tag is fixed, but its digest is deliberately not pinned. See the [Chinese guide](README_zh.md).
+This ARM64 image builds on `ascendai/torch-npu:2.10.0.post7-cann9.2.0-910b-ubuntu22.04-py3.12` and publishes as `ghcr.io/dkuav/luciole-ascend`. The base tag is fixed, but its digest is deliberately not pinned. See the [Chinese guide](README_zh.md).
 
 ## Contents and build
 
@@ -13,7 +13,7 @@ The package check permits only three exact known vendor diagnostics: the `mindst
 Build and run smoke checks on a native ARM64 host:
 
 ```bash
-python -m image_kit plan --target luciole-ascend/2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12 --output build-plan.json
+python -m image_kit plan --target luciole-ascend/2.10.0.post7-cann9.2.0-910b-ubuntu22.04-py3.12 --output build-plan.json
 python -m image_kit bake --plan build-plan.json --owner dkuav --revision "$(git rev-parse HEAD)" --platform linux/arm64 --mode load --output docker-bake.load.json
 docker buildx bake -f docker-bake.load.json
 python -m image_kit test --plan build-plan.json --owner dkuav --revision "$(git rev-parse HEAD)" --platform linux/arm64
@@ -26,7 +26,7 @@ Direct builds use the tagged vendor base by default and the repository root as c
 Use an ARM64 host with a compatible Ascend 910B driver and Ascend Docker Runtime. Follow the [vendor compatibility information](https://www.hiascend.com/developer/download/compatibility) for host driver and CANN pairing. For example, with the `ascend` runtime registered:
 
 ```bash
-IMAGE=ghcr.io/dkuav/luciole-ascend:2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12
+IMAGE=ghcr.io/dkuav/luciole-ascend:2.10.0.post7-cann9.2.0-910b-ubuntu22.04-py3.12
 docker run --rm -it --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disabled "$IMAGE"
 docker run --rm -i --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disabled "$IMAGE" bash -s < src/_tests/npu-ascend.sh
 ```
