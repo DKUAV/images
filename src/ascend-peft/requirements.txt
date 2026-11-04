@@ -1,6 +1,5 @@
 # Resolve application packages within the parent image's vendor constraints.
 --extra-index-url https://download.pytorch.org/whl/cpu
---extra-index-url https://triton-ascend.osinfra.cn/pypi/simple
 
 accelerate
 huggingface-hub
@@ -15,5 +14,6 @@ torchmetrics
 pillow
 opencv-python
 einops
-triton-ascend
-flash-linear-attention[npu]
+# The source-built Triton Ascend backend is installed first by the Dockerfile.
+# FLA >=0.5 separates backend dependencies; [npu] pins an older vendor stack.
+flash-linear-attention>=0.5

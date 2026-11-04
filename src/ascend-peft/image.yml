@@ -6,6 +6,7 @@ context: .
 platforms:
 - linux/arm64
 inputs:
+- src/ascend-peft/install-triton-ascend.sh
 - src/ascend-peft/requirements.txt
 - vendor/image-kit/scripts/python/ascend-python-packages.sh
 - vendor/image-kit/scripts/system/finalize-mirror.sh
