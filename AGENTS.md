@@ -10,7 +10,7 @@
 - Each manifest declares a published name and explicit variants. Preserve package names; publish variant channels, `<variant>-<sha12>-<run-id>-<attempt>` build tags and receipt-promoted `<variant>-vMAJOR.MINOR.PATCH` releases. Do not maintain old global aliases or delete historical tags.
 - All Dockerfiles use the repository root as build context. CUDA Compose builds use `context: ../..`; Ascend Compose only runs published images, with builds handled by manifest/Bake.
 - Internal bases use `base.target` and `base.context` and same-checkout Bake named contexts. The planner adds build ancestors without selecting them for publication. Child platforms must be supported by their parent.
-- External bases need an explicit version tag and an explicit digest value or null. CUDA uses `nvcr.io/nvidia/pytorch:26.06-py3`; Ascend uses `ascendai/torch-npu:2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12` with a null digest.
+- External bases need an explicit version tag and an explicit digest value or null. CUDA uses `nvcr.io/nvidia/pytorch:26.06-py3`; Ascend uses `ascendai/torch-npu:2.10.0.post7-cann9.2.0-910b-ubuntu22.04-py3.12` with a null digest.
 - `BASE_IMAGE` is injected by the build tool. Direct Docker/Compose builds retain Dockerfile defaults and final-image `BASE_TAG` compatibility; these use the published base by default.
 
 ## Shared scripts and Dockerfiles
@@ -19,6 +19,7 @@
 - Separate installation mechanisms from dependency selection. Reuse existing installers with image-local requirements; a package being publicly available does not make it part of the shared default toolset. Share dependency lists only when consumers need the same set, retaining separate CUDA/Ascend installers where required.
 - Adding packages does not require a new script. Prefer a requirements edit or a short direct Dockerfile command; use capability-named scripts without sequence numbers for substantial installation logic or conditional behavior. Promote scripts only for actual reuse and keep business dependencies out of common bases unless all inheriting images need them.
 - Follow `.agents/skills/add-install-step/SKILL.md` for dependency additions. Preserve Ascend vendor constraints, place frequently changed image-specific layers after stable prerequisites where possible, and keep final mirror configuration and cleanup last among installation steps.
+- `ascend-peft` alone may replace the parent pins for attrs, numpy, scipy, decorator and psutil with the versions required by the precompiled Triton Ascend 3.6.0 wheel. Keep the original base constraints unchanged, derive child constraints excluding only those five names, and retain `ascend-pip-check` plus smoke checks for every other recorded parent version.
 - Copy each independently changeable shared file explicitly and declare it in manifest `inputs`. Keep capability `COPY + RUN` pairs adjacent; do not copy entire script/asset directories.
 - Keep common Python development tools in `vendor/image-kit/assets/python-dev-requirements.txt`. CUDA and Ascend consume that file through separate pip installers because CUDA extras and Ascend vendor constraints differ.
 - Preserve capability order in CUDA base: system, dev-tools, WSLg, pip, CMake, networking libraries, user and SSH. Python is supplied by NVIDIA. Ascend is a separate ARM64 image built from the vendor TorchNPU base; preserve vendor Python and CANN.

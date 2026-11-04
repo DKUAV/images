@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/dkuav/ascend-peft:2.14.0-cann9.2.0-peft-910b-ubuntu22.04-py3.12
+    image: ghcr.io/dkuav/ascend-peft:2.10.0.post7-cann9.2.0-peft-910b-ubuntu22.04-py3.12
     platform: linux/arm64
     runtime: ascend
     environment:

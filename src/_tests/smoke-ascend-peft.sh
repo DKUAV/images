@@ -9,7 +9,7 @@ source /etc/profile.d/ascend-dev.sh
 header "PEFT packages and parent constraints"
 assert_cmd "ARM64 host" test "$(uname -m)" = aarch64
 assert_cmd "Python package check" ascend-pip-check
-assert_cmd "PEFT metadata and unchanged vendor Torch" python3 -c '
+assert_cmd "PEFT metadata and protected parent packages" python3 -c '
 from importlib.metadata import version
 from pathlib import Path
 
@@ -18,12 +18,33 @@ for line in Path("/opt/image-python/base-constraints.txt").read_text(encoding="u
     name, pinned_version = line.split("==", 1)
     base_versions[name.lower().replace("_", "-")] = pinned_version
 
-for package in ("torch", "torch-npu"):
-    expected = base_versions[package]
+auxiliary_versions = {
+    "attrs": "24.2.0",
+    "numpy": "1.26.4",
+    "scipy": "1.13.1",
+    "decorator": "5.1.1",
+    "psutil": "6.0.0",
+}
+for package, expected in (base_versions | auxiliary_versions).items():
     actual = version(package)
-    assert actual == expected, f"{package}: expected parent version {expected}, got {actual}"
-for package in ("accelerate", "huggingface-hub", "peft", "transformers", "torchvision", "graphviz", "torchview", "openai"):
+    assert actual == expected, f"{package}: expected {expected}, got {actual}"
+assert version("triton-ascend") == "3.6.0"
+for package in ("accelerate", "huggingface-hub", "peft", "transformers", "torchvision", "graphviz", "torchview", "openai", "flash-linear-attention", "fla-core", "triton-ascend", "triton"):
     print(f"{package}=={version(package)}")
+'
+
+header "FLA and Triton Ascend without NPU devices"
+assert_cmd "Triton Ascend backend loads" python3 -c '
+import triton.backends
+from triton._C import libtriton
+
+assert "ascend" in triton.backends.backends
+assert hasattr(libtriton, "ascend")
+'
+assert_cmd "FLA linear attention imports" python3 -c '
+from fla.ops.linear_attn import chunk_linear_attn
+
+assert callable(chunk_linear_attn)
 '
 
 header "TorchVision CPU operators"

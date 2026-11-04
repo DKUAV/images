@@ -24,9 +24,9 @@ inputs:
 - vendor/image-kit/assets/ascend-entrypoint.sh
 publish: true
 variants:
-- id: 2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12
+- id: 2.10.0.post7-cann9.2.0-910b-ubuntu22.04-py3.12
   base:
-    image: ascendai/torch-npu:2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12
+    image: ascendai/torch-npu:2.10.0.post7-cann9.2.0-910b-ubuntu22.04-py3.12
     digest: null
   build_args:
     DEFAULT_USER: root

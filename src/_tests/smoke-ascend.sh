@@ -36,8 +36,8 @@ import sys
 import sysconfig
 assert sys.version_info[:2] == (3, 12)
 assert sys.prefix.startswith("/usr/local/python3.12.")
-assert version("torch").split("+")[0] == "2.14.0"
-assert version("torch-npu") == "2.14.0"
+assert version("torch").split("+")[0] == "2.10.0"
+assert version("torch-npu") == "2.10.0.post7"
 assert Path(sysconfig.get_path("include"), "Python.h").is_file()
 '
 assert_cmd "zsh recovers vendor environment" env -i HOME="${HOME}" PATH=/usr/bin:/bin zsh -ec 'test -r "${ASCEND_HOME_PATH}/include/acl/acl.h"; command -v bisheng; test "$(python3 -c "import sys; print(sys.version_info.minor)")" = 12'

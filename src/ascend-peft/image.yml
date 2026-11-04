@@ -7,13 +7,13 @@ platforms:
 - linux/arm64
 inputs:
 - src/ascend-peft/requirements.txt
-- vendor/image-kit/scripts/python/ascend-python-packages.sh
+- vendor/image-kit/assets/python-dev-requirements.txt
 - vendor/image-kit/scripts/system/finalize-mirror.sh
 publish: true
 variants:
-- id: 2.14.0-cann9.2.0-peft-910b-ubuntu22.04-py3.12
+- id: 2.10.0.post7-cann9.2.0-peft-910b-ubuntu22.04-py3.12
   base:
-    target: luciole-ascend/2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12
+    target: luciole-ascend/2.10.0.post7-cann9.2.0-910b-ubuntu22.04-py3.12
     context: ascend_base
   build_args: {}
   tests:

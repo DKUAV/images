@@ -1,10 +1,10 @@
 # Luciole Ascend development image
 
-This ARM64 image builds on `ascendai/torch-npu:2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12` and publishes as `ghcr.io/dkuav/luciole-ascend`. The base tag is fixed, but its digest is deliberately not pinned. See the [Chinese guide](README_zh.md).
+This ARM64 image builds on `ascendai/torch-npu:2.10.0.post7-cann9.2.0-910b-ubuntu22.04-py3.12` and publishes as `ghcr.io/dkuav/luciole-ascend`. The base tag is fixed, but its digest is deliberately not pinned. See the [Chinese guide](README_zh.md).
 
 ## Contents and build
 
-The vendor base supplies Python 3.12, PyTorch 2.14, TorchNPU 2.14 and CANN. Shared scripts install system tools, CMake 4.3.2, SSH and the development shell. The image retains the vendor root account and uses `/root` as HOME so root-owned CANN scripts remain readable. Both image families install the shared `vendor/image-kit/assets/python-dev-requirements.txt`, including uv, ty, Ruff, setuptools, setuptools-scm, Hatchling, hatch-vcs, editables, uv_build, wheel and packaging, through separate pip scripts. Ascend's script preserves the vendor Python environment with constraints generated from every preinstalled package and restores CANN in login shells and the entrypoint. CUDA-specific vision packages, ROS 2 and networking library steps are not included.
+The vendor base supplies Python 3.12, PyTorch 2.10.0, TorchNPU 2.10.0.post7 and CANN 9.2.0. Shared scripts install system tools, CMake 4.3.2, SSH and the development shell. The image retains the vendor root account and uses `/root` as HOME so root-owned CANN scripts remain readable. Both image families install the shared `vendor/image-kit/assets/python-dev-requirements.txt`, including uv, ty, Ruff, setuptools, setuptools-scm, Hatchling, hatch-vcs, editables, uv_build, wheel and packaging, through separate pip scripts. Ascend's script preserves the vendor Python environment with constraints generated from every preinstalled package and restores CANN in login shells and the entrypoint. CUDA-specific vision packages, ROS 2 and networking library steps are not included.
 
 The shared developer tools include the Graphviz system executable. PEFT dependencies and the `graphviz` and `torchview` Python packages are installed in the derived [ascend-peft image](../ascend-peft/README.md).
 
@@ -13,7 +13,7 @@ The package check permits only three exact known vendor diagnostics: the `mindst
 Build and run smoke checks on a native ARM64 host:
 
 ```bash
-python -m image_kit plan --target luciole-ascend/2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12 --output build-plan.json
+python -m image_kit plan --target luciole-ascend/2.10.0.post7-cann9.2.0-910b-ubuntu22.04-py3.12 --output build-plan.json
 python -m image_kit bake --plan build-plan.json --owner dkuav --revision "$(git rev-parse HEAD)" --platform linux/arm64 --mode load --output docker-bake.load.json
 docker buildx bake -f docker-bake.load.json
 python -m image_kit test --plan build-plan.json --owner dkuav --revision "$(git rev-parse HEAD)" --platform linux/arm64
@@ -26,7 +26,7 @@ Direct builds use the tagged vendor base by default and the repository root as c
 Use an ARM64 host with a compatible Ascend 910B driver and Ascend Docker Runtime. Follow the [vendor compatibility information](https://www.hiascend.com/developer/download/compatibility) for host driver and CANN pairing. For example, with the `ascend` runtime registered:
 
 ```bash
-IMAGE=ghcr.io/dkuav/luciole-ascend:2.14.0-cann9.2.0-910b-ubuntu22.04-py3.12
+IMAGE=ghcr.io/dkuav/luciole-ascend:2.10.0.post7-cann9.2.0-910b-ubuntu22.04-py3.12
 docker run --rm -it --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disabled "$IMAGE"
 docker run --rm -i --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disabled "$IMAGE" bash -s < src/_tests/npu-ascend.sh
 ```
