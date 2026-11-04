@@ -8,10 +8,107 @@ Privileged commands are replaced with shell functions before running script text
 import shutil
 import subprocess
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
+
+
+@pytest.mark.parametrize("install_status,check_status", [(0, 0), (1, 0), (0, 1)])
+def test_peft_constraints(
+    bash: str, tmp_path: Path, install_status: int, check_status: int
+) -> None:
+    """Retain parent pins except approved auxiliary packages and fail on errors.
+
+    Parameters
+    ----------
+    bash : str
+        Bash executable.
+    tmp_path : pathlib.Path
+        Isolated constraints directory.
+    install_status, check_status : int
+        Simulated pip installation and dependency-check exit codes.
+    """
+    original = (
+        "torch==2.10.0+cpu\ntorch_npu==2.10.0.post7\n"
+        "attrs==26.1.0\nNumPy==2.5.4\nscipy==1.18.1\n"
+        "decorator==5.3.1\npsutil==7.2.2\n"
+        "vendor-package==1.0\nattrs-extra==2.0\n"
+    )
+    base = tmp_path / "base-constraints.txt"
+    base.write_text(original, encoding="utf-8", newline="\n")
+    dockerfile = (ROOT / "src/ascend-peft/Dockerfile").read_text(encoding="utf-8")
+    command = dockerfile.split(
+        "RUN --mount=type=cache,target=/tmp/pip-cache,mode=0777 \\\n", 1
+    )[1].split("\nCOPY", 1)[0]
+    command = command.replace("/opt/image-python", tmp_path.as_posix()).replace(
+        "/usr/local/bin/ascend-pip-check", "mock_check"
+    )
+    preamble = f"""
+python3() {{ printf '%s\\n' "$@"; return {install_status}; }}
+mock_check() {{ echo dependency-check; return {check_status}; }}
+"""
+    result = run_script(bash, preamble + command, [])
+    assert result.returncode == (install_status or check_status), result.stderr
+    assert base.read_text(encoding="utf-8") == original
+    effective = (tmp_path / "peft-constraints.txt").read_text(encoding="utf-8")
+    assert effective == (
+        "torch==2.10.0+cpu\ntorch_npu==2.10.0.post7\n"
+        "vendor-package==1.0\nattrs-extra==2.0\n"
+    )
+    assert f"--constraint\n{tmp_path.as_posix()}/peft-constraints.txt" in result.stdout
+    assert "--requirement\n/tmp/image-scripts/peft-requirements.txt" in result.stdout
+    assert "--no-deps" not in result.stdout
+    assert ("dependency-check" in result.stdout) == (install_status == 0)
+
+
+@pytest.mark.parametrize(
+    "changed", [None, "torch", "torch-npu", "vendor-package", "attrs", "triton-ascend"]
+)
+def test_peft_parent_smoke(changed: str | None) -> None:
+    """Reject unapproved parent changes and incorrect auxiliary or Triton pins.
+
+    Parameters
+    ----------
+    changed : str or None
+        Package with an unexpected installed version, or a compatible environment.
+    """
+    smoke = (ROOT / "src/_tests/smoke-ascend-peft.sh").read_text(encoding="utf-8")
+    code = smoke.split(
+        'assert_cmd "PEFT metadata and protected parent packages" python3 -c \'\n', 1
+    )[1].split("\n'", 1)[0]
+    base = (
+        "torch==2.10.0+cpu\ntorch_npu==2.10.0.post7\nvendor-package==1.0\n"
+        "attrs==26.1.0\nnumpy==2.5.4\nscipy==1.18.1\n"
+        "decorator==5.3.1\npsutil==7.2.2\n"
+    )
+    installed = {
+        "torch": "2.10.0+cpu",
+        "torch-npu": "2.10.0.post7",
+        "vendor-package": "1.0",
+        "attrs": "24.2.0",
+        "numpy": "1.26.4",
+        "scipy": "1.13.1",
+        "decorator": "5.1.1",
+        "psutil": "6.0.0",
+        "triton-ascend": "3.6.0",
+    }
+    if changed is not None:
+        installed[changed] = "0.0.0"
+    with (
+        patch.object(Path, "read_text", return_value=base),
+        patch(
+            "importlib.metadata.version", side_effect=lambda name: installed.get(name)
+        ),
+    ):
+        if changed is None:
+            exec(code, {})
+        else:
+            with pytest.raises(
+                AssertionError, match=changed if changed != "triton-ascend" else None
+            ):
+                exec(code, {})
 
 
 @pytest.fixture
