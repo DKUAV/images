@@ -1,6 +1,6 @@
 schema_version: 2
 name: ascend-torch-infer-server
-description: ARM64 Ascend PyTorch inference server environment with Flask and the MinIO Python SDK.
+description: ARM64 Ascend PyTorch inference server environment with Flask, the MinIO Python SDK, and AIS Bench.
 dockerfile: src/ascend-torch-infer-server/Dockerfile
 context: .
 platforms:

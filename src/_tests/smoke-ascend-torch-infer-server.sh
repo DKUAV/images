@@ -16,7 +16,7 @@ for line in Path("/opt/image-python/infer-server-constraints.txt").read_text(enc
     package, expected = line.split("==", 1)
     actual = version(package)
     assert actual == expected, f"{package}: expected {expected}, got {actual}"
-for package in ("flask", "flask-cors", "minio"):
+for package in ("flask", "flask-cors", "minio", "aclruntime", "ais-bench"):
     print(f"{package}=={version(package)}")
 '
 assert_cmd "Flask CLI" python3 -m flask --version
@@ -40,5 +40,6 @@ from minio import Minio
 client = Minio("localhost:9000", secure=False)
 assert callable(client.get_object) and callable(client.put_object)
 '
+assert_cmd "AIS Bench CLI loads the ACL runtime" python3 -m ais_bench --help
 
 smoke_summary
