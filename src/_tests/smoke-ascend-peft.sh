@@ -58,6 +58,29 @@ scores = torch.tensor([0.9, 0.8, 0.7])
 assert nms(boxes, scores, 0.5).tolist() == [0, 2]
 '
 
+header "COCO masks and TensorBoard events"
+assert_cmd "COCO mask encoding and decoding" python3 -c '
+import numpy as np
+from pycocotools import mask
+
+pixels = np.asfortranarray([[0, 1], [1, 1]], dtype=np.uint8)
+encoded = mask.encode(pixels)
+np.testing.assert_array_equal(mask.decode(encoded), pixels)
+assert int(mask.area(encoded)) == 3
+'
+assert_cmd "TensorBoard scalar event round trip" python3 -c '
+from tempfile import TemporaryDirectory
+from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
+from torch.utils.tensorboard import SummaryWriter
+
+with TemporaryDirectory(prefix="tensorboard-smoke-") as directory:
+    with SummaryWriter(log_dir=directory) as writer:
+        writer.add_scalar("smoke/loss", 0.5, 1)
+    events = EventAccumulator(directory).Reload().Scalars("smoke/loss")
+    assert len(events) == 1
+    assert events[0].step == 1 and events[0].value == 0.5
+'
+
 header "Python packaging and editable installs"
 assert_import "OpenAI SDK imports" openai
 assert_cmd "pip uses the vendor Python environment" python3 -c '

@@ -1,0 +1,37 @@
+schema_version: 2
+name: ascend-torch-infer-server
+description: ARM64 Ascend PyTorch inference server environment with Flask and the MinIO Python SDK.
+dockerfile: src/ascend-torch-infer-server/Dockerfile
+context: .
+platforms:
+- linux/arm64
+inputs:
+- src/ascend-torch-infer-server/requirements.txt
+- vendor/image-kit/scripts/system/finalize-mirror.sh
+publish: true
+variants:
+- id: 2.10.0.post7-cann9.2.0-infer-server-910b-ubuntu22.04-py3.12
+  base:
+    target: ascend-peft/2.10.0.post7-cann9.2.0-peft-910b-ubuntu22.04-py3.12
+    context: ascend_peft
+  build_args: {}
+  tests:
+  - library: src/_tests/_lib.sh
+    script: src/_tests/smoke-ascend.sh
+    inputs:
+    - src/_tests/_lib.sh
+    - src/_tests/npu-ascend.sh
+    policy: required
+    entrypoint: bash
+  - library: src/_tests/_lib.sh
+    script: src/_tests/smoke-ascend-peft.sh
+    inputs:
+    - src/_tests/_lib.sh
+    policy: required
+    entrypoint: bash
+  - library: src/_tests/_lib.sh
+    script: src/_tests/smoke-ascend-torch-infer-server.sh
+    inputs:
+    - src/_tests/_lib.sh
+    policy: required
+    entrypoint: bash

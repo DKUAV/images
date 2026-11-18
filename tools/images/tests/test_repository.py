@@ -71,7 +71,7 @@ def test_real_repository_contracts() -> None:
     """Validate real image graph, account, COPY and README contracts."""
     repo = ImageRepository(ROOT).load()
     repo.validate_documentation()
-    assert len(repo.families) == 5
+    assert len(repo.families) == 6
     ascend = repo.families["luciole-ascend"]
     assert ascend.platforms == ("linux/arm64",)
     assert ascend.variants[0].base_digest is None
@@ -87,6 +87,12 @@ def test_real_repository_contracts() -> None:
     assert dependency.key == ascend.variants[0].key
     assert dependency.context == "ascend_base"
     assert all(test.policy == "required" for test in peft.variants[0].tests)
+    infer_server = repo.families["ascend-torch-infer-server"]
+    assert infer_server.platforms == ("linux/arm64",)
+    dependency = infer_server.variants[0].dependencies[0]
+    assert dependency.key == peft.variants[0].key
+    assert dependency.context == "ascend_peft"
+    assert all(test.policy == "required" for test in infer_server.variants[0].tests)
     plan = repo.make_plan(repo.variants)
     workers = plan["build_matrix"]["include"]
     assert len(workers) == 3
@@ -99,7 +105,7 @@ def test_real_repository_contracts() -> None:
             )
         }
         assert names in (
-            {"luciole-ascend", "ascend-peft"},
+            {"luciole-ascend", "ascend-peft", "ascend-torch-infer-server"},
             {"luciole-cuda-base", "luciole-cuda-dev", "luciole-cuda-runtime"},
         )
     common = "vendor/image-kit/assets/python-dev-requirements.txt"
@@ -109,14 +115,26 @@ def test_real_repository_contracts() -> None:
         for key in repo.affected(
             ["vendor/image-kit/scripts/python/ascend-pip-packages.sh"]
         )
-    } == {"luciole-ascend", "ascend-peft"}
+    } == {"luciole-ascend", "ascend-peft", "ascend-torch-infer-server"}
     assert {key[0] for key in repo.affected(["src/ascend-peft/requirements.txt"])} == {
-        "ascend-peft"
+        "ascend-peft",
+        "ascend-torch-infer-server",
     }
     assert {key[0] for key in repo.affected(["src/luciole-ascend/Dockerfile"])} == {
         "luciole-ascend",
         "ascend-peft",
+        "ascend-torch-infer-server",
     }
+    assert {
+        key[0]
+        for key in repo.affected(["src/ascend-torch-infer-server/requirements.txt"])
+    } == {"ascend-torch-infer-server"}
+    plan = repo.make_plan(repo.select(family="ascend-torch-infer-server"))
+    assert [(item["name"], item["publish"]) for item in plan["targets"]] == [
+        ("luciole-ascend", False),
+        ("ascend-peft", False),
+        ("ascend-torch-infer-server", True),
+    ]
     plan = repo.make_plan(repo.select(family="ascend-peft"))
     assert [(item["name"], item["publish"]) for item in plan["targets"]] == [
         ("luciole-ascend", False),

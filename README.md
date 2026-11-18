@@ -11,8 +11,9 @@ graph TD
   N["NVIDIA PyTorch 26.06-py3"] --> B["luciole-cuda-base"]
   B --> D["luciole-cuda-dev"]
   B --> R["luciole-cuda-runtime"]
-  A["Ascend TorchNPU 2.14.0"] --> NPU["luciole-ascend"]
+  A["Ascend TorchNPU 2.10.0.post7"] --> NPU["luciole-ascend"]
   NPU --> PEFT["ascend-peft"]
+  PEFT --> INFER["ascend-torch-infer-server"]
 ```
 
 | Image | Contents | Platforms | Smoke policy |
@@ -21,7 +22,8 @@ graph TD
 | [luciole-cuda-dev](src/luciole-cuda-dev/README.md) | Base + ROS 2 Jazzy, LLVM 21, developer shell, cached pre-commit hooks | amd64 + arm64 | Required |
 | [luciole-cuda-runtime](src/luciole-cuda-runtime/README.md) | Base + ROS 2 Jazzy; inherits system development tools and CMake | amd64 + arm64 | Required |
 | [luciole-ascend](src/luciole-ascend/README.md) | Ascend 910B TorchNPU, CANN and ARM64 development tools | arm64 | Required |
-| [ascend-peft](src/ascend-peft/README.md) | Ascend base + PEFT dependencies and Graphviz/torchview model visualization | arm64 | Required |
+| [ascend-peft](src/ascend-peft/README.md) | Ascend base + PEFT dependencies, Graphviz/torchview model visualization, pycocotools and TensorBoard | arm64 | Required |
+| [ascend-torch-infer-server](src/ascend-torch-infer-server/README.md) | Ascend PEFT + Flask and the MinIO Python SDK | arm64 | Required |
 
 The CUDA base and Ascend image keep upstream package sources. CUDA dev/runtime switch persisted apt and pip sources to Aliyun after all package installation. The runtime image inherits the base toolset; it is not a minimal CUDA runtime image. Ascend uses a tagged external base without a pinned digest; run its separate NPU check on a compatible host.
 
