@@ -4,7 +4,7 @@
 
 ## 依赖和运行方式
 
-本镜像的 [requirements.txt](requirements.txt) 添加 `flask` 和 `minio`（MinIO Python SDK），并继承 PEFT、pycocotools、TensorBoard 及模型可视化依赖。镜像为应用提供推理服务依赖，默认命令沿用父镜像的 Bash；运行时需提供应用及启动命令。MinIO 对象存储服务单独运行。
+本镜像的 [requirements.txt](requirements.txt) 添加 `flask`、`flask-cors` 和 `minio`（MinIO Python SDK），并继承 PEFT、pycocotools、TensorBoard 及模型可视化依赖。镜像为应用提供推理服务依赖，默认命令沿用父镜像的 Bash；运行时需提供应用及启动命令。MinIO 对象存储服务单独运行。
 
 安装前，Dockerfile 将父镜像全部已安装包版本记录到 `/opt/image-python/infer-server-constraints.txt`，并将其作为 pip 约束。这会保留 PEFT 软件栈，包括五个 Triton 辅助包版本，原始厂商约束文件保持不变。不兼容的依赖会使构建失败。安装后执行 `ascend-pip-check`，最后配置上游软件源并清理临时文件。
 
@@ -26,7 +26,7 @@ python -m image_kit test --plan build-plan.json --owner dkuav --revision "$(git 
 
 计划构建、测试当前工作区的 `luciole-ascend` 和 `ascend-peft` 两级父镜像，但不选择它们发布。新镜像使用 `ascend_peft` 命名上下文。修改任一级父镜像会选择下游镜像；仅修改本镜像的 requirements 时，只选择本镜像。
 
-必须通过的烟测重跑两级父镜像检查，比较继承包版本与快照，调用 Flask CLI，通过 Flask 测试客户端处理 JSON 请求，并在无网络访问的情况下初始化 MinIO 客户端。这些检查不覆盖对象存储或 NPU 推理；需在兼容 NPU 主机运行独立的[硬件检查](../_tests/npu-ascend.sh)和应用集成测试。
+必须通过的烟测重跑两级父镜像检查，比较继承包版本与快照，调用 Flask CLI，通过 Flask 测试客户端验证 JSON 响应体和 CORS 响应头，并在无网络访问的情况下初始化 MinIO 客户端。这些检查不覆盖对象存储或 NPU 推理；需在兼容 NPU 主机运行独立的[硬件检查](../_tests/npu-ascend.sh)和应用集成测试。
 
 直接构建默认使用已发布的 `ascend-peft` 父镜像：
 

@@ -4,7 +4,7 @@ This ARM64 image derives from [ascend-peft](../ascend-peft/README.md) and publis
 
 ## Packages and runtime
 
-Image-local [requirements.txt](requirements.txt) adds `flask` and `minio` (the MinIO Python SDK). The image inherits the PEFT, pycocotools, TensorBoard and model visualization packages. It supplies dependencies for an application-provided inference server; its default command remains the parent's Bash shell. Supply your application and startup command when running it. MinIO object storage runs separately.
+Image-local [requirements.txt](requirements.txt) adds `flask`, `flask-cors`, and `minio` (the MinIO Python SDK). The image inherits the PEFT, pycocotools, TensorBoard and model visualization packages. It supplies dependencies for an application-provided inference server; its default command remains the parent's Bash shell. Supply your application and startup command when running it. MinIO object storage runs separately.
 
 Before installing dependencies, the Dockerfile records all installed parent versions in `/opt/image-python/infer-server-constraints.txt` and constrains pip to that snapshot. This preserves the PEFT stack, including its five Triton auxiliary versions, without changing the original vendor constraints. Incompatible dependencies fail the build. Installation runs `ascend-pip-check` and finishes with upstream mirror configuration and cleanup.
 
@@ -26,7 +26,7 @@ python -m image_kit test --plan build-plan.json --owner dkuav --revision "$(git 
 
 The plan builds and tests both current-checkout ancestors, `luciole-ascend` and `ascend-peft`, without selecting them for publication. The child uses the `ascend_peft` named context. Changes to either ancestor select downstream images; changes to this image's requirements select only this image.
 
-Required smoke tests rerun both ancestors' checks, compare all inherited versions with the snapshot, invoke the Flask CLI, handle a JSON request through Flask's test client, and initialize a MinIO client without network access. They do not exercise object storage or NPU inference. Run the separate [hardware check](../_tests/npu-ascend.sh) and application integration tests on a compatible NPU host.
+Required smoke tests rerun both ancestors' checks, compare all inherited versions with the snapshot, invoke the Flask CLI, verify the JSON body and CORS response header through Flask's test client, and initialize a MinIO client without network access. They do not exercise object storage or NPU inference. Run the separate [hardware check](../_tests/npu-ascend.sh) and application integration tests on a compatible NPU host.
 
 Direct builds use the published `ascend-peft` parent by default:
 

@@ -16,19 +16,23 @@ for line in Path("/opt/image-python/infer-server-constraints.txt").read_text(enc
     package, expected = line.split("==", 1)
     actual = version(package)
     assert actual == expected, f"{package}: expected {expected}, got {actual}"
-for package in ("flask", "minio"):
+for package in ("flask", "flask-cors", "minio"):
     print(f"{package}=={version(package)}")
 '
 assert_cmd "Flask CLI" python3 -m flask --version
-assert_cmd "Flask handles a JSON request" python3 -c '
+assert_cmd "Flask handles a cross-origin JSON request" python3 -c '
 from flask import Flask
+from flask_cors import CORS
 
 app = Flask("infer-server-smoke")
+CORS(app)
 app.add_url_rule("/health", view_func=lambda: {"status": "ok"})
+origin = "https://example.test"
 with app.test_client() as client:
-    response = client.get("/health")
+    response = client.get("/health", headers={"Origin": origin})
     assert response.status_code == 200
     assert response.json == {"status": "ok"}
+    assert response.headers["Access-Control-Allow-Origin"] == origin
 '
 assert_cmd "MinIO client initializes without network access" python3 -c '
 from minio import Minio
