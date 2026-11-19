@@ -25,7 +25,7 @@ graph TD
 | [luciole-ascend](src/luciole-ascend/README_zh.md) | 昇腾 910B TorchNPU、CANN、ARM64 开发工具、AMCT、ONNX 工具、MindStudio Probe 和 AIS Bench | arm64 | 必须通过 |
 | [ascend-peft](src/ascend-peft/README_zh.md) | Ascend 基础镜像 + PEFT 依赖、Graphviz/torchview 模型可视化、pycocotools 和 TensorBoard | arm64 | 必须通过 |
 | [ascend-torch-infer-server](src/ascend-torch-infer-server/README_zh.md) | Ascend PEFT + Flask、CORS 支持和 MinIO Python SDK | arm64 | 必须通过 |
-| [ascend-atc](src/ascend-atc/README_zh.md) | CANN 8.5.0 ATC 面向 Ascend910B2，支持 AMCT ONNX CPU INT8 校准、AMCT ACL 内联校准和 AIS Bench | arm64 | 必须通过 |
+| [ascend-atc](src/ascend-atc/README_zh.md) | CANN 8.5.0 ATC 面向 Ascend910B2，支持 AMCT ONNX CPU INT8 校准、AMCT ACL 内联校准、ONNX 工具、MindStudio Probe 和 AIS Bench | arm64 | 必须通过 |
 
 CUDA base 和昇腾镜像保持上游软件源。CUDA dev/runtime 在安装完所有软件包后，将持久化的 apt 和 pip 源切换到 Aliyun。Runtime 继承 base 的工具集，并非精简 CUDA runtime 镜像。`luciole-ascend` 使用带版本标签的外部基础镜像，NPU 硬件检查在兼容宿主机单独运行。`ascend-atc` 固定 CANN 8.5.0 基础镜像的 digest，并通过厂商入口运行工具命令。
 

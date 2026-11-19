@@ -53,6 +53,20 @@ AMCT 还会生成 `output/model-int8_fake_quant_model.onnx`，供 CPU 使用 AMC
 
 镜像也在 Toolkit 中安装 AMCT ACL 8.5.0。若要通过 `--compression_optimize_conf` 的 `calibration` 段执行 ATC 内联校准，需要给容器挂载兼容的 NPU，并提供 ATC 压缩配置文件。 [ATC 压缩配置](https://www.hiascend.com/doc_center/source/en/canncommercial/850/devaids/atctool/atlasatcparam_16_0059.html)
 
+## ONNX 工具与 MindStudio Probe
+
+本镜像与 `luciole-ascend` 共用 [ONNX 依赖清单](../_assets/onnx-requirements.txt)，在 `/opt/onnx` 独立的 Python 3.11 环境中安装 ONNX、ONNX Runtime、ONNX Simplifier、ONNX Slim、ONNX Optimizer、ONNX GraphSurgeon、ONNX Converter Common、ONNX Script 和 MindStudio Probe。ARM64 构建在没有可用 wheel 时从源码编译 `onnxoptimizer`。
+
+厂商入口会为 CANN 设置 `PYTHONPATH`。在容器内运行 ONNX 脚本时用 `-E` 忽略该环境变量，运行 CLI 时可以只对当前命令清除它。
+
+```bash
+/opt/onnx/bin/python -E -c 'import onnx; print(onnx.__version__)'
+env -u PYTHONPATH /opt/onnx/bin/onnxsim model.onnx model-simplified.onnx
+env -u PYTHONPATH /opt/onnx/bin/msprobe --help
+```
+
+ONNX Runtime 使用 CPU 执行提供程序。这个环境中的 MindStudio Probe 用于离线分析。必过烟测会检查环境依赖、启动 msProbe CLI，并优化一个小型 ONNX 模型后在 CPU 上执行。
+
 ## OM 推理与基准测试
 
 [ATC 依赖](atc-requirements.txt)通过 SHA256 固定官方 `ais-bench` 和 `aclruntime` 0.0.2 wheel。AIS Bench 使用厂商 Python 3.11，`aclruntime` 使用对应的 ARM64 CPython 3.11 wheel。必过烟测运行 `python3.11 -m ais_bench --help`，检查 CLI 能否加载原生 runtime。 [Ascend AIS Bench 推理工具指南](https://gitee.com/ascend/tools/blob/master/ais-bench_workload/tool/ais_bench/README.md)

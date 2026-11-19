@@ -89,7 +89,7 @@ RUN --network=none tar -xzf /tmp/amct_onnx/amct_onnx_op.tar.gz -C /tmp \
     && uv pip check --python /opt/amct/bin/python \
     && sed -i '1s/$/ -E/' /opt/amct/bin/amct_onnx
 
-COPY src/luciole-ascend/onnx-requirements.txt /tmp/image-scripts/onnx-requirements.txt
+COPY src/_assets/onnx-requirements.txt /tmp/image-scripts/onnx-requirements.txt
 # Limit parallel compilation when onnxoptimizer builds its ARM64 extension.
 RUN --mount=type=cache,target=/tmp/uv-cache,mode=0777 \
     uv venv --no-python-downloads --python "$(command -v python3)" /opt/onnx \

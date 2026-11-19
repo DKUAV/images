@@ -34,11 +34,21 @@ RUN --network=none tar -xzf /tmp/amct.tar.gz -C /tmp ./amct_acl ./amct_onnx \
     && /opt/amct/bin/python -m pip check \
     && sed -i '1s/$/ -E/' /opt/amct/bin/amct_onnx
 
+FROM ${BASE_IMAGE} AS onnx-build
+
+USER root
+ENV PYTHONPATH=""
+COPY src/_assets/onnx-requirements.txt /tmp/onnx-requirements.txt
+# Limit parallel compilation when pip builds onnxoptimizer from source.
+RUN python3.11 -m venv /opt/onnx \
+    && MAX_JOBS=2 /opt/onnx/bin/python -m pip install --no-cache-dir \
+        --requirement /tmp/onnx-requirements.txt
+
 FROM ${BASE_IMAGE}
 
 USER root
 ENV HOME=/root
-LABEL org.opencontainers.image.description="CANN 8.5.0 ATC, AMCT and AIS Bench for Ascend910B2"
+LABEL org.opencontainers.image.description="CANN 8.5.0 ATC, AMCT, ONNX tools and AIS Bench for Ascend910B2"
 
 # Add offline compiler dependencies and AIS Bench to the vendor interpreter.
 COPY src/ascend-atc/atc-requirements.txt /tmp/atc-requirements.txt
@@ -67,6 +77,7 @@ RUN --mount=type=bind,from=amct-build,source=/tmp/amct_acl,target=/tmp/amct_acl 
 
 COPY --from=amct-build /opt/amct /opt/amct
 RUN ln -s /opt/amct/bin/amct_onnx /usr/local/bin/amct_onnx
+COPY --from=onnx-build /opt/onnx /opt/onnx
 COPY src/ascend-atc/calibration.cfg /opt/ascend-atc/calibration.cfg
 
 COPY --chmod=0755 vendor/image-kit/scripts/system/finalize-mirror.sh /tmp/finalize-mirror.sh

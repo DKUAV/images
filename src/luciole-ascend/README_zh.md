@@ -43,7 +43,7 @@ AMCT ACL 支持通过 `--compression_optimize_conf` 的 `calibration` 段执行 
 
 ### ONNX 工具和 MindStudio Probe
 
-构建通过 `uv` 在 `/opt/onnx` 创建独立的 Python 3.12 环境，安装 `onnx`、`onnxruntime`、`onnxsim`、`onnxslim`、`onnxoptimizer`、`onnx-graphsurgeon`、`onnxconverter-common`、`onnxscript` 和 `mindstudio-probe>=26.2.0`。[虚拟环境依赖](onnx-requirements.txt)独立于默认 Python 环境的厂商版本约束进行解析。ARM64 构建在没有可用 wheel 时从源码编译 `onnxoptimizer`。
+构建通过 `uv` 在 `/opt/onnx` 创建独立的 Python 3.12 环境，安装 `onnx`、`onnxruntime`、`onnxsim`、`onnxslim`、`onnxoptimizer`、`onnx-graphsurgeon`、`onnxconverter-common`、`onnxscript` 和 `mindstudio-probe>=26.2.0`。[虚拟环境依赖](../_assets/onnx-requirements.txt)独立于默认 Python 环境的厂商版本约束进行解析。ARM64 构建在没有可用 wheel 时从源码编译 `onnxoptimizer`。
 
 用 `/opt/onnx/bin/python` 运行 ONNX 脚本，用 `/opt/onnx/bin/msprobe --help` 查看 MindStudio Probe 命令。也可以在 Bash 中运行 `source /opt/onnx/bin/activate`，将两类工具加入当前 shell 的 PATH。ONNX Runtime 使用 CPU 执行提供程序。这个环境中的 msProbe 用于离线分析。进程内精度调试需要在同一个 Python 环境中使用 msProbe、PyTorch 和 TorchNPU。
 

@@ -8,7 +8,7 @@
 
 向默认 Python 环境安装依赖前，Dockerfile 将父镜像全部已安装包版本记录到 `/opt/image-python/infer-server-constraints.txt`，并将其作为 pip 约束。这会保留 PEFT 软件栈，包括五个 Triton 辅助包版本，原始厂商约束文件保持不变。不兼容的依赖会使构建失败。默认 Python 环境安装完成后执行 `ascend-pip-check`。
 
-本镜像从 `luciole-ascend` 继承 AMCT、ONNX 工具、MindStudio Probe、AIS Bench 和 `aclruntime`，见[模型编译与部署说明](../luciole-ascend/README_zh.md#模型编译与部署)。
+本镜像从 `luciole-ascend` 继承 AMCT、ONNX 工具、MindStudio Probe、AIS Bench 和 `aclruntime`。必过烟测会在 CPU 上验证 ONNX 工具，见[模型编译与部署说明](../luciole-ascend/README_zh.md#模型编译与部署)。
 
 镜像继承 root、`HOME=/root`、`/work`、Ascend 入口和公钥 SSH 策略。宿主机 runtime、驱动要求和 SSH 凭据说明见 [Ascend 运行指南](../luciole-ascend/README_zh.md#使用-npu)。
 

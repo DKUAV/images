@@ -1,11 +1,12 @@
 schema_version: 2
 name: ascend-atc
-description: CANN 8.5.0 ATC model conversion, AMCT INT8 calibration and AIS Bench for Ascend910B2 on ARM64.
+description: CANN 8.5.0 ATC model conversion, AMCT INT8 calibration, ONNX tools and AIS Bench for Ascend910B2 on ARM64.
 dockerfile: src/ascend-atc/Dockerfile
 context: .
 platforms:
 - linux/arm64
 inputs:
+- src/_assets/onnx-requirements.txt
 - src/ascend-atc/atc-requirements.txt
 - src/ascend-atc/requirements.txt
 - src/ascend-atc/calibration.cfg
@@ -22,5 +23,6 @@ variants:
     script: src/_tests/smoke-ascend-atc.sh
     inputs:
     - src/_tests/_lib.sh
+    - src/_tests/onnx-tools.sh
     policy: required
     entrypoint: image

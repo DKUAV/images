@@ -43,7 +43,7 @@ AMCT ACL supports ATC inline calibration through the `calibration` block in `--c
 
 ### ONNX tools and MindStudio Probe
 
-The build uses `uv` to create a separate Python 3.12 environment at `/opt/onnx` with `onnx`, `onnxruntime`, `onnxsim`, `onnxslim`, `onnxoptimizer`, `onnx-graphsurgeon`, `onnxconverter-common`, `onnxscript`, and `mindstudio-probe>=26.2.0`. The [environment requirements](onnx-requirements.txt) resolve independently of the default Python environment's vendor pins. The ARM64 build compiles `onnxoptimizer` from source when a wheel is unavailable.
+The build uses `uv` to create a separate Python 3.12 environment at `/opt/onnx` with `onnx`, `onnxruntime`, `onnxsim`, `onnxslim`, `onnxoptimizer`, `onnx-graphsurgeon`, `onnxconverter-common`, `onnxscript`, and `mindstudio-probe>=26.2.0`. The [environment requirements](../_assets/onnx-requirements.txt) resolve independently of the default Python environment's vendor pins. The ARM64 build compiles `onnxoptimizer` from source when a wheel is unavailable.
 
 Use `/opt/onnx/bin/python` for ONNX scripts and `/opt/onnx/bin/msprobe --help` to see the MindStudio Probe commands. Run `source /opt/onnx/bin/activate` in Bash to put both sets of tools on your shell's path. ONNX Runtime uses the CPU execution provider. Use this msProbe environment for offline analysis. In-process precision debugging requires msProbe, PyTorch, and TorchNPU in the same Python environment.
 
