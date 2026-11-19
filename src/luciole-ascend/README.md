@@ -21,6 +21,44 @@ python -m image_kit test --plan build-plan.json --owner dkuav --revision "$(git 
 
 Direct builds use the tagged vendor base by default and the repository root as context. Compose only runs published images and has no `build` section; use the manifest/Bake commands above to build and test this checkout. CI publishes explicit variant and batch-qualified build tags after all native checks pass. The required smoke test needs no NPU and does not verify hardware compatibility.
 
+## Micromamba
+
+The image includes micromamba 2.10.0 for creating separate Conda environments. The manifest pins the release and its ARM64 checksum. Run `micromamba --version` to check the executable. See the [environment creation example](../luciole-cuda-base/README.md#micromamba).
+
+## Model compilation and deployment
+
+### AMCT quantization
+
+The image installs AMCT ACL 9.2.0 into the CANN Toolkit and AMCT ONNX 0.24.1 into an isolated Python 3.12 environment at `/opt/amct`. The `amct_onnx` command runs in that environment with ONNX 1.18.0, ONNX Runtime 1.20.0 and the matching custom operators. Its [requirements](amct-requirements.txt) resolve separately from `/opt/onnx` and the vendor Python environment. [AMCT ONNX compatibility](https://www.hiascend.com/doc_center/source/en/CANNCommunityEdition/910/devaids/amct/atlasamct_16_0014.html)
+
+Run `amct_onnx calibration --help` for the CPU calibration command. Use representative input batches with the model's real preprocessing and layout. For example, place raw NCHW float32 batches in `calibration/images/` and adjust the sample shape and batch count below. Use an ONNX model with IR version 10 or earlier for ONNX Runtime 1.20. [ONNX Runtime compatibility](https://onnxruntime.ai/docs/reference/compatibility.html)
+
+```bash
+mkdir -p output
+INPUT_SHAPE='images:1,3,640,640'
+amct_onnx calibration --model=model.onnx --save_path=output/model-int8 \
+  --input_shape="$INPUT_SHAPE" --data_dir=calibration/images \
+  --data_types=float32 --batch_num=1 &&
+atc --framework=5 --model=output/model-int8_deploy_model.onnx \
+  --output=output/model-int8 --soc_version=Ascend910B2 --input_shape="$INPUT_SHAPE"
+```
+
+AMCT ACL supports ATC inline calibration through the `calibration` block in `--compression_optimize_conf`. Use a compatible NPU host and expose the device to the container for that path. The required container smoke test checks the installed ACL library, runs AMCT ONNX calibration on the CPU and compiles the deploy model into an INT8 OM for `Ascend910B2`. [ATC compression options](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/920beta1/devaids/atctool/docs/zh/user_guides/atc_tools/CLI_options/--compression_optimize_conf.md)
+
+### ONNX tools and MindStudio Probe
+
+The build uses `uv` to create a separate Python 3.12 environment at `/opt/onnx` with `onnx`, `onnxruntime`, `onnxsim`, `onnxslim`, `onnxoptimizer`, `onnx-graphsurgeon`, `onnxconverter-common`, `onnxscript`, and `mindstudio-probe>=26.2.0`. The [environment requirements](../_assets/onnx-requirements.txt) resolve independently of the default Python environment's vendor pins. The ARM64 build compiles `onnxoptimizer` from source when a wheel is unavailable.
+
+Use `/opt/onnx/bin/python` for ONNX scripts and `/opt/onnx/bin/msprobe --help` to see the MindStudio Probe commands. Run `source /opt/onnx/bin/activate` in Bash to put both sets of tools on your shell's path. ONNX Runtime uses the CPU execution provider. Use this msProbe environment for offline analysis. In-process precision debugging requires msProbe, PyTorch, and TorchNPU in the same Python environment.
+
+The required smoke test checks dependency consistency, runs `msprobe --help`, imports the eight ONNX packages and verifies an optimized graph with ONNX Runtime's CPU execution provider.
+
+### OM inference and benchmarking
+
+The [AIS Bench requirements](ais-bench-requirements.txt) pin the official `ais-bench` and `aclruntime` 0.0.2 wheels by SHA256. The `aclruntime` wheel targets Linux ARM64 and CPython 3.12. Both packages use the vendor Python with its existing dependency constraints. The required smoke test runs `python3 -m ais_bench --help` to check that the CLI loads the native ACL runtime. [Ascend AIS Bench inference guide](https://gitee.com/ascend/tools/blob/master/ais-bench_workload/tool/ais_bench/README.md)
+
+Inside an [NPU-enabled container](#running-with-an-npu), benchmark an OM model with `python3 -m ais_bench --model /work/model.om --device 0`.
+
 ## Running with an NPU
 
 Use an ARM64 host with a compatible Ascend 910B driver and Ascend Docker Runtime. Follow the [vendor compatibility information](https://www.hiascend.com/developer/download/compatibility) for host driver and CANN pairing. For example, with the `ascend` runtime registered:

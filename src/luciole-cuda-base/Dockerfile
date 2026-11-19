@@ -76,6 +76,13 @@ RUN /tmp/scripts/ssh.sh --default-user "${USERNAME}" --mode password
 # survives the cleanup below.
 COPY --chmod=0755 vendor/image-kit/assets/docker-entrypoint.sh /usr/local/bin/docker-entrypoint
 
+ARG MICROMAMBA_VERSION=2.10.0-0
+ARG MICROMAMBA_SHA256_AMD64=701f39c06f8e6a670a0e186c8479b9e5c0502a2f0cda6cef65d83bdd2875e8bd
+ARG MICROMAMBA_SHA256_ARM64=3bb56786e21b9b24024f599fe9185b4a59dc3f9f59937a42311ee583adbbb23c
+COPY --chmod=0755 vendor/image-kit/scripts/dev/micromamba.sh /tmp/scripts/micromamba.sh
+RUN /tmp/scripts/micromamba.sh --version "${MICROMAMBA_VERSION}" \
+    --sha256-amd64 "${MICROMAMBA_SHA256_AMD64}" --sha256-arm64 "${MICROMAMBA_SHA256_ARM64}"
+
 RUN rm -rf /tmp/scripts
 
 ENV XDG_RUNTIME_DIR=/run/user/${USER_UID}

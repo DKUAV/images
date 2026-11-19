@@ -13,7 +13,7 @@ Main 更新显式 variant 通道。构建标签包含 variant、SHA12 和运行�
 
 | 类别 | 说明 |
 | --- | --- |
-| 基础 | [luciole-cuda-base](../luciole-cuda-base/README_zh.md)：PyTorch/CUDA、工具、pip 包、CMake、网络库与用户 |
+| 基础 | [luciole-cuda-base](../luciole-cuda-base/README_zh.md)：PyTorch/CUDA、工具、pip 包、CMake、micromamba、网络库与用户 |
 | Python 构建工具 | 继承 setuptools、setuptools-scm、Hatchling、hatch-vcs、editables、uv_build、wheel 和 packaging |
 | ROS 2 | Jazzy `ros-base`、colcon、rosdep 和 rosinstall-generator |
 | 软件源 | 所有软件安装完成后切换至 Aliyun apt/pip 源；构建过程使用上游源 |
@@ -86,6 +86,8 @@ ssh -p 2222 luciole@localhost
 SSH 使用显式选择的 `DEFAULT_USER`：选择 `root` 后，公钥模式默认要求非空的 `/root/.ssh/authorized_keys`；root 密码登录必须挂载非空的 `SSH_PASSWORD_FILE`。root SSH 具有完整容器权限。运行时修改 `DEFAULT_USER` 只选择 SSH 账户，不改变 Dockerfile 命令用户。
 
 ## ROS 2 配置
+
+共享 ROS 2 安装脚本使用固定版本的 Ubuntu `ros2-apt-source` 包，并校验 SHA-256。
 
 使用 ROS 前执行 `source /opt/ros/jazzy/setup.bash`。Runtime 不添加 devshell、`load_ros` 别名或 LLVM，默认命令保持 Bash。
 

@@ -15,15 +15,6 @@ RUN --mount=type=cache,target=/tmp/pip-cache,mode=0777 \
         --requirement /tmp/image-scripts/infer-server-requirements.txt \
     && /usr/local/bin/ascend-pip-check
 
-COPY src/ascend-torch-infer-server/onnx-requirements.txt /tmp/image-scripts/onnx-requirements.txt
-# Limit parallel compilation when onnxoptimizer builds its ARM64 extension.
-RUN --mount=type=cache,target=/tmp/uv-cache,mode=0777 \
-    uv venv --no-python-downloads --python "$(command -v python3)" /opt/onnx \
-    && UV_CACHE_DIR=/tmp/uv-cache MAX_JOBS=2 uv pip install \
-        --python /opt/onnx/bin/python \
-        --link-mode copy \
-        --requirement /tmp/image-scripts/onnx-requirements.txt
-
 COPY --chmod=0755 vendor/image-kit/scripts/system/finalize-mirror.sh /tmp/image-scripts/finalize-mirror.sh
 RUN /tmp/image-scripts/finalize-mirror.sh --mirror upstream \
     && rm -rf /tmp/image-scripts

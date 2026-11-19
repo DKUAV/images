@@ -19,13 +19,13 @@ graph TD
 
 | 镜像 | 内容 | 平台 | 烟测策略 |
 | --- | --- | --- | --- |
-| [luciole-cuda-base](src/luciole-cuda-base/README_zh.md) | PyTorch/CUDA、系统与 GUI 工具、Python 包、CMake、网络库、用户和 SSH 配置 | amd64 + arm64 | 仅报告断言失败 |
+| [luciole-cuda-base](src/luciole-cuda-base/README_zh.md) | PyTorch/CUDA、系统与 GUI 工具、Python 包、CMake、micromamba、网络库、用户和 SSH 配置 | amd64 + arm64 | 仅报告断言失败 |
 | [luciole-cuda-dev](src/luciole-cuda-dev/README_zh.md) | Base + ROS 2 Jazzy、LLVM 21、开发 shell、预缓存 pre-commit hooks | amd64 + arm64 | 必须通过 |
 | [luciole-cuda-runtime](src/luciole-cuda-runtime/README_zh.md) | Base + ROS 2 Jazzy；继承系统开发工具与 CMake | amd64 + arm64 | 必须通过 |
-| [luciole-ascend](src/luciole-ascend/README_zh.md) | 昇腾 910B TorchNPU、CANN 和 ARM64 开发工具 | arm64 | 必须通过 |
+| [luciole-ascend](src/luciole-ascend/README_zh.md) | 昇腾 910B TorchNPU、CANN、ARM64 开发工具、micromamba、AMCT、ONNX 工具、MindStudio Probe 和 AIS Bench | arm64 | 必须通过 |
 | [ascend-peft](src/ascend-peft/README_zh.md) | Ascend 基础镜像 + PEFT 依赖、Graphviz/torchview 模型可视化、pycocotools 和 TensorBoard | arm64 | 必须通过 |
-| [ascend-torch-infer-server](src/ascend-torch-infer-server/README_zh.md) | Ascend PEFT + Flask、MinIO Python SDK、AIS Bench，以及 ONNX 工具与 MindStudio Probe 的独立环境 | arm64 | 必须通过 |
-| [ascend-atc](src/ascend-atc/README_zh.md) | CANN 8.5.0 ATC 面向 Ascend910B2，支持 AMCT ONNX CPU INT8 校准和 AMCT ACL 内联校准 | arm64 | 必须通过 |
+| [ascend-torch-infer-server](src/ascend-torch-infer-server/README_zh.md) | Ascend PEFT + Flask、CORS 支持和 MinIO Python SDK | arm64 | 必须通过 |
+| [ascend-atc](src/ascend-atc/README_zh.md) | CANN 8.5.0 ATC 面向 Ascend910B2，支持 AMCT ONNX CPU INT8 校准、AMCT ACL 内联校准、ONNX 工具、MindStudio Probe 和 AIS Bench | arm64 | 必须通过 |
 
 CUDA base 和昇腾镜像保持上游软件源。CUDA dev/runtime 在安装完所有软件包后，将持久化的 apt 和 pip 源切换到 Aliyun。Runtime 继承 base 的工具集，并非精简 CUDA runtime 镜像。`luciole-ascend` 使用带版本标签的外部基础镜像，NPU 硬件检查在兼容宿主机单独运行。`ascend-atc` 固定 CANN 8.5.0 基础镜像的 digest，并通过厂商入口运行工具命令。
 

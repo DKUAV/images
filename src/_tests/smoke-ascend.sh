@@ -25,6 +25,7 @@ for tool in cmake ninja git clangd gdb rg fd bat gosu landscape-sysinfo uv ty zs
     assert_cmd "${tool} available" bash -c "command -v ${tool}"
 done
 assert_cmd_contains "CMake 4.3.2" "cmake version 4.3.2" cmake --version
+assert_cmd "micromamba CLI" micromamba --version
 assert_cmd "fzf installed" test -x "${HOME}/.fzf/bin/fzf"
 assert_cmd "Python package check" ascend-pip-check
 assert_cmd "Python build tools import" python3 -c 'import build, packaging, wheel, hatchling.build, hatch_vcs, editables, setuptools_scm, uv_build'
@@ -65,5 +66,58 @@ assert_cmd "password mode starts sshd with secret" env SSH_MODE=password SSH_PAS
 assert_cmd "sshd running" pgrep -x sshd
 pkill -x sshd || true
 rm -f "${password_file}"
+
+amct_onnx_smoke() (
+    work=$(mktemp -d) || exit 1
+    trap 'rm -rf -- "$work"' EXIT
+    cd "$work" && mkdir calibration || exit 1
+
+    /opt/amct/bin/python -E - <<'PY' || exit 1
+import amct_onnx
+import numpy as np
+import onnx
+from onnx import TensorProto, helper, numpy_helper
+
+assert amct_onnx.AMCT_SO is not None, "AMCT custom operators could not be loaded"
+shape = [1, 16, 8, 8]
+rng = np.random.default_rng(42)
+weights = rng.normal(0, 0.2, (16, 16, 3, 3)).astype(np.float32)
+graph = helper.make_graph(
+    [helper.make_node("Conv", ["x", "weights"], ["y"], name="conv", pads=[1] * 4)],
+    "smoke",
+    [helper.make_tensor_value_info("x", TensorProto.FLOAT, shape)],
+    [helper.make_tensor_value_info("y", TensorProto.FLOAT, shape)],
+    [numpy_helper.from_array(weights, "weights")],
+)
+model = helper.make_model(graph, ir_version=9, opset_imports=[helper.make_opsetid("", 13)])
+onnx.checker.check_model(model)
+onnx.save(model, "model.onnx")
+rng.normal(size=shape).astype("<f4").tofile("calibration/000.bin")
+PY
+
+    amct_onnx calibration --model model.onnx --save_path int8 \
+        --input_shape 'x:1,16,8,8' --data_dir calibration --data_types float32 \
+        --batch_num 1 || exit 1
+    test -s int8_fake_quant_model.onnx || exit 1
+    /opt/amct/bin/python -E -c 'import onnx; assert any(
+        node.op_type == "AscendQuant"
+        for node in onnx.load("int8_deploy_model.onnx").graph.node
+    ), "AMCT deploy graph has no AscendQuant node"' || exit 1
+    atc --model=int8_deploy_model.onnx --framework=5 --output=int8 \
+        --soc_version=Ascend910B2 --input_shape='x:1,16,8,8' && test -s int8.om
+)
+
+header "AMCT ACL and ONNX calibration"
+assert_cmd "AMCT ACL library is installed in the Toolkit" \
+    test -s "${ASCEND_HOME_PATH}/lib64/libamctacl.so"
+assert_cmd "Calibrate ONNX on CPU and compile Ascend910B2 INT8 OM" amct_onnx_smoke
+
+header "ONNX tools and MindStudio Probe"
+assert_cmd "ONNX environment dependencies are consistent" uv pip check --python /opt/onnx/bin/python
+# shellcheck source=src/_tests/onnx-tools.sh
+source "$(dirname -- "${BASH_SOURCE[0]}")/onnx-tools.sh" || exit 1
+
+header "OM inference and benchmarking"
+assert_cmd "AIS Bench CLI loads the ACL runtime" python3 -m ais_bench --help
 
 smoke_summary

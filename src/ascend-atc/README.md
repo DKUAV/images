@@ -52,3 +52,29 @@ atc --framework=5 --model=output/model-int8_deploy_model.onnx \
 AMCT also writes `output/model-int8_fake_quant_model.onnx` for CPU accuracy simulation with the AMCT operators. ATC consumes the deploy ONNX and writes `output/model-int8.om`. Keep the calibration configuration and compare the baseline and INT8 OM on the Ascend910B2 with a held-out dataset. For a 310-series board, identify its full SoC, choose a build environment with compatible CANN and the corresponding ops package, and test the OM on that board.
 
 The image also installs AMCT ACL 8.5.0 into the Toolkit. ATC inline calibration via the `calibration` block in `--compression_optimize_conf` requires a compatible NPU exposed to the container and an ATC compression configuration file. [ATC compression configuration](https://www.hiascend.com/doc_center/source/en/canncommercial/850/devaids/atctool/atlasatcparam_16_0059.html)
+
+## ONNX tools and MindStudio Probe
+
+The image shares the [ONNX requirements](../_assets/onnx-requirements.txt) with `luciole-ascend`. Its separate Python 3.11 environment at `/opt/onnx` includes ONNX, ONNX Runtime, ONNX Simplifier, ONNX Slim, ONNX Optimizer, ONNX GraphSurgeon, ONNX Converter Common, ONNX Script and MindStudio Probe. The ARM64 build compiles `onnxoptimizer` from source when a wheel is unavailable.
+
+The vendor entrypoint sets `PYTHONPATH` for CANN. Use `-E` to ignore it in your ONNX scripts, or unset it for an individual CLI command. Run these commands inside the container.
+
+```bash
+/opt/onnx/bin/python -E -c 'import onnx; print(onnx.__version__)'
+env -u PYTHONPATH /opt/onnx/bin/onnxsim model.onnx model-simplified.onnx
+env -u PYTHONPATH /opt/onnx/bin/msprobe --help
+```
+
+Use ONNX Runtime's CPU execution provider and MindStudio Probe's offline tools. The required smoke test checks the environment's dependencies, starts the msProbe CLI, and optimizes and runs a small ONNX model on CPU.
+
+## OM inference and benchmarking
+
+The [ATC requirements](atc-requirements.txt) pin the official `ais-bench` and `aclruntime` 0.0.2 wheels by SHA256. AIS Bench uses the vendor Python 3.11, with an ARM64 CPython 3.11 wheel for `aclruntime`. The required smoke test runs `python3.11 -m ais_bench --help` to check that the CLI loads the native runtime. [Ascend AIS Bench inference guide](https://gitee.com/ascend/tools/blob/master/ais-bench_workload/tool/ais_bench/README.md)
+
+On an ARM64 host with the Ascend Docker Runtime registered and a driver compatible with CANN 8.5.0, benchmark the model generated above from the repository root:
+
+```bash
+docker run --pull=never --rm --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 \
+  --mount "type=bind,source=$PWD/work,target=/work" "$IMAGE" \
+  python3.11 -m ais_bench --model /work/output/model-int8.om --device 0
+```

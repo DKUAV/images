@@ -21,6 +21,44 @@ python -m image_kit test --plan build-plan.json --owner dkuav --revision "$(git 
 
 直接构建默认使用带版本标签的厂商基础镜像，并以仓库根目录为构建上下文。Compose 仅运行已发布镜像，不包含 `build` 字段；构建和测试当前工作区请使用上面的 manifest/Bake 命令。所有原生检查通过后，CI 发布显式 variant 和包含构建批次的标签。必过的冒烟测试不需要 NPU，也不证明硬件兼容。
 
+## Micromamba
+
+镜像包含 micromamba 2.10.0，可用来创建独立的 Conda 环境。清单固定了发布版本和 ARM64 校验值。运行 `micromamba --version` 检查命令。参见[环境创建示例](../luciole-cuda-base/README_zh.md#micromamba)。
+
+## 模型编译与部署
+
+### AMCT 量化
+
+镜像将 AMCT ACL 9.2.0 安装到 CANN Toolkit，并将 AMCT ONNX 0.24.1 装进 `/opt/amct` 下的独立 Python 3.12 环境。`amct_onnx` 命令在该环境中使用 ONNX 1.18.0、ONNX Runtime 1.20.0 和配套自定义算子。[AMCT 环境依赖](amct-requirements.txt)独立于 `/opt/onnx` 和厂商 Python 环境解析。 [AMCT ONNX 版本配套表](https://www.hiascend.com/doc_center/source/en/CANNCommunityEdition/910/devaids/amct/atlasamct_16_0014.html)
+
+运行 `amct_onnx calibration --help` 查看 CPU 校准参数。以模型实际的预处理和布局导出有代表性的输入批次。以下示例将原始 NCHW float32 数据放在 `calibration/images/`，请按模型和样本调整输入形状与批次数。ONNX Runtime 1.20 需要 ONNX 模型的 IR 版本为 10 或更低。 [ONNX Runtime 兼容性](https://onnxruntime.ai/docs/reference/compatibility.html)
+
+```bash
+mkdir -p output
+INPUT_SHAPE='images:1,3,640,640'
+amct_onnx calibration --model=model.onnx --save_path=output/model-int8 \
+  --input_shape="$INPUT_SHAPE" --data_dir=calibration/images \
+  --data_types=float32 --batch_num=1 &&
+atc --framework=5 --model=output/model-int8_deploy_model.onnx \
+  --output=output/model-int8 --soc_version=Ascend910B2 --input_shape="$INPUT_SHAPE"
+```
+
+AMCT ACL 支持通过 `--compression_optimize_conf` 的 `calibration` 段执行 ATC 内联校准。该路径需要兼容的 NPU 主机，并将设备暴露给容器。必过烟测检查 ACL 库是否已安装，在 CPU 上运行 AMCT ONNX 校准，并为 `Ascend910B2` 将部署模型编译成 INT8 OM。 [ATC 压缩配置](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/920beta1/devaids/atctool/docs/zh/user_guides/atc_tools/CLI_options/--compression_optimize_conf.md)
+
+### ONNX 工具和 MindStudio Probe
+
+构建通过 `uv` 在 `/opt/onnx` 创建独立的 Python 3.12 环境，安装 `onnx`、`onnxruntime`、`onnxsim`、`onnxslim`、`onnxoptimizer`、`onnx-graphsurgeon`、`onnxconverter-common`、`onnxscript` 和 `mindstudio-probe>=26.2.0`。[虚拟环境依赖](../_assets/onnx-requirements.txt)独立于默认 Python 环境的厂商版本约束进行解析。ARM64 构建在没有可用 wheel 时从源码编译 `onnxoptimizer`。
+
+用 `/opt/onnx/bin/python` 运行 ONNX 脚本，用 `/opt/onnx/bin/msprobe --help` 查看 MindStudio Probe 命令。也可以在 Bash 中运行 `source /opt/onnx/bin/activate`，将两类工具加入当前 shell 的 PATH。ONNX Runtime 使用 CPU 执行提供程序。这个环境中的 msProbe 用于离线分析。进程内精度调试需要在同一个 Python 环境中使用 msProbe、PyTorch 和 TorchNPU。
+
+必过烟测检查环境依赖，运行 `msprobe --help`，导入八个 ONNX 包，并用 ONNX Runtime 的 CPU 执行提供程序验证优化后的图。
+
+### OM 推理与基准测试
+
+[AIS Bench 依赖](ais-bench-requirements.txt)通过 SHA256 固定官方 `ais-bench` 和 `aclruntime` 0.0.2 wheel。其中 `aclruntime` 适用于 Linux ARM64 和 CPython 3.12。两者都安装到使用现有依赖约束的厂商 Python。必过烟测运行 `python3 -m ais_bench --help`，检查 CLI 能否加载原生 ACL runtime。 [Ascend AIS Bench 推理工具指南](https://gitee.com/ascend/tools/blob/master/ais-bench_workload/tool/ais_bench/README.md)
+
+进入[启用 NPU 的容器](#使用-npu)后，可用 `python3 -m ais_bench --model /work/model.om --device 0` 对 OM 模型进行基准测试。
+
 ## 使用 NPU
 
 宿主机需要 ARM64、兼容的昇腾 910B 驱动及 Ascend Docker Runtime。请依据[厂商配套信息](https://www.hiascend.com/developer/download/compatibility)核对宿主机驱动和 CANN 版本。注册 `ascend` runtime 后，例如：

@@ -16,6 +16,7 @@ inputs:
 - vendor/image-kit/scripts/python/cuda-pip-packages.sh
 - vendor/image-kit/assets/python-dev-requirements.txt
 - vendor/image-kit/scripts/dev/cmake.sh
+- vendor/image-kit/scripts/dev/micromamba.sh
 - vendor/image-kit/scripts/libraries/libdatachannel.sh
 - vendor/image-kit/scripts/libraries/rpclib.sh
 - vendor/image-kit/scripts/libraries/iceoryx.sh
@@ -32,6 +33,9 @@ variants:
     TZ: Asia/Shanghai
     SYSTEM_UPGRADE: true
     CMAKE_VERSION: 4.3.2
+    MICROMAMBA_VERSION: 2.10.0-0
+    MICROMAMBA_SHA256_AMD64: 701f39c06f8e6a670a0e186c8479b9e5c0502a2f0cda6cef65d83bdd2875e8bd
+    MICROMAMBA_SHA256_ARM64: 3bb56786e21b9b24024f599fe9185b4a59dc3f9f59937a42311ee583adbbb23c
     LIBDATACHANNEL_VERSION: v0.24.5
     RPCLIB_VERSION: v2.3.0
     ICEORYX_VERSION: v2.0.8

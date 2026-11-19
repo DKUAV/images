@@ -13,7 +13,7 @@ Main advances the explicit variant channel. Build tags include variant, SHA12 an
 
 | Category | Details |
 | --- | --- |
-| Base | [luciole-cuda-base](../luciole-cuda-base/README.md): PyTorch/CUDA, tools, pip packages, CMake, networking libraries and user |
+| Base | [luciole-cuda-base](../luciole-cuda-base/README.md): PyTorch/CUDA, tools, pip packages, CMake, micromamba, networking libraries and user |
 | Python build tools | Inherited setuptools, setuptools-scm, Hatchling, hatch-vcs, editables, uv_build, wheel and packaging |
 | ROS 2 | Jazzy `ros-base`, colcon, rosdep and rosinstall-generator |
 | Mirrors | Aliyun apt/pip sources applied after all package installation; builds use upstream sources |
@@ -89,6 +89,8 @@ Before running this example, create a nonempty `$HOME/.config/luciole/ssh-passwo
 SSH follows the explicitly selected `DEFAULT_USER`: selecting `root` permits key-only root access with a nonempty `/root/.ssh/authorized_keys` by default; root password access requires a nonempty mounted `SSH_PASSWORD_FILE`. Root SSH grants full container privileges. Changing `DEFAULT_USER` at runtime selects the SSH account, not the Dockerfile command user.
 
 ## ROS 2 and WSLg
+
+The shared ROS 2 installer uses the pinned, checksum-verified `ros2-apt-source` package for Ubuntu.
 
 ROS is not sourced automatically. Run `load_ros` in zsh to source `/opt/ros/jazzy/setup.zsh`, or source the setup file manually. Devshell tools are installed/configured for `luciole`.
 
