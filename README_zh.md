@@ -14,6 +14,7 @@ graph TD
   A["Ascend TorchNPU 2.10.0.post7"] --> NPU["luciole-ascend"]
   NPU --> PEFT["ascend-peft"]
   PEFT --> INFER["ascend-torch-infer-server"]
+  CANN["Ascend CANN 8.5.0"] --> ATC["ascend-atc"]
 ```
 
 | 镜像 | 内容 | 平台 | 烟测策略 |
@@ -24,10 +25,11 @@ graph TD
 | [luciole-ascend](src/luciole-ascend/README_zh.md) | 昇腾 910B TorchNPU、CANN 和 ARM64 开发工具 | arm64 | 必须通过 |
 | [ascend-peft](src/ascend-peft/README_zh.md) | Ascend 基础镜像 + PEFT 依赖、Graphviz/torchview 模型可视化、pycocotools 和 TensorBoard | arm64 | 必须通过 |
 | [ascend-torch-infer-server](src/ascend-torch-infer-server/README_zh.md) | Ascend PEFT + Flask、MinIO Python SDK、AIS Bench，以及 ONNX 工具与 MindStudio Probe 的独立环境 | arm64 | 必须通过 |
+| [ascend-atc](src/ascend-atc/README_zh.md) | CANN 8.5.0 ATC 面向 Ascend910B2，支持 AMCT ONNX CPU INT8 校准和 AMCT ACL 内联校准 | arm64 | 必须通过 |
 
-CUDA base 和昇腾镜像保持上游软件源。CUDA dev/runtime 在安装完所有软件包后，将持久化的 apt 和 pip 源切换到 Aliyun。Runtime 继承 base 的工具集，并非精简 CUDA runtime 镜像。昇腾基础镜像使用版本标签但不固定 digest；NPU 硬件检查需在兼容宿主机单独运行。
+CUDA base 和昇腾镜像保持上游软件源。CUDA dev/runtime 在安装完所有软件包后，将持久化的 apt 和 pip 源切换到 Aliyun。Runtime 继承 base 的工具集，并非精简 CUDA runtime 镜像。`luciole-ascend` 使用带版本标签的外部基础镜像，NPU 硬件检查在兼容宿主机单独运行。`ascend-atc` 固定 CANN 8.5.0 基础镜像的 digest，并通过厂商入口运行工具命令。
 
-CUDA 与昇腾共用 Python 开发依赖清单，包括 uv、ty、Ruff 等基础工具，以及用于 Python 构建和 editable 安装的 setuptools、setuptools-scm、Hatchling、hatch-vcs、editables、uv_build、wheel 和 packaging；两侧的 pip 安装脚本分别处理 CUDA 专属视觉包和昇腾厂商约束。
+CUDA base 与 `luciole-ascend` 共用 Python 开发依赖清单，包括 uv、ty、Ruff 等基础工具，以及用于 Python 构建和 editable 安装的 setuptools、setuptools-scm、Hatchling、hatch-vcs、editables、uv_build、wheel 和 packaging；两侧的 pip 安装脚本分别处理 CUDA 专属视觉包和昇腾厂商约束。
 
 ## 使用镜像
 
@@ -36,7 +38,7 @@ docker pull ghcr.io/dkuav/luciole-cuda-dev:pytorch26.06-py3
 docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-dev:pytorch26.06-py3
 ```
 
-CUDA base 和昇腾镜像默认以 root 运行；CUDA dev/runtime 默认为 `luciole`（UID/GID 1000）。昇腾使用 `/root` 作为 HOME，以读取厂商 CANN 环境。共享入口脚本根据 `SSH_MODE` 启动 sshd，再以 Dockerfile 的 `USER` 执行命令。CUDA 默认使用 password 模式；昇腾默认使用 key-only SSH，要求非空的 `/root/.ssh/authorized_keys`。显式启用 root 密码 SSH 时必须在运行时挂载密码文件。公钥模式要求非空公钥文件，`SSH_MODE=disabled` 不启动 SSH 服务。CUDA dev/runtime 默认禁止 root SSH。`APP_USER` 只是 CUDA 描述性元数据。SSH 和 Compose 示例见各镜像文档。
+CUDA base 和昇腾镜像默认以 root 运行；CUDA dev/runtime 默认为 `luciole`（UID/GID 1000）。昇腾镜像使用 `/root` 作为 HOME，以读取厂商 CANN 环境。CUDA 和昇腾 TorchNPU 系列的共享入口脚本根据 `SSH_MODE` 启动 sshd，再以 Dockerfile 的 `USER` 执行命令。CUDA 默认使用 password 模式；昇腾 TorchNPU 系列默认使用 key-only SSH，要求非空的 `/root/.ssh/authorized_keys`。显式启用 root 密码 SSH 时必须在运行时挂载密码文件。公钥模式要求非空公钥文件，`SSH_MODE=disabled` 不启动 SSH 服务。CUDA dev/runtime 默认禁止 root SSH。`APP_USER` 只是 CUDA 描述性元数据。SSH 和 Compose 示例见各镜像文档。
 
 ## 本地构建与烟测
 

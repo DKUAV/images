@@ -14,6 +14,7 @@ graph TD
   A["Ascend TorchNPU 2.10.0.post7"] --> NPU["luciole-ascend"]
   NPU --> PEFT["ascend-peft"]
   PEFT --> INFER["ascend-torch-infer-server"]
+  CANN["Ascend CANN 8.5.0"] --> ATC["ascend-atc"]
 ```
 
 | Image | Contents | Platforms | Smoke policy |
@@ -24,10 +25,11 @@ graph TD
 | [luciole-ascend](src/luciole-ascend/README.md) | Ascend 910B TorchNPU, CANN and ARM64 development tools | arm64 | Required |
 | [ascend-peft](src/ascend-peft/README.md) | Ascend base + PEFT dependencies, Graphviz/torchview model visualization, pycocotools and TensorBoard | arm64 | Required |
 | [ascend-torch-infer-server](src/ascend-torch-infer-server/README.md) | Ascend PEFT + Flask, the MinIO Python SDK, AIS Bench, and an isolated environment for ONNX tools and MindStudio Probe | arm64 | Required |
+| [ascend-atc](src/ascend-atc/README.md) | CANN 8.5.0 ATC for Ascend910B2, with AMCT ONNX for CPU INT8 calibration and AMCT ACL for ATC inline calibration | arm64 | Required |
 
-The CUDA base and Ascend image keep upstream package sources. CUDA dev/runtime switch persisted apt and pip sources to Aliyun after all package installation. The runtime image inherits the base toolset; it is not a minimal CUDA runtime image. Ascend uses a tagged external base without a pinned digest; run its separate NPU check on a compatible host.
+The CUDA base and Ascend images keep upstream package sources. CUDA dev/runtime switch persisted apt and pip sources to Aliyun after all package installation. The runtime image inherits the base toolset; it is not a minimal CUDA runtime image. `luciole-ascend` uses a tagged external base without a pinned digest; run its separate NPU check on a compatible host. `ascend-atc` pins the CANN 8.5.0 base digest and uses the vendor entrypoint for its tool commands.
 
-CUDA and Ascend use the same Python development requirements for tools such as uv, ty and Ruff, plus setuptools, setuptools-scm, Hatchling, hatch-vcs, editables, uv_build, wheel and packaging for Python builds and editable installs. Their pip installers retain CUDA-specific vision packages and Ascend vendor constraints separately.
+The CUDA base and `luciole-ascend` use the same Python development requirements for tools such as uv, ty and Ruff, plus setuptools, setuptools-scm, Hatchling, hatch-vcs, editables, uv_build, wheel and packaging for Python builds and editable installs. Their pip installers retain CUDA-specific vision packages and Ascend vendor constraints separately.
 
 ## Use an image
 
@@ -36,7 +38,7 @@ docker pull ghcr.io/dkuav/luciole-cuda-dev:pytorch26.06-py3
 docker run --rm -it --gpus all ghcr.io/dkuav/luciole-cuda-dev:pytorch26.06-py3
 ```
 
-CUDA base and Ascend default to root; CUDA dev/runtime default to `luciole` (UID/GID 1000). Ascend uses `/root` as HOME so the vendor CANN environment can be read. The shared entrypoint starts sshd according to `SSH_MODE` and executes the command as the Dockerfile's `USER`. CUDA defaults to password mode; Ascend defaults to key-only SSH and requires a nonempty `/root/.ssh/authorized_keys`. Explicit root password SSH requires a runtime-mounted password file. Key-only mode requires a nonempty authorized-keys file, and `SSH_MODE=disabled` starts no SSH server. CUDA dev/runtime prohibit root SSH by default. `APP_USER` is CUDA metadata, not an identity switch. See the image guides for SSH and Compose examples.
+CUDA base and Ascend images default to root; CUDA dev/runtime default to `luciole` (UID/GID 1000). Ascend images use `/root` as HOME so the vendor CANN environment can be read. The shared entrypoint in the CUDA and Ascend TorchNPU families starts sshd according to `SSH_MODE` and executes the command as the Dockerfile's `USER`. CUDA defaults to password mode; the Ascend TorchNPU family defaults to key-only SSH and requires a nonempty `/root/.ssh/authorized_keys`. Explicit root password SSH requires a runtime-mounted password file. Key-only mode requires a nonempty authorized-keys file, and `SSH_MODE=disabled` starts no SSH server. CUDA dev/runtime prohibit root SSH by default. `APP_USER` is CUDA metadata, not an identity switch. See the image guides for SSH and Compose examples.
 
 ## Local build and smoke tests
 
