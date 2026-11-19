@@ -21,6 +21,19 @@ docker run --pull=never --rm -it --network=none \
 
 如需转移到离线 ARM64 主机，使用 `docker save -o ascend-atc.tar "$IMAGE"` 导出，在离线端用 `docker load -i ascend-atc.tar` 导入，再执行同一个 `docker run` 命令。挂载可写工作目录以保存模型、校准样本、日志和产物。
 
+## 开发工具
+
+镜像与 `luciole-ascend` 共用系统开发工具和交互 shell 安装脚本，包含 zsh 和 oh-my-zsh、Neovim 和 NvChad、tmux、ripgrep、clangd、fzf、eza、Starship、Sheldon、zoxide、Witr 和 micromamba。`uv` 和 `ty` 使用 `/opt/dev-tools` 的独立环境。
+
+默认命令是 Bash。要使用交互式 zsh，可以保留原厂 CANN 环境与相同的工作目录挂载。
+
+```bash
+docker run --pull=never --rm -it --network=none \
+  --mount "type=bind,source=$PWD/work,target=/work" "$IMAGE" zsh -l
+```
+
+必过烟测会启动开发工具，并确认新开的 zsh 能找到 ATC、AMCT ACL 和厂商 Python 3.11。
+
 ## 编译浮点基线
 
 在容器内执行以下命令。将 `SOC` 设为实际目标设备的 ATC SoC 标识，将 `INPUT_SHAPE` 设为模型的固定输入名和维度。示例使用 `Ascend910B2` 和单路 NCHW FP32 张量。 [ATC 8.5.0 SoC 参数](https://www.hiascend.com/doc_center/source/en/CANNCommunityEdition/850/devaids/atctool/atlasatcparam_16_0036.html)

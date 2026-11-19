@@ -1,6 +1,6 @@
 schema_version: 2
 name: ascend-atc
-description: CANN 8.5.0 ATC model conversion, AMCT INT8 calibration, ONNX tools and AIS Bench for Ascend910B2 on ARM64.
+description: CANN 8.5.0 ATC model conversion, AMCT INT8 calibration, ONNX tools, AIS Bench and developer tools for Ascend910B2 on ARM64.
 dockerfile: src/ascend-atc/Dockerfile
 context: .
 platforms:
@@ -10,6 +10,10 @@ inputs:
 - src/ascend-atc/atc-requirements.txt
 - src/ascend-atc/requirements.txt
 - src/ascend-atc/calibration.cfg
+- vendor/image-kit/scripts/dev/dev-tools.sh
+- vendor/image-kit/scripts/dev/micromamba.sh
+- vendor/image-kit/scripts/dev/devshell.sh
+- vendor/image-kit/scripts/integrations/ascend-environment.sh
 - vendor/image-kit/scripts/system/finalize-mirror.sh
 publish: true
 variants:
@@ -17,7 +21,9 @@ variants:
   base:
     image: quay.io/ascend/cann:8.5.0-910b-ubuntu22.04-py3.11
     digest: sha256:3faee0835b3900a2a77dbe02775fd34bc521d12e23eb8603f9c9f16013a9d015
-  build_args: {}
+  build_args:
+    MICROMAMBA_VERSION: 2.10.0-0
+    MICROMAMBA_SHA256_ARM64: 3bb56786e21b9b24024f599fe9185b4a59dc3f9f59937a42311ee583adbbb23c
   tests:
   - library: src/_tests/_lib.sh
     script: src/_tests/smoke-ascend-atc.sh

@@ -59,4 +59,18 @@ source "$(dirname -- "${BASH_SOURCE[0]}")/onnx-tools.sh" || exit 1
 header "OM inference and benchmarking"
 assert_cmd "AIS Bench CLI loads the ACL runtime" python3.11 -m ais_bench --help
 
+header "Development tools"
+for tool in zsh nvim git rg clangd eza starship uv ty micromamba witr; do
+    assert_cmd "${tool} CLI" "$tool" --version
+done
+assert_cmd "tmux CLI" tmux -V
+assert_cmd "fzf CLI" "${HOME}/.fzf/bin/fzf" --version
+assert_cmd "Sheldon CLI" "${HOME}/.local/bin/sheldon" --version
+assert_cmd "zoxide CLI" "${HOME}/.local/bin/zoxide" --version
+assert_cmd "zsh login restores ATC and vendor Python" env -i HOME="$HOME" PATH=/usr/bin:/bin zsh -ls <<'ZSH'
+command -v atc &&
+    test -r "${ASCEND_TOOLKIT_HOME}/lib64/libamctacl.so" &&
+    python3.11 -c 'import sys; assert sys.version_info[:2] == (3, 11); assert sys.prefix.startswith("/usr/local/python3.11.")'
+ZSH
+
 smoke_summary
