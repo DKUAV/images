@@ -19,10 +19,10 @@ graph TD
 
 | Image | Contents | Platforms | Smoke policy |
 | --- | --- | --- | --- |
-| [luciole-cuda-base](src/luciole-cuda-base/README.md) | PyTorch/CUDA, system and GUI tools, Python packages, CMake, networking libraries, user and SSH setup | amd64 + arm64 | Advisory |
+| [luciole-cuda-base](src/luciole-cuda-base/README.md) | PyTorch/CUDA, system and GUI tools, Python packages, CMake, micromamba, networking libraries, user and SSH setup | amd64 + arm64 | Advisory |
 | [luciole-cuda-dev](src/luciole-cuda-dev/README.md) | Base + ROS 2 Jazzy, LLVM 21, developer shell, cached pre-commit hooks | amd64 + arm64 | Required |
 | [luciole-cuda-runtime](src/luciole-cuda-runtime/README.md) | Base + ROS 2 Jazzy; inherits system development tools and CMake | amd64 + arm64 | Required |
-| [luciole-ascend](src/luciole-ascend/README.md) | Ascend 910B TorchNPU, CANN, ARM64 development tools, AMCT, ONNX tools, MindStudio Probe and AIS Bench | arm64 | Required |
+| [luciole-ascend](src/luciole-ascend/README.md) | Ascend 910B TorchNPU, CANN, ARM64 development tools, micromamba, AMCT, ONNX tools, MindStudio Probe and AIS Bench | arm64 | Required |
 | [ascend-peft](src/ascend-peft/README.md) | Ascend base + PEFT dependencies, Graphviz/torchview model visualization, pycocotools and TensorBoard | arm64 | Required |
 | [ascend-torch-infer-server](src/ascend-torch-infer-server/README.md) | Ascend PEFT + Flask, CORS support and the MinIO Python SDK | arm64 | Required |
 | [ascend-atc](src/ascend-atc/README.md) | CANN 8.5.0 ATC for Ascend910B2, AMCT ONNX CPU INT8 calibration, AMCT ACL inline calibration, ONNX tools, MindStudio Probe and AIS Bench | arm64 | Required |

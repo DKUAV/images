@@ -117,6 +117,12 @@ RUN --mount=type=cache,target=/tmp/pip-cache,mode=0777 \
 COPY --chmod=0755 vendor/image-kit/scripts/integrations/ascend-environment.sh /tmp/image-scripts/ascend-environment.sh
 RUN /tmp/image-scripts/ascend-environment.sh
 
+ARG MICROMAMBA_VERSION=2.10.0-0
+ARG MICROMAMBA_SHA256_ARM64=3bb56786e21b9b24024f599fe9185b4a59dc3f9f59937a42311ee583adbbb23c
+COPY --chmod=0755 vendor/image-kit/scripts/dev/micromamba.sh /tmp/image-scripts/micromamba.sh
+RUN /tmp/image-scripts/micromamba.sh --version "${MICROMAMBA_VERSION}" \
+    --sha256-arm64 "${MICROMAMBA_SHA256_ARM64}"
+
 COPY --chmod=0755 vendor/image-kit/scripts/system/finalize-mirror.sh /tmp/image-scripts/finalize-mirror.sh
 RUN /tmp/image-scripts/finalize-mirror.sh --mirror "${PACKAGE_MIRROR}" \
     && rm -rf /tmp/image-scripts

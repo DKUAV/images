@@ -21,6 +21,10 @@ python -m image_kit test --plan build-plan.json --owner dkuav --revision "$(git 
 
 Direct builds use the tagged vendor base by default and the repository root as context. Compose only runs published images and has no `build` section; use the manifest/Bake commands above to build and test this checkout. CI publishes explicit variant and batch-qualified build tags after all native checks pass. The required smoke test needs no NPU and does not verify hardware compatibility.
 
+## Micromamba
+
+The image includes micromamba 2.10.0 for creating separate Conda environments. The manifest pins the release and its ARM64 checksum. Run `micromamba --version` to check the executable. See the [environment creation example](../luciole-cuda-base/README.md#micromamba).
+
 ## Model compilation and deployment
 
 ### AMCT quantization

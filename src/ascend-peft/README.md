@@ -50,7 +50,7 @@ Required checks also encode and decode a COCO mask with pycocotools and write/re
 
 For an offline editable install of a source project whose runtime dependencies are already present, use the image's Python with `python3 -m pip install --no-index --no-deps --no-build-isolation --editable .`. Preinstalled build tools do not make an ordinary isolated build offline.
 
-This image inherits AMCT, the ONNX tools, MindStudio Probe and AIS Bench with `aclruntime` from `luciole-ascend`. The required smoke test exercises its ONNX tools on CPU. See the [model compilation and deployment guide](../luciole-ascend/README.md#model-compilation-and-deployment).
+This image inherits micromamba, AMCT, the ONNX tools, MindStudio Probe and AIS Bench with `aclruntime` from `luciole-ascend`. The required smoke test exercises its ONNX tools on CPU. See the [model compilation and deployment guide](../luciole-ascend/README.md#model-compilation-and-deployment).
 
 ## Build and test
 

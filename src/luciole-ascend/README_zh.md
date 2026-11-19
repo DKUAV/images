@@ -21,6 +21,10 @@ python -m image_kit test --plan build-plan.json --owner dkuav --revision "$(git 
 
 直接构建默认使用带版本标签的厂商基础镜像，并以仓库根目录为构建上下文。Compose 仅运行已发布镜像，不包含 `build` 字段；构建和测试当前工作区请使用上面的 manifest/Bake 命令。所有原生检查通过后，CI 发布显式 variant 和包含构建批次的标签。必过的冒烟测试不需要 NPU，也不证明硬件兼容。
 
+## Micromamba
+
+镜像包含 micromamba 2.10.0，可用来创建独立的 Conda 环境。清单固定了发布版本和 ARM64 校验值。运行 `micromamba --version` 检查命令。参见[环境创建示例](../luciole-cuda-base/README_zh.md#micromamba)。
+
 ## 模型编译与部署
 
 ### AMCT 量化

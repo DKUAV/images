@@ -8,7 +8,7 @@ Image-local [requirements.txt](requirements.txt) adds `flask`, `flask-cors`, and
 
 Before installing into the default Python environment, the Dockerfile records all installed parent versions in `/opt/image-python/infer-server-constraints.txt` and constrains pip to that snapshot. This preserves the PEFT stack, including its five Triton auxiliary versions, without changing the original vendor constraints. Incompatible dependencies fail the build. The default Python installation runs `ascend-pip-check`.
 
-This image inherits AMCT, the ONNX tools, MindStudio Probe and AIS Bench with `aclruntime` from `luciole-ascend`. The required smoke test exercises its ONNX tools on CPU. See the [model compilation and deployment guide](../luciole-ascend/README.md#model-compilation-and-deployment).
+This image inherits micromamba, AMCT, the ONNX tools, MindStudio Probe and AIS Bench with `aclruntime` from `luciole-ascend`. The required smoke test exercises its ONNX tools on CPU. See the [model compilation and deployment guide](../luciole-ascend/README.md#model-compilation-and-deployment).
 
 Root, `HOME=/root`, `/work`, the Ascend entrypoint and key-only SSH are inherited. See the [Ascend runtime guide](../luciole-ascend/README.md#running-with-an-npu) for host runtime and driver requirements and SSH credentials.
 

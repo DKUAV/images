@@ -22,6 +22,15 @@ Main advances the explicit variant channel. Build tags include variant, SHA12 an
 | Mirrors | Upstream Ubuntu / PyPI sources; final images switch to Aliyun |
 | Editor / timezone | `EDITOR=vim`, `VISUAL=vim`, default `Asia/Shanghai` |
 
+## Micromamba
+
+The image includes micromamba 2.10.0 for creating separate Conda environments. The installer verifies the binary for each architecture. Run `micromamba --version` to check the executable, then create and use an environment inside the container.
+
+```bash
+micromamba create -y -p "$HOME/envs/tools" -c conda-forge python=3.11
+micromamba run -p "$HOME/envs/tools" python --version
+```
+
 ## User and entrypoint
 
 The default container user is `root` and the default command is `/bin/bash`. The configured `luciole` account has UID/GID 1000 and passwordless sudo. The base does not override the upstream working directory.
@@ -38,6 +47,8 @@ The [manifest](image.yml) supplies these values for standard builds. Dockerfile 
 | `TZ` | `Asia/Shanghai` | Timezone |
 | `SYSTEM_UPGRADE` | `true` | Upgrade installed packages during system initialization |
 | `CMAKE_VERSION` | `4.3.2` | CMake release |
+| `MICROMAMBA_VERSION` | `2.10.0-0` | Upstream release tag |
+| `MICROMAMBA_SHA256_AMD64` and `MICROMAMBA_SHA256_ARM64` | Pinned in the manifest | SHA-256 of each release binary |
 | `LIBDATACHANNEL_VERSION` | `v0.24.5` | libdatachannel release |
 | `RPCLIB_VERSION` | `v2.3.0` | rpclib release |
 | `ICEORYX_VERSION` | `v2.0.8` | iceoryx release |

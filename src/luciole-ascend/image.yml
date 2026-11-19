@@ -18,6 +18,7 @@ inputs:
 - vendor/image-kit/scripts/python/ascend-python-packages.sh
 - vendor/image-kit/scripts/dev/dev-tools.sh
 - vendor/image-kit/scripts/dev/cmake.sh
+- vendor/image-kit/scripts/dev/micromamba.sh
 - vendor/image-kit/scripts/system/user.sh
 - vendor/image-kit/scripts/system/ssh.sh
 - vendor/image-kit/scripts/system/workspace.sh
@@ -38,6 +39,8 @@ variants:
     SYSTEM_UPGRADE: false
     CMAKE_VERSION: 4.3.2
     CMAKE_SHA256: 377079ab739f5765176f427609d9a2015b756ea20d5cba908d279c3731a2f481
+    MICROMAMBA_VERSION: 2.10.0-0
+    MICROMAMBA_SHA256_ARM64: 3bb56786e21b9b24024f599fe9185b4a59dc3f9f59937a42311ee583adbbb23c
     DEVSHELL: true
     PACKAGE_MIRROR: upstream
     SSH_MODE: key-only

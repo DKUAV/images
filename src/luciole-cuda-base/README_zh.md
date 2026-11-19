@@ -22,6 +22,15 @@ Main 更新显式 variant 通道。构建标签包含 variant、SHA12 和运行�
 | 软件源 | 上游 Ubuntu / PyPI 源；最终镜像切换至 Aliyun |
 | 编辑器 / 时区 | `EDITOR=vim`、`VISUAL=vim`，默认 `Asia/Shanghai` |
 
+## Micromamba
+
+镜像包含 micromamba 2.10.0，可用来创建独立的 Conda 环境。安装脚本会校验对应架构的二进制文件。在容器内用 `micromamba --version` 检查命令，再创建并使用环境。
+
+```bash
+micromamba create -y -p "$HOME/envs/tools" -c conda-forge python=3.11
+micromamba run -p "$HOME/envs/tools" python --version
+```
+
 ## 用户与入口脚本
 
 默认容器用户为 `root`，默认命令为 `/bin/bash`。配置的 `luciole` 账户 UID/GID 为 1000，具有免密 sudo 权限。Base 不覆盖上游工作目录。
@@ -38,6 +47,8 @@ Main 更新显式 variant 通道。构建标签包含 variant、SHA12 和运行�
 | `TZ` | `Asia/Shanghai` | 时区 |
 | `SYSTEM_UPGRADE` | `true` | 系统初始化时升级已安装软件包 |
 | `CMAKE_VERSION` | `4.3.2` | CMake 版本 |
+| `MICROMAMBA_VERSION` | `2.10.0-0` | 上游发布标签 |
+| `MICROMAMBA_SHA256_AMD64` 和 `MICROMAMBA_SHA256_ARM64` | 在清单中固定 | 各架构发布二进制的 SHA-256 |
 | `LIBDATACHANNEL_VERSION` | `v0.24.5` | libdatachannel 版本 |
 | `RPCLIB_VERSION` | `v2.3.0` | rpclib 版本 |
 | `ICEORYX_VERSION` | `v2.0.8` | iceoryx 版本 |

@@ -50,7 +50,7 @@ PYTHON
 
 源码项目的运行依赖已齐备时，可使用镜像自带的 Python 执行离线 editable 安装：`python3 -m pip install --no-index --no-deps --no-build-isolation --editable .`。预装构建工具不会让普通隔离构建自动支持离线。
 
-本镜像从 `luciole-ascend` 继承 AMCT、ONNX 工具、MindStudio Probe、AIS Bench 和 `aclruntime`。必过烟测会在 CPU 上验证 ONNX 工具，见[模型编译与部署说明](../luciole-ascend/README_zh.md#模型编译与部署)。
+本镜像从 `luciole-ascend` 继承 micromamba、AMCT、ONNX 工具、MindStudio Probe、AIS Bench 和 `aclruntime`。必过烟测会在 CPU 上验证 ONNX 工具，见[模型编译与部署说明](../luciole-ascend/README_zh.md#模型编译与部署)。
 
 ## 构建与测试
 

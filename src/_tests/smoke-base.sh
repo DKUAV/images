@@ -53,6 +53,7 @@ base_main() {
     header "Python & PyTorch"
     assert_cmd "python3 entrypoint" python3 --version
     assert_cmd "uv CLI" uv --version
+    assert_cmd "micromamba CLI as luciole" sudo -u luciole -n micromamba --version
     assert_cmd "ty CLI" ty --version
     assert_import "numpy importable"  numpy
     assert_import "pandas importable" pandas
