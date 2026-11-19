@@ -21,6 +21,19 @@ docker run --pull=never --rm -it --network=none \
 
 To move the image to an offline ARM64 host, export it with `docker save -o ascend-atc.tar "$IMAGE"` and import it there with `docker load -i ascend-atc.tar`. The same `docker run` command works with the loaded image. Mount a writable workspace for models, calibration samples, logs and output files.
 
+## Development tools
+
+The image uses the shared development tool and shell installers from `luciole-ascend`. It includes zsh with oh-my-zsh, Neovim with NvChad, tmux, ripgrep, clangd, fzf, eza, Starship, Sheldon, zoxide, Witr and micromamba. The `uv` and `ty` commands use a separate environment at `/opt/dev-tools`.
+
+The default command is Bash. Start an interactive zsh session with the vendor CANN environment and the same workspace mount.
+
+```bash
+docker run --pull=never --rm -it --network=none \
+  --mount "type=bind,source=$PWD/work,target=/work" "$IMAGE" zsh -l
+```
+
+The required smoke test starts the developer tools and checks that a fresh zsh session locates ATC, AMCT ACL and the vendor Python 3.11.
+
 ## Convert a floating-point baseline
 
 Run the following commands in the container. Set `SOC` to the actual target's ATC SoC identifier and set `INPUT_SHAPE` to the model's fixed input names and dimensions. The example targets `Ascend910B2` with a single FP32 tensor in NCHW order. [ATC 8.5.0 SoC options](https://www.hiascend.com/doc_center/source/en/CANNCommunityEdition/850/devaids/atctool/atlasatcparam_16_0036.html)

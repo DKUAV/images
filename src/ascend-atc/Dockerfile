@@ -48,7 +48,7 @@ FROM ${BASE_IMAGE}
 
 USER root
 ENV HOME=/root
-LABEL org.opencontainers.image.description="CANN 8.5.0 ATC, AMCT, ONNX tools and AIS Bench for Ascend910B2"
+LABEL org.opencontainers.image.description="CANN 8.5.0 ATC, AMCT, ONNX tools, AIS Bench and developer tools for Ascend910B2"
 
 # Add offline compiler dependencies and AIS Bench to the vendor interpreter.
 COPY src/ascend-atc/atc-requirements.txt /tmp/atc-requirements.txt
@@ -80,8 +80,29 @@ RUN ln -s /opt/amct/bin/amct_onnx /usr/local/bin/amct_onnx
 COPY --from=onnx-build /opt/onnx /opt/onnx
 COPY src/ascend-atc/calibration.cfg /opt/ascend-atc/calibration.cfg
 
-COPY --chmod=0755 vendor/image-kit/scripts/system/finalize-mirror.sh /tmp/finalize-mirror.sh
-RUN /tmp/finalize-mirror.sh --mirror upstream && rm /tmp/finalize-mirror.sh
+COPY --chmod=0755 vendor/image-kit/scripts/dev/dev-tools.sh /tmp/image-scripts/dev-tools.sh
+RUN /tmp/image-scripts/dev-tools.sh
+
+# Keep Python development tools separate from ATC's vendor packages.
+RUN python3.11 -E -m venv /opt/dev-tools \
+    && /opt/dev-tools/bin/python -E -m pip install --no-cache-dir --only-binary=:all: uv ty \
+    && ln -s /opt/dev-tools/bin/uv /opt/dev-tools/bin/uvx /opt/dev-tools/bin/ty /usr/local/bin/
+
+ARG MICROMAMBA_VERSION=2.10.0-0
+ARG MICROMAMBA_SHA256_ARM64=3bb56786e21b9b24024f599fe9185b4a59dc3f9f59937a42311ee583adbbb23c
+COPY --chmod=0755 vendor/image-kit/scripts/dev/micromamba.sh /tmp/image-scripts/micromamba.sh
+RUN /tmp/image-scripts/micromamba.sh --version "${MICROMAMBA_VERSION}" \
+    --sha256-arm64 "${MICROMAMBA_SHA256_ARM64}"
+
+COPY --chmod=0755 vendor/image-kit/scripts/dev/devshell.sh /tmp/image-scripts/devshell.sh
+RUN /tmp/image-scripts/devshell.sh --enabled true
+
+# Restore CANN in login shells after zsh creates its package-owned startup files.
+COPY --chmod=0755 vendor/image-kit/scripts/integrations/ascend-environment.sh /tmp/image-scripts/ascend-environment.sh
+RUN /tmp/image-scripts/ascend-environment.sh
+
+COPY --chmod=0755 vendor/image-kit/scripts/system/finalize-mirror.sh /tmp/image-scripts/finalize-mirror.sh
+RUN /tmp/image-scripts/finalize-mirror.sh --mirror upstream && rm -rf /tmp/image-scripts
 
 WORKDIR /work
 # The vendor entrypoint sets up CANN before executing the supplied command.
