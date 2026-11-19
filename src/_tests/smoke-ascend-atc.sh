@@ -11,7 +11,7 @@ ascend_atc_smoke() (
     trap 'rm -rf -- "$work"' EXIT
     cd "$work" && mkdir calibration || exit 1
 
-    /opt/amct/bin/python - <<'PY' || exit 1
+    /opt/amct/bin/python -E - <<'PY' || exit 1
 import amct_onnx
 import numpy as np
 import onnx
@@ -39,7 +39,7 @@ PY
         --input_shape 'x:1,16,8,8' --data_dir calibration --data_types float32 \
         --calibration_config /opt/ascend-atc/calibration.cfg || exit 1
     test -s int8_fake_quant_model.onnx || exit 1
-    /opt/amct/bin/python -c 'import onnx; assert any(
+    /opt/amct/bin/python -E -c 'import onnx; assert any(
         node.op_type == "AscendQuant"
         for node in onnx.load("int8_deploy_model.onnx").graph.node
     ), "AMCT deploy graph has no AscendQuant node"' || exit 1

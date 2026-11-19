@@ -4,7 +4,7 @@
 
 `ascend-atc` 基于华为的 CANN `8.5.0-910b-ubuntu22.04-py3.11` 镜像，运行于 Linux ARM64。ATC 将 ONNX 编译为 OM。AMCT ONNX 0.23.2 使用 ONNX 1.14.0、ONNX Runtime 1.16.0 和配套的 AMCT 自定义算子，在 CPU 上完成 INT8 校准。容器启动后位于 `/work`，并已加载 CANN 环境。 [AMCT 8.5.0 版本配套表](https://www.hiascend.com/doc_center/source/en/CANNCommunityEdition/850/devaids/amct/atlasamct_16_0017.html)
 
-ATC 使用装有 CANN 编译依赖的原厂 Python 3.11。AMCT ONNX 使用 `/opt/amct` 下的独立环境。 [CANN 编译依赖](https://www.hiascend.com/doc_center/source/en/CANNCommunityEdition/850/softwareinst/instg/instg_0054.html)
+ATC 使用原厂 Python 3.11，依赖按 CANN 文档和软件包元数据安装。`amct_onnx` 命令使用 `/opt/amct` 下的独立环境，并忽略 Toolkit 的 Python 模块搜索路径。 [CANN 编译依赖](https://www.hiascend.com/doc_center/source/en/CANNCommunityEdition/850/softwareinst/instg/instg_0054.html)
 
 ## 构建和运行
 

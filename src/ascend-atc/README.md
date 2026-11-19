@@ -4,7 +4,7 @@
 
 `ascend-atc` uses Huawei's CANN `8.5.0-910b-ubuntu22.04-py3.11` image on Linux ARM64. ATC compiles ONNX to OM. AMCT ONNX 0.23.2 calibrates INT8 models on the CPU using ONNX 1.14.0, ONNX Runtime 1.16.0 and the matching AMCT custom operators. The container starts in `/work` with CANN loaded. [AMCT 8.5.0 compatibility](https://www.hiascend.com/doc_center/source/en/CANNCommunityEdition/850/devaids/amct/atlasamct_16_0017.html)
 
-ATC uses the vendor Python 3.11 with the CANN compiler dependencies installed. AMCT ONNX uses its own environment at `/opt/amct`. [CANN compiler dependencies](https://www.hiascend.com/doc_center/source/en/CANNCommunityEdition/850/softwareinst/instg/instg_0054.html)
+ATC uses the vendor Python 3.11 with the compiler dependencies from the CANN guide and package metadata. The `amct_onnx` command uses its own environment at `/opt/amct` and ignores the Toolkit's Python module path. [CANN compiler dependencies](https://www.hiascend.com/doc_center/source/en/CANNCommunityEdition/850/softwareinst/instg/instg_0054.html)
 
 ## Build and run
 

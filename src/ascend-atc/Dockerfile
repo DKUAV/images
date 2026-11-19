@@ -5,6 +5,7 @@ FROM ${BASE_IMAGE} AS amct-build
 
 USER root
 # Isolate AMCT's Python package versions from the vendor ATC interpreter.
+ENV PYTHONPATH=""
 COPY src/ascend-atc/requirements.txt /tmp/amct-requirements.txt
 RUN python3.11 -m venv /opt/amct \
     && /opt/amct/bin/python -m pip install --no-cache-dir --only-binary=:all: \
@@ -30,7 +31,8 @@ RUN --network=none tar -xzf /tmp/amct.tar.gz -C /tmp ./amct_acl ./amct_onnx \
     && tar -xzf /tmp/amct_onnx/amct_onnx_op.tar.gz -C /tmp \
     && cd /tmp/amct_onnx_op \
     && /opt/amct/bin/python setup.py build \
-    && /opt/amct/bin/python -m pip check
+    && /opt/amct/bin/python -m pip check \
+    && sed -i '1s/$/ -E/' /opt/amct/bin/amct_onnx
 
 FROM ${BASE_IMAGE}
 
@@ -40,11 +42,23 @@ LABEL org.opencontainers.image.description="CANN 8.5.0 ATC, AMCT ACL and AMCT ON
 
 # The vendor image ships the Toolkit and interpreter. Add its offline compiler dependencies.
 COPY src/ascend-atc/atc-requirements.txt /tmp/atc-requirements.txt
-RUN python3.11 -m pip list --format=freeze > /tmp/atc-constraints.txt \
-    && python3.11 -m pip install --no-cache-dir --only-binary=:all: \
-        --constraint /tmp/atc-constraints.txt --requirement /tmp/atc-requirements.txt \
-    && python3.11 -m pip check \
-    && rm /tmp/atc-constraints.txt /tmp/atc-requirements.txt
+RUN <<'BASH'
+set -euo pipefail
+python3.11 -m pip list --format=freeze > /tmp/atc-constraints.txt
+python3.11 -m pip install --no-cache-dir --only-binary=:all: \
+    --constraint /tmp/atc-constraints.txt --requirement /tmp/atc-requirements.txt
+
+# CANN 8.5.0's op-compile-tool lists these standard library modules as distributions.
+python3.11 -c 'import getopt, inspect, multiprocessing'
+if ! atc_pip_check=$(python3.11 -m pip check); then
+    printf '%s\n' "$atc_pip_check"
+    test -n "$atc_pip_check"
+    if grep -qvE '^op-compile-tool 0\.1\.0 requires (getopt|inspect|multiprocessing), which is not installed\.$' <<<"$atc_pip_check"; then
+        exit 1
+    fi
+fi
+rm /tmp/atc-constraints.txt /tmp/atc-requirements.txt
+BASH
 
 # Install the matching ACL component into the vendor Toolkit installation.
 RUN --mount=type=bind,from=amct-build,source=/tmp/amct_acl,target=/tmp/amct_acl \

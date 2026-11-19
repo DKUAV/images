@@ -1,9 +1,12 @@
-# Python dependencies from the CANN 8.5.0 Toolkit installation guide.
+# Python dependencies from the Toolkit installation guide and CANN package metadata.
 absl-py
 attrs
 cffi
+cloudpickle
 cython
 decorator
+jinja2
+ml-dtypes
 numpy>=1.19.2,<2.0
 pathlib2
 protobuf==3.20.0
@@ -12,3 +15,4 @@ pyyaml
 requests
 scipy
 sympy
+tornado
