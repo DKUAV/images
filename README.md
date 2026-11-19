@@ -23,7 +23,7 @@ graph TD
 | [luciole-cuda-runtime](src/luciole-cuda-runtime/README.md) | Base + ROS 2 Jazzy; inherits system development tools and CMake | amd64 + arm64 | Required |
 | [luciole-ascend](src/luciole-ascend/README.md) | Ascend 910B TorchNPU, CANN and ARM64 development tools | arm64 | Required |
 | [ascend-peft](src/ascend-peft/README.md) | Ascend base + PEFT dependencies, Graphviz/torchview model visualization, pycocotools and TensorBoard | arm64 | Required |
-| [ascend-torch-infer-server](src/ascend-torch-infer-server/README.md) | Ascend PEFT + Flask, the MinIO Python SDK, and AIS Bench | arm64 | Required |
+| [ascend-torch-infer-server](src/ascend-torch-infer-server/README.md) | Ascend PEFT + Flask, the MinIO Python SDK, AIS Bench, and an isolated environment for ONNX tools and MindStudio Probe | arm64 | Required |
 
 The CUDA base and Ascend image keep upstream package sources. CUDA dev/runtime switch persisted apt and pip sources to Aliyun after all package installation. The runtime image inherits the base toolset; it is not a minimal CUDA runtime image. Ascend uses a tagged external base without a pinned digest; run its separate NPU check on a compatible host.
 

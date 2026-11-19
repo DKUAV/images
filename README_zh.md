@@ -23,7 +23,7 @@ graph TD
 | [luciole-cuda-runtime](src/luciole-cuda-runtime/README_zh.md) | Base + ROS 2 Jazzy；继承系统开发工具与 CMake | amd64 + arm64 | 必须通过 |
 | [luciole-ascend](src/luciole-ascend/README_zh.md) | 昇腾 910B TorchNPU、CANN 和 ARM64 开发工具 | arm64 | 必须通过 |
 | [ascend-peft](src/ascend-peft/README_zh.md) | Ascend 基础镜像 + PEFT 依赖、Graphviz/torchview 模型可视化、pycocotools 和 TensorBoard | arm64 | 必须通过 |
-| [ascend-torch-infer-server](src/ascend-torch-infer-server/README_zh.md) | Ascend PEFT + Flask、MinIO Python SDK 和 AIS Bench | arm64 | 必须通过 |
+| [ascend-torch-infer-server](src/ascend-torch-infer-server/README_zh.md) | Ascend PEFT + Flask、MinIO Python SDK、AIS Bench，以及 ONNX 工具与 MindStudio Probe 的独立环境 | arm64 | 必须通过 |
 
 CUDA base 和昇腾镜像保持上游软件源。CUDA dev/runtime 在安装完所有软件包后，将持久化的 apt 和 pip 源切换到 Aliyun。Runtime 继承 base 的工具集，并非精简 CUDA runtime 镜像。昇腾基础镜像使用版本标签但不固定 digest；NPU 硬件检查需在兼容宿主机单独运行。
 

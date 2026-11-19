@@ -8,7 +8,9 @@
 
 该依赖文件还通过 SHA256 固定了官方 `aclruntime` 和 `ais_bench` 0.0.2 wheel。其中 `aclruntime` 原生 wheel 适用于 Linux ARM64 和 CPython 3.12。用法见 [Ascend AIS Bench 推理工具指南](https://gitee.com/ascend/tools/blob/master/ais-bench_workload/tool/ais_bench/README.md)。
 
-安装前，Dockerfile 将父镜像全部已安装包版本记录到 `/opt/image-python/infer-server-constraints.txt`，并将其作为 pip 约束。这会保留 PEFT 软件栈，包括五个 Triton 辅助包版本，原始厂商约束文件保持不变。不兼容的依赖会使构建失败。安装后执行 `ascend-pip-check`，最后配置上游软件源并清理临时文件。
+向默认 Python 环境安装依赖前，Dockerfile 将父镜像全部已安装包版本记录到 `/opt/image-python/infer-server-constraints.txt`，并将其作为 pip 约束。这会保留 PEFT 软件栈，包括五个 Triton 辅助包版本，原始厂商约束文件保持不变。不兼容的依赖会使构建失败。默认 Python 环境安装完成后执行 `ascend-pip-check`。
+
+构建通过 `uv` 在 `/opt/onnx` 创建独立的 Python 3.12 环境，安装 `onnx`、`onnxruntime`、`onnxsim`、`onnxslim`、`onnxoptimizer`、`onnx-graphsurgeon`、`onnxconverter-common`、`onnxscript` 和 `mindstudio-probe>=26.2.0`。[虚拟环境依赖](onnx-requirements.txt)独立于默认 Python 环境的厂商版本约束进行解析。ARM64 构建在没有可用 wheel 时从源码编译 `onnxoptimizer`。安装结束后配置上游软件源并清理临时文件。
 
 镜像继承 root、`HOME=/root`、`/work`、Ascend 入口和公钥 SSH 策略。宿主机 runtime、驱动要求和 SSH 凭据说明见 [Ascend 运行指南](../luciole-ascend/README_zh.md#使用-npu)。
 
@@ -26,9 +28,11 @@ docker buildx bake -f docker-bake.load.json
 python -m image_kit test --plan build-plan.json --owner dkuav --revision "$(git rev-parse HEAD)" --platform linux/arm64
 ```
 
-计划构建、测试当前工作区的 `luciole-ascend` 和 `ascend-peft` 两级父镜像，但不选择它们发布。新镜像使用 `ascend_peft` 命名上下文。修改任一级父镜像会选择下游镜像；仅修改本镜像的 requirements 时，只选择本镜像。
+计划构建、测试当前工作区的 `luciole-ascend` 和 `ascend-peft` 两级父镜像，但不选择它们发布。新镜像使用 `ascend_peft` 命名上下文。修改任一级父镜像会选择下游镜像。只修改本镜像的任一依赖文件时，只选择本镜像。
 
 必须通过的烟测重跑两级父镜像检查，比较继承包版本与快照，调用 Flask CLI，通过 Flask 测试客户端验证 JSON 响应体和 CORS 响应头，在无网络访问的情况下初始化 MinIO 客户端，并执行 `python3 -m ais_bench --help` 检查 CLI 能否加载原生 ACL runtime。实际对象存储访问和模型推理需在兼容 NPU 主机上通过应用集成测试验证。另见独立的[硬件检查](../_tests/npu-ascend.sh)。
+
+`/opt/onnx` 的烟测检查环境的依赖一致性，执行 `msprobe --help`，导入全部 8 个 ONNX 包，优化内存中的 ONNX 图，并使用 ONNX Runtime 的 CPU 执行提供程序验证输出。
 
 直接构建默认使用已发布的 `ascend-peft` 父镜像：
 
@@ -49,3 +53,5 @@ docker run --rm -i --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disa
 ```
 
 进入启用 NPU 的容器后，可用 `python3 -m ais_bench --model /work/model.om --device 0` 对 Ascend OM 模型进行基准测试。
+
+用 `/opt/onnx/bin/python` 运行 ONNX 脚本，用 `/opt/onnx/bin/msprobe --help` 查看 MindStudio Probe 命令。也可以在 Bash 中运行 `source /opt/onnx/bin/activate`，将两类工具加入当前 shell 的 PATH。ONNX Runtime 使用 CPU 执行提供程序。这个环境中的 msProbe 用于离线分析。进程内精度调试需要在同一个 Python 环境中使用 msProbe、PyTorch 和 TorchNPU。
