@@ -38,9 +38,9 @@ FROM ${BASE_IMAGE}
 
 USER root
 ENV HOME=/root
-LABEL org.opencontainers.image.description="CANN 8.5.0 ATC, AMCT ACL and AMCT ONNX tools for Ascend910B2"
+LABEL org.opencontainers.image.description="CANN 8.5.0 ATC, AMCT and AIS Bench for Ascend910B2"
 
-# The vendor image ships the Toolkit and interpreter. Add its offline compiler dependencies.
+# Add offline compiler dependencies and AIS Bench to the vendor interpreter.
 COPY src/ascend-atc/atc-requirements.txt /tmp/atc-requirements.txt
 RUN <<'BASH'
 set -euo pipefail

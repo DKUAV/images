@@ -50,4 +50,8 @@ header "CANN 8.5.0 conversion and CPU calibration"
 assert_cmd "AMCT ACL library is installed in the Toolkit" \
     test -s "${ASCEND_TOOLKIT_HOME}/lib64/libamctacl.so"
 assert_cmd "Compile baseline OM, calibrate with AMCT and compile INT8 OM" ascend_atc_smoke
+
+header "OM inference and benchmarking"
+assert_cmd "AIS Bench CLI loads the ACL runtime" python3.11 -m ais_bench --help
+
 smoke_summary

@@ -22,10 +22,10 @@ graph TD
 | [luciole-cuda-base](src/luciole-cuda-base/README.md) | PyTorch/CUDA, system and GUI tools, Python packages, CMake, networking libraries, user and SSH setup | amd64 + arm64 | Advisory |
 | [luciole-cuda-dev](src/luciole-cuda-dev/README.md) | Base + ROS 2 Jazzy, LLVM 21, developer shell, cached pre-commit hooks | amd64 + arm64 | Required |
 | [luciole-cuda-runtime](src/luciole-cuda-runtime/README.md) | Base + ROS 2 Jazzy; inherits system development tools and CMake | amd64 + arm64 | Required |
-| [luciole-ascend](src/luciole-ascend/README.md) | Ascend 910B TorchNPU, CANN and ARM64 development tools | arm64 | Required |
+| [luciole-ascend](src/luciole-ascend/README.md) | Ascend 910B TorchNPU, CANN, ARM64 development tools, AMCT, ONNX tools, MindStudio Probe and AIS Bench | arm64 | Required |
 | [ascend-peft](src/ascend-peft/README.md) | Ascend base + PEFT dependencies, Graphviz/torchview model visualization, pycocotools and TensorBoard | arm64 | Required |
-| [ascend-torch-infer-server](src/ascend-torch-infer-server/README.md) | Ascend PEFT + Flask, the MinIO Python SDK, AIS Bench, and an isolated environment for ONNX tools and MindStudio Probe | arm64 | Required |
-| [ascend-atc](src/ascend-atc/README.md) | CANN 8.5.0 ATC for Ascend910B2, with AMCT ONNX for CPU INT8 calibration and AMCT ACL for ATC inline calibration | arm64 | Required |
+| [ascend-torch-infer-server](src/ascend-torch-infer-server/README.md) | Ascend PEFT + Flask, CORS support and the MinIO Python SDK | arm64 | Required |
+| [ascend-atc](src/ascend-atc/README.md) | CANN 8.5.0 ATC for Ascend910B2, with AMCT ONNX for CPU INT8 calibration, AMCT ACL for ATC inline calibration and AIS Bench | arm64 | Required |
 
 The CUDA base and Ascend images keep upstream package sources. CUDA dev/runtime switch persisted apt and pip sources to Aliyun after all package installation. The runtime image inherits the base toolset; it is not a minimal CUDA runtime image. `luciole-ascend` uses a tagged external base without a pinned digest; run its separate NPU check on a compatible host. `ascend-atc` pins the CANN 8.5.0 base digest and uses the vendor entrypoint for its tool commands.
 

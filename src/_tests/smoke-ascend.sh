@@ -66,4 +66,85 @@ assert_cmd "sshd running" pgrep -x sshd
 pkill -x sshd || true
 rm -f "${password_file}"
 
+amct_onnx_smoke() (
+    work=$(mktemp -d) || exit 1
+    trap 'rm -rf -- "$work"' EXIT
+    cd "$work" && mkdir calibration || exit 1
+
+    /opt/amct/bin/python -E - <<'PY' || exit 1
+import amct_onnx
+import numpy as np
+import onnx
+from onnx import TensorProto, helper, numpy_helper
+
+assert amct_onnx.AMCT_SO is not None, "AMCT custom operators could not be loaded"
+shape = [1, 16, 8, 8]
+rng = np.random.default_rng(42)
+weights = rng.normal(0, 0.2, (16, 16, 3, 3)).astype(np.float32)
+graph = helper.make_graph(
+    [helper.make_node("Conv", ["x", "weights"], ["y"], name="conv", pads=[1] * 4)],
+    "smoke",
+    [helper.make_tensor_value_info("x", TensorProto.FLOAT, shape)],
+    [helper.make_tensor_value_info("y", TensorProto.FLOAT, shape)],
+    [numpy_helper.from_array(weights, "weights")],
+)
+model = helper.make_model(graph, ir_version=9, opset_imports=[helper.make_opsetid("", 13)])
+onnx.checker.check_model(model)
+onnx.save(model, "model.onnx")
+rng.normal(size=shape).astype("<f4").tofile("calibration/000.bin")
+PY
+
+    amct_onnx calibration --model model.onnx --save_path int8 \
+        --input_shape 'x:1,16,8,8' --data_dir calibration --data_types float32 \
+        --batch_num 1 || exit 1
+    test -s int8_fake_quant_model.onnx || exit 1
+    /opt/amct/bin/python -E -c 'import onnx; assert any(
+        node.op_type == "AscendQuant"
+        for node in onnx.load("int8_deploy_model.onnx").graph.node
+    ), "AMCT deploy graph has no AscendQuant node"' || exit 1
+    atc --model=int8_deploy_model.onnx --framework=5 --output=int8 \
+        --soc_version=Ascend910B2 --input_shape='x:1,16,8,8' && test -s int8.om
+)
+
+header "AMCT ACL and ONNX calibration"
+assert_cmd "AMCT ACL library is installed in the Toolkit" \
+    test -s "${ASCEND_HOME_PATH}/lib64/libamctacl.so"
+assert_cmd "Calibrate ONNX on CPU and compile Ascend910B2 INT8 OM" amct_onnx_smoke
+
+header "ONNX tools and MindStudio Probe"
+assert_cmd "ONNX environment dependencies are consistent" uv pip check --python /opt/onnx/bin/python
+assert_cmd "MindStudio Probe CLI starts" /opt/onnx/bin/msprobe --help
+assert_cmd "ONNX tools load and ONNX Runtime runs a model on CPU" /opt/onnx/bin/python -c '
+from importlib import import_module
+import sys
+
+import numpy as np
+import onnx
+import onnxoptimizer
+import onnxruntime
+from onnx import TensorProto, helper
+
+assert sys.prefix != sys.base_prefix
+for module in ("onnxsim", "onnxslim", "onnx_graphsurgeon", "onnxconverter_common", "onnxscript"):
+    import_module(module)
+
+graph = helper.make_graph(
+    [helper.make_node("Add", ["x", "x"], ["y"])],
+    "onnx-smoke",
+    [helper.make_tensor_value_info("x", TensorProto.FLOAT, [1])],
+    [helper.make_tensor_value_info("y", TensorProto.FLOAT, [1])],
+)
+model = helper.make_model(graph, opset_imports=[helper.make_opsetid("", 13)], ir_version=8)
+onnx.checker.check_model(model)
+optimized = onnxoptimizer.optimize(model)
+session = onnxruntime.InferenceSession(
+    optimized.SerializeToString(), providers=["CPUExecutionProvider"]
+)
+result, = session.run(["y"], {"x": np.array([2.0], dtype=np.float32)})
+np.testing.assert_array_equal(result, np.array([4.0], dtype=np.float32))
+'
+
+header "OM inference and benchmarking"
+assert_cmd "AIS Bench CLI loads the ACL runtime" python3 -m ais_bench --help
+
 smoke_summary
