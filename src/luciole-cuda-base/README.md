@@ -19,7 +19,7 @@ Main advances the explicit variant channel. Build tags include variant, SHA12 an
 | Networking libraries | libdatachannel v0.24.5, rpclib v2.3.0, iceoryx v2.0.8 |
 | GUI | WSLg dependencies, D-Bus, CJK fonts, Mesa and PulseAudio |
 | OpenCV | apt `libopencv-dev` plus pip packages; `opencv.sh` is disabled, so NVIDIA OpenCV is not quarantined by this Dockerfile |
-| Mirrors | Upstream Ubuntu over HTTPS and upstream PyPI. APT retries failed downloads up to three times. Final images switch to Aliyun. |
+| Mirrors | Canonical's Azure archive on amd64 and Ubuntu Ports on arm64, both over HTTPS. APT uses a 30-second HTTPS network timeout and retries failed downloads up to three times. The base uses upstream PyPI. Final images switch to Aliyun. |
 | Editor / timezone | `EDITOR=vim`, `VISUAL=vim`, default `Asia/Shanghai` |
 
 ## Micromamba
