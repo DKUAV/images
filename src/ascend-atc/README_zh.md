@@ -1,0 +1,54 @@
+# 昇腾 ATC 和 AMCT ONNX
+
+[English documentation](README.md)
+
+`ascend-atc` 基于华为的 CANN `8.5.0-910b-ubuntu22.04-py3.11` 镜像，运行于 Linux ARM64。ATC 将 ONNX 编译为 OM。AMCT ONNX 0.23.2 使用 ONNX 1.14.0、ONNX Runtime 1.16.0 和配套的 AMCT 自定义算子，在 CPU 上完成 INT8 校准。容器启动后位于 `/work`，并已加载 CANN 环境。 [AMCT 8.5.0 版本配套表](https://www.hiascend.com/doc_center/source/en/CANNCommunityEdition/850/devaids/amct/atlasamct_16_0017.html)
+
+ATC 使用装有 CANN 编译依赖的原厂 Python 3.11。AMCT ONNX 使用 `/opt/amct` 下的独立环境。 [CANN 编译依赖](https://www.hiascend.com/doc_center/source/en/CANNCommunityEdition/850/softwareinst/instg/instg_0054.html)
+
+## 构建和运行
+
+在联网的 ARM64 Docker 宿主机上，从仓库根目录构建。若要执行仓库的必过烟测，按[清单构建流程](../../README_zh.md#本地构建与烟测)操作，使用目标 `ascend-atc/8.5.0-910b-ubuntu22.04-py3.11` 和平台 `linux/arm64`。烟测会检查 AMCT ACL 库是否已安装，再用小型卷积模型在无 NPU 环境下验证 CPU 校准和 `Ascend910B2` 的两份 OM 产物。
+
+```bash
+IMAGE=ascend-atc:8.5.0-910b-ubuntu22.04-py3.11
+docker build --platform linux/arm64 -f src/ascend-atc/Dockerfile -t "$IMAGE" .
+mkdir -p work
+# Place model.onnx and any external weight files in work/.
+docker run --pull=never --rm -it --network=none \
+  --mount "type=bind,source=$PWD/work,target=/work" "$IMAGE"
+```
+
+如需转移到离线 ARM64 主机，使用 `docker save -o ascend-atc.tar "$IMAGE"` 导出，在离线端用 `docker load -i ascend-atc.tar` 导入，再执行同一个 `docker run` 命令。挂载可写工作目录以保存模型、校准样本、日志和产物。
+
+## 编译浮点基线
+
+在容器内执行以下命令。将 `SOC` 设为实际目标设备的 ATC SoC 标识，将 `INPUT_SHAPE` 设为模型的固定输入名和维度。示例使用 `Ascend910B2` 和单路 NCHW FP32 张量。 [ATC 8.5.0 SoC 参数](https://www.hiascend.com/doc_center/source/en/CANNCommunityEdition/850/devaids/atctool/atlasatcparam_16_0036.html)
+
+```bash
+SOC=Ascend910B2
+INPUT_SHAPE='images:1,3,640,640'
+mkdir -p output
+atc --framework=5 --model=model.onnx --output=output/model-fp \
+  --soc_version="$SOC" --input_shape="$INPUT_SHAPE"
+```
+
+## INT8 校准与编译
+
+按实际模型的预处理、输入 dtype 和布局导出有代表性的批次。以上例为准，每个连续的小端 FP32 输入 batch 保存为一个原始 `.bin`，并放入 `calibration/images/`。若预处理后的批次保存在 `.npy` 文件中，可用 `np.ascontiguousarray(np.load(path), dtype="<f4").tofile(output_path)` 写出原始张量。多输入模型按输入分别建目录，同批次在各目录中使用相同的补零文件名。AMCT 的输入名称和形状、数据目录、dtype 各自在对应参数中用分号分隔，顺序保持一致。
+
+复制[校准配置模板](calibration.cfg)，将 `batch_num` 改为 AMCT 要读取的批次数。AMCT 按文件名字典序读取。若某层需要保留浮点，可把 ONNX 节点名填入 `skip_layers`。 [AMCT ONNX 校准参数](https://www.hiascend.com/document/detail/en/canncommercial/850/devaids/amct/atlasamct_16_0337.html)
+
+```bash
+cp /opt/ascend-atc/calibration.cfg quant.cfg
+# Edit quant.cfg for the actual calibration set before running AMCT.
+amct_onnx calibration --model=model.onnx --save_path=output/model-int8 \
+  --input_shape="$INPUT_SHAPE" --data_dir=calibration/images \
+  --data_types=float32 --calibration_config=quant.cfg &&
+atc --framework=5 --model=output/model-int8_deploy_model.onnx \
+  --output=output/model-int8 --soc_version="$SOC" --input_shape="$INPUT_SHAPE"
+```
+
+AMCT 还会生成 `output/model-int8_fake_quant_model.onnx`，供 CPU 使用 AMCT 算子做精度仿真。ATC 读取部署用 ONNX，生成 `output/model-int8.om`。保留校准配置，在 Ascend910B2 上用独立的验证集对比浮点和 INT8 OM。若后续要为 310 系列设备编译，先确认完整 SoC 标识，选择含兼容 CANN 和对应算子包的构建环境，再在目标板上验收 OM。
+
+镜像也在 Toolkit 中安装 AMCT ACL 8.5.0。若要通过 `--compression_optimize_conf` 的 `calibration` 段执行 ATC 内联校准，需要给容器挂载兼容的 NPU，并提供 ATC 压缩配置文件。 [ATC 压缩配置](https://www.hiascend.com/doc_center/source/en/canncommercial/850/devaids/atctool/atlasatcparam_16_0059.html)

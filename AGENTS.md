@@ -10,7 +10,7 @@
 - Each manifest declares a published name and explicit variants. Preserve package names; publish variant channels, `<variant>-<sha12>-<run-id>-<attempt>` build tags and receipt-promoted `<variant>-vMAJOR.MINOR.PATCH` releases. Do not maintain old global aliases or delete historical tags.
 - All Dockerfiles use the repository root as build context. CUDA Compose builds use `context: ../..`; Ascend Compose only runs published images, with builds handled by manifest/Bake.
 - Internal bases use `base.target` and `base.context` and same-checkout Bake named contexts. The planner adds build ancestors without selecting them for publication. Child platforms must be supported by their parent.
-- External bases need an explicit version tag and an explicit digest value or null. CUDA uses `nvcr.io/nvidia/pytorch:26.06-py3`; Ascend uses `ascendai/torch-npu:2.10.0.post7-cann9.2.0-910b-ubuntu22.04-py3.12` with a null digest.
+- External bases need an explicit version tag and an explicit digest value or null. CUDA uses `nvcr.io/nvidia/pytorch:26.06-py3`. `luciole-ascend` uses `ascendai/torch-npu:2.10.0.post7-cann9.2.0-910b-ubuntu22.04-py3.12` with a null digest. `ascend-atc` pins `quay.io/ascend/cann:8.5.0-910b-ubuntu22.04-py3.11` by digest and retains the vendor entrypoint. Install AMCT ACL from the matching CANN release into the Toolkit and keep AMCT ONNX in its own Python environment so ATC continues to use the vendor Python packages.
 - `BASE_IMAGE` is injected by the build tool. Direct Docker/Compose builds retain Dockerfile defaults and final-image `BASE_TAG` compatibility; these use the published base by default.
 
 ## Shared scripts and Dockerfiles
@@ -22,13 +22,13 @@
 - `ascend-peft` alone may replace the parent pins for attrs, numpy, scipy, decorator and psutil with the versions required by the precompiled Triton Ascend 3.6.0 wheel. Keep the original base constraints unchanged, derive child constraints excluding only those five names, and retain `ascend-pip-check` plus smoke checks for every other recorded parent version.
 - Copy each independently changeable shared file explicitly and declare it in manifest `inputs`. Keep capability `COPY + RUN` pairs adjacent; do not copy entire script/asset directories.
 - Keep common Python development tools in `vendor/image-kit/assets/python-dev-requirements.txt`. CUDA and Ascend consume that file through separate pip installers because CUDA extras and Ascend vendor constraints differ.
-- Preserve capability order in CUDA base: system, dev-tools, WSLg, pip, CMake, networking libraries, user and SSH. Python is supplied by NVIDIA. Ascend is a separate ARM64 image built from the vendor TorchNPU base; preserve vendor Python and CANN.
+- Preserve capability order in CUDA base: system, dev-tools, WSLg, pip, CMake, networking libraries, user and SSH. Python is supplied by NVIDIA. `luciole-ascend` is a separate ARM64 image built from the vendor TorchNPU base. Preserve vendor Python and CANN in both Ascend families.
 - `opencv.sh` is currently disabled. Do not claim the NVIDIA OpenCV installation is quarantined or promise a particular apt OpenCV version without verifying a built image.
 - CUDA base OpenCV smoke verifies an apt-owned CMake configuration and compiles/runs a probe with matching CMake, header and runtime versions; do not hardcode a historical Ubuntu package version. Keep Python cv2 import separate and retain advisory policy.
 - ROS 2 is added in both final images. LLVM, devshell and cached pre-commit hooks are dev-only.
 - Run devshell/precommit as the target user, then return to root for mirror configuration and cleanup. Select correct binaries for amd64/arm64.
 - Run `finalize-mirror.sh` as root after all apt/pip installation. CUDA dev/runtime select Aliyun; Ascend selects upstream.
-- CUDA base and Ascend default to root. CUDA final Dockerfiles set `USER luciole`; the shared entrypoint starts sshd according to `SSH_MODE` then execs the command. Managed non-root accounts start locked. CUDA defaults to password SSH; Ascend defaults to key-only SSH with nonempty authorized keys. CUDA final images prohibit root SSH by default; Ascend explicitly selects root. Root password mode requires a mounted password file and key-only mode requires nonempty authorized keys unless `SSH_ALLOW_EMPTY_AUTHORIZED_KEYS=true` explicitly allows starting sshd while waiting for keys. APP_USER is CUDA metadata, not privilege control.
+- CUDA base and Ascend images default to root. CUDA final Dockerfiles set `USER luciole`. The shared entrypoint in the CUDA and Ascend TorchNPU families starts sshd according to `SSH_MODE` then execs the command. Managed non-root accounts start locked. CUDA defaults to password SSH. The Ascend TorchNPU family defaults to key-only SSH with nonempty authorized keys. CUDA final images prohibit root SSH by default. `luciole-ascend` explicitly selects root. Root password mode requires a mounted password file and key-only mode requires nonempty authorized keys unless `SSH_ALLOW_EMPTY_AUTHORIZED_KEYS=true` explicitly allows starting sshd while waiting for keys. APP_USER is CUDA metadata, not privilege control.
 - Do not change software versions, SSH policy or existing smoke assertions merely to make a build refactor pass.
 
 ## CI and verification
@@ -75,7 +75,7 @@ Refactor: Synchronize shared installers and SSH behavior
 
 Use one worker per dependency component and native platform, pass `--component` to worker
 commands and qualify artifacts with `worker_id` and run attempt. Keep the full plan for merge.
-Ascend defaults to root with HOME=/root to read the vendor CANN environment; omit UID/GID/groups
+`luciole-ascend` defaults to root with HOME=/root to read the vendor CANN environment; omit UID/GID/groups
 from its manifest. Its Bash smoke override restores the installed environment and explicitly
 checks the real entrypoint and credential-gated root SSH. CUDA account policy is unchanged.
 Ascend Compose mounts the existing host `SSH_CONFIG_DIR` read-only at `/root/.ssh`; retain

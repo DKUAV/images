@@ -71,7 +71,7 @@ def test_real_repository_contracts() -> None:
     """Validate real image graph, account, COPY and README contracts."""
     repo = ImageRepository(ROOT).load()
     repo.validate_documentation()
-    assert len(repo.families) == 6
+    assert len(repo.families) == 7
     ascend = repo.families["luciole-ascend"]
     assert ascend.platforms == ("linux/arm64",)
     assert ascend.variants[0].base_digest is None
@@ -93,10 +93,16 @@ def test_real_repository_contracts() -> None:
     assert dependency.key == peft.variants[0].key
     assert dependency.context == "ascend_peft"
     assert all(test.policy == "required" for test in infer_server.variants[0].tests)
+    atc = repo.families["ascend-atc"]
+    assert atc.platforms == ("linux/arm64",)
+    assert atc.variants[0].base_digest is not None
+    assert not atc.variants[0].dependencies
+    assert atc.variants[0].tests[0].policy == "required"
+    assert atc.variants[0].tests[0].entrypoint == "image"
     plan = repo.make_plan(repo.variants)
     workers = plan["build_matrix"]["include"]
-    assert len(workers) == 3
-    assert len({worker["worker_id"] for worker in workers}) == 3
+    assert len(workers) == 4
+    assert len({worker["worker_id"] for worker in workers}) == 4
     for worker in workers:
         names = {
             item["name"]
@@ -107,9 +113,11 @@ def test_real_repository_contracts() -> None:
         assert names in (
             {"luciole-ascend", "ascend-peft", "ascend-torch-infer-server"},
             {"luciole-cuda-base", "luciole-cuda-dev", "luciole-cuda-runtime"},
+            {"ascend-atc"},
         )
     common = "vendor/image-kit/assets/python-dev-requirements.txt"
-    assert repo.affected([common]) == set(repo.variants)
+    assert repo.affected([common]) == set(repo.variants) - {atc.variants[0].key}
+    assert repo.affected(["src/ascend-atc/calibration.cfg"]) == {atc.variants[0].key}
     assert {
         key[0]
         for key in repo.affected(

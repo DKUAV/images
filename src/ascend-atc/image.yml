@@ -1,0 +1,26 @@
+schema_version: 2
+name: ascend-atc
+description: CANN 8.5.0 ATC model conversion and AMCT INT8 calibration for Ascend910B2 on ARM64.
+dockerfile: src/ascend-atc/Dockerfile
+context: .
+platforms:
+- linux/arm64
+inputs:
+- src/ascend-atc/atc-requirements.txt
+- src/ascend-atc/requirements.txt
+- src/ascend-atc/calibration.cfg
+- vendor/image-kit/scripts/system/finalize-mirror.sh
+publish: true
+variants:
+- id: 8.5.0-910b-ubuntu22.04-py3.11
+  base:
+    image: quay.io/ascend/cann:8.5.0-910b-ubuntu22.04-py3.11
+    digest: sha256:3faee0835b3900a2a77dbe02775fd34bc521d12e23eb8603f9c9f16013a9d015
+  build_args: {}
+  tests:
+  - library: src/_tests/_lib.sh
+    script: src/_tests/smoke-ascend-atc.sh
+    inputs:
+    - src/_tests/_lib.sh
+    policy: required
+    entrypoint: image

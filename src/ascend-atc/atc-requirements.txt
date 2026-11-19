@@ -1,0 +1,14 @@
+# Python dependencies from the CANN 8.5.0 Toolkit installation guide.
+absl-py
+attrs
+cffi
+cython
+decorator
+numpy>=1.19.2,<2.0
+pathlib2
+protobuf==3.20.0
+psutil
+pyyaml
+requests
+scipy
+sympy
