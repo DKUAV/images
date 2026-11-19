@@ -33,6 +33,9 @@ dev_main() {
     done
     assert_cmd "uv CLI" uv --version
     assert_cmd "ty CLI" ty --version
+    assert_cmd "Sheldon CLI" "$HOME/.local/bin/sheldon" --version
+    assert_cmd "zoxide CLI" "$HOME/.local/bin/zoxide" --version
+    assert_cmd "Witr CLI" witr --version
     # fzf is git-cloned to ~/.fzf/bin/fzf by devshell.sh, which only adds it to
     # PATH via .bashrc/.zshrc (NOT .profile). A non-interactive `bash -lc` smoke
     # shell therefore won't see it on PATH — verify the binary exists directly.

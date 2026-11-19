@@ -8,6 +8,8 @@
 
 共享开发工具包含 Graphviz 系统命令。PEFT 依赖以及 `graphviz`、`torchview` Python 包安装在派生的 [ascend-peft 镜像](../ascend-peft/README_zh.md)中。
 
+开发 shell 固定 Sheldon、zoxide 和 Witr 的版本，校验 ARM64 二进制后安装。
+
 依赖检查只放行三条精确匹配的厂商诊断：`mindstudio-kl 26.2.0` 对 NumPy 的版本要求，以及 `ms-service-profiler 26.0.0` 缺少两个 OTLP exporter。其他依赖错误会使构建失败；放行不代表相关厂商功能已经验证兼容。镜像保留上游 apt 和 pip 软件源。
 
 在原生 ARM64 主机上构建和运行冒烟测试：

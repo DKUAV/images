@@ -8,6 +8,8 @@ The vendor base supplies Python 3.12, PyTorch 2.10.0, TorchNPU 2.10.0.post7 and 
 
 The shared developer tools include the Graphviz system executable. PEFT dependencies and the `graphviz` and `torchview` Python packages are installed in the derived [ascend-peft image](../ascend-peft/README.md).
 
+The developer shell verifies pinned ARM64 binaries for Sheldon, zoxide and Witr before installation.
+
 The package check permits only three exact known vendor diagnostics: the `mindstudio-kl 26.2.0` NumPy bound and the two missing `ms-service-profiler 26.0.0` OTLP exporters. Other dependency errors fail the build. This does not establish compatibility for the affected vendor features. The image keeps upstream apt and pip sources.
 
 Build and run smoke checks on a native ARM64 host:

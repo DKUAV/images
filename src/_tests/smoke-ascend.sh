@@ -26,6 +26,9 @@ for tool in cmake ninja git clangd gdb rg fd bat gosu landscape-sysinfo uv ty zs
 done
 assert_cmd_contains "CMake 4.3.2" "cmake version 4.3.2" cmake --version
 assert_cmd "micromamba CLI" micromamba --version
+assert_cmd "Sheldon CLI" "${HOME}/.local/bin/sheldon" --version
+assert_cmd "zoxide CLI" "${HOME}/.local/bin/zoxide" --version
+assert_cmd "Witr CLI" witr --version
 assert_cmd "fzf installed" test -x "${HOME}/.fzf/bin/fzf"
 assert_cmd "Python package check" ascend-pip-check
 assert_cmd "Python build tools import" python3 -c 'import build, packaging, wheel, hatchling.build, hatch_vcs, editables, setuptools_scm, uv_build'

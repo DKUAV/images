@@ -22,6 +22,8 @@ Main 更新显式 variant 通道。构建标签包含 variant、SHA12 和运行�
 | 开发 shell | zsh、oh-my-zsh、启用共用 ty Python LSP 的 NvChad/neovim、starship、nvm、fzf、eza、zoxide、Atuin 和 Witr |
 | Pre-commit | 按共享配置预缓存 hook 环境 |
 
+开发 shell 固定 Sheldon、zoxide 和 Witr 的版本，按架构校验二进制后安装。
+
 ## 用户与入口脚本
 
 默认容器用户为 `luciole`，默认命令为 `/bin/zsh`。配置的 `luciole` 账户 UID/GID 为 1000，具有免密 sudo 权限。工作目录为 `/home/luciole`。

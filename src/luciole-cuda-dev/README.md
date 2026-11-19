@@ -22,6 +22,8 @@ Main advances the explicit variant channel. Build tags include variant, SHA12 an
 | Developer shell | zsh, oh-my-zsh, NvChad/neovim with the shared ty Python LSP, starship, nvm, fzf, eza, zoxide, Atuin and Witr |
 | Pre-commit | Hook environments pre-cached from the shared config |
 
+The developer shell verifies pinned Sheldon, zoxide and Witr binaries for each architecture before installation.
+
 ## User and entrypoint
 
 The default container user is `luciole` and the default command is `/bin/zsh`. The configured `luciole` account has UID/GID 1000 and passwordless sudo. The working directory is `/home/luciole`.
