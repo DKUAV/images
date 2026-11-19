@@ -87,6 +87,8 @@ SSH follows the explicitly selected `DEFAULT_USER`: selecting `root` permits key
 
 ## ROS 2 setup
 
+The shared ROS 2 installer uses the pinned, checksum-verified `ros2-apt-source` package for Ubuntu.
+
 Source `source /opt/ros/jazzy/setup.bash` before using ROS. Runtime does not add devshell, the `load_ros` alias or LLVM; its default command remains Bash.
 
 See [build architecture](../../docs/build-architecture.md) and [manifest reference](../../docs/manifest-reference.md) for configuration and release details.

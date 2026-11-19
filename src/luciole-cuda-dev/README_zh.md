@@ -90,6 +90,8 @@ SSH 使用显式选择的 `DEFAULT_USER`：选择 `root` 后，公钥模式默�
 
 ## ROS 2 与 WSLg
 
+共享 ROS 2 安装脚本使用固定版本的 Ubuntu `ros2-apt-source` 包，并校验 SHA-256。
+
 ROS 不自动加载。在 zsh 中运行 `load_ros` 加载 `/opt/ros/jazzy/setup.zsh`，也可手动 source。Devshell 工具为 `luciole` 安装和配置。
 
 Dev Compose 挂载 `/tmp/.X11-unix`、`/mnt/wslg`，转发 DISPLAY、WAYLAND_DISPLAY、XDG_RUNTIME_DIR、PULSE_SERVER，需要宿主机支持这些路径。

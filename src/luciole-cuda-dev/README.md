@@ -90,6 +90,8 @@ SSH follows the explicitly selected `DEFAULT_USER`: selecting `root` permits key
 
 ## ROS 2 and WSLg
 
+The shared ROS 2 installer uses the pinned, checksum-verified `ros2-apt-source` package for Ubuntu.
+
 ROS is not sourced automatically. Run `load_ros` in zsh to source `/opt/ros/jazzy/setup.zsh`, or source the setup file manually. Devshell tools are installed/configured for `luciole`.
 
 Dev Compose mounts `/tmp/.X11-unix` and `/mnt/wslg` and forwards DISPLAY, WAYLAND_DISPLAY, XDG_RUNTIME_DIR and PULSE_SERVER. These paths require a compatible host environment.

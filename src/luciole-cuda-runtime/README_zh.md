@@ -87,6 +87,8 @@ SSH 使用显式选择的 `DEFAULT_USER`：选择 `root` 后，公钥模式默�
 
 ## ROS 2 配置
 
+共享 ROS 2 安装脚本使用固定版本的 Ubuntu `ros2-apt-source` 包，并校验 SHA-256。
+
 使用 ROS 前执行 `source /opt/ros/jazzy/setup.bash`。Runtime 不添加 devshell、`load_ros` 别名或 LLVM，默认命令保持 Bash。
 
 配置与发布细节见[构建架构](../../docs/build-architecture.md)和[清单参考](../../docs/manifest-reference.md)。
