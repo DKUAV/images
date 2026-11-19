@@ -21,9 +21,13 @@ ARG TZ=Asia/Shanghai
 ARG SYSTEM_UPGRADE=true
 
 COPY --chmod=0755 vendor/image-kit/scripts/system/system.sh /tmp/scripts/system.sh
+# Use Canonical's Azure archive for amd64 and the upstream ports archive for arm64.
 RUN find /etc/apt -maxdepth 2 -type f \( -name '*.list' -o -name '*.sources' \) \
-        -exec sed -i -E 's@http://((archive|security|ports)\.ubuntu\.com/)@https://\1@g' {} + \
-    && printf '%s\n' 'Acquire::Retries "3";' > /etc/apt/apt.conf.d/80-luciole-download-retries \
+        -exec sed -i -E \
+            -e 's@https?://(archive|security)\.ubuntu\.com/@https://azure.archive.ubuntu.com/@g' \
+            -e 's@http://ports\.ubuntu\.com/@https://ports.ubuntu.com/@g' {} + \
+    && printf '%s\n' 'Acquire::Retries "3";' 'Acquire::https::Timeout "30";' \
+        > /etc/apt/apt.conf.d/80-luciole-download-retries \
     && /tmp/scripts/system.sh --timezone "${TZ}" --upgrade "${SYSTEM_UPGRADE}"
 # OpenCV replacement remains disabled; dev-tools installs apt libopencv-dev.
 COPY --chmod=0755 vendor/image-kit/scripts/dev/dev-tools.sh /tmp/scripts/dev-tools.sh

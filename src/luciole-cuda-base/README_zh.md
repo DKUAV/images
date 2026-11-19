@@ -19,7 +19,7 @@ Main 更新显式 variant 通道。构建标签包含 variant、SHA12 和运行�
 | 网络库 | libdatachannel v0.24.5、rpclib v2.3.0、iceoryx v2.0.8 |
 | GUI | WSLg 依赖、D-Bus、CJK 字体、Mesa 和 PulseAudio |
 | OpenCV | apt `libopencv-dev` 与 pip 包；`opencv.sh` 未启用，当前 Dockerfile 不隔离 NVIDIA OpenCV |
-| 软件源 | Ubuntu 官方源使用 HTTPS，PyPI 保持上游。APT 下载失败最多重试三次，最终镜像切换至 Aliyun。 |
+| 软件源 | amd64 使用 Canonical 的 Azure 官方源，arm64 使用 Ubuntu Ports，两者均使用 HTTPS。APT 的 HTTPS 网络超时为 30 秒，下载失败最多重试三次。基础镜像使用上游 PyPI，最终镜像切换至 Aliyun。 |
 | 编辑器 / 时区 | `EDITOR=vim`、`VISUAL=vim`，默认 `Asia/Shanghai` |
 
 ## Micromamba
