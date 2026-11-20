@@ -15,7 +15,7 @@ IMAGE=ascend-atc:8.5.0-910b-ubuntu22.04-py3.11
 docker build --platform linux/arm64 -f src/ascend-atc/Dockerfile -t "$IMAGE" .
 mkdir -p work
 # Place model.onnx and any external weight files in work/.
-docker run --pull=never --rm -it --network=none \
+docker run --pull=never --rm -it --network=none -e SSH_MODE=disabled \
   --mount "type=bind,source=$PWD/work,target=/work" "$IMAGE"
 ```
 
@@ -23,16 +23,33 @@ To move the image to an offline ARM64 host, export it with `docker save -o ascen
 
 ## Development tools
 
-The image uses the shared development tool and shell installers from `luciole-ascend`. It includes zsh with oh-my-zsh, Neovim with NvChad, tmux, ripgrep, clangd, fzf, eza, Starship, Sheldon, zoxide, Witr and micromamba. The `uv` and `ty` commands use a separate environment at `/opt/dev-tools`.
+The image uses the shared development tool and shell installers from `luciole-ascend`. It includes zsh with oh-my-zsh, Neovim with NvChad, tmux, ripgrep, clangd, fzf, eza, Starship, Sheldon, zoxide, Witr and micromamba. Use `/opt/dev-tools/bin/uv` or `/opt/dev-tools/bin/ty` to invoke the standalone tools explicitly.
+
+The vendor Python 3.11 and the `/opt/amct`, `/opt/onnx` and `/opt/dev-tools` environments each include [Python development and packaging tools](../_assets/ascend-python-dev-requirements.txt), `opencv-contrib-python`, `scikit-image` and `h5py`. The vendor Python also provides data and interactive tools such as IPython, pandas, Polars, matplotlib, Seaborn and Excel readers. Each environment resolves its dependencies against its own version requirements. [Vendor Python requirements](atc-requirements.txt)
 
 The default command is Bash. Start an interactive zsh session with the vendor CANN environment and the same workspace mount.
 
 ```bash
-docker run --pull=never --rm -it --network=none \
+docker run --pull=never --rm -it --network=none -e SSH_MODE=disabled \
   --mount "type=bind,source=$PWD/work,target=/work" "$IMAGE" zsh -l
 ```
 
-The required smoke test starts the developer tools and checks that a fresh zsh session locates ATC, AMCT ACL and the vendor Python 3.11.
+The required smoke test starts the developer tools, checks the Python tools in all four environments and verifies that a fresh zsh session locates ATC, AMCT ACL and the vendor Python 3.11.
+
+## SSH access
+
+The entrypoint loads CANN and starts SSH in `key-only` mode by default. Mount a nonempty `authorized_keys` for `root` before starting the container. The directory and file must be owned by root and have modes `0700` and `0600`. This example publishes the SSH port on the host's loopback address.
+
+```bash
+sudo install -d -m 0700 "$PWD/ssh"
+sudo install -m 0600 "$HOME/.ssh/id_ed25519.pub" "$PWD/ssh/authorized_keys"
+docker run --pull=never --rm -d -p 127.0.0.1:2222:22 \
+  --mount "type=bind,source=$PWD/ssh,target=/root/.ssh,readonly" \
+  --mount "type=bind,source=$PWD/work,target=/work" "$IMAGE" sleep infinity
+ssh -p 2222 root@127.0.0.1
+```
+
+Set `SSH_MODE=disabled` for local commands or offline runs that use `--network=none`. The smoke test verifies that default startup requires a key and checks a real public-key login before exercising CANN from the SSH session.
 
 ## Convert a floating-point baseline
 
@@ -70,7 +87,7 @@ The image also installs AMCT ACL 8.5.0 into the Toolkit. ATC inline calibration 
 
 The image shares the [ONNX requirements](../_assets/onnx-requirements.txt) with `luciole-ascend`. Its separate Python 3.11 environment at `/opt/onnx` includes ONNX, ONNX Runtime, ONNX Simplifier, ONNX Slim, ONNX Optimizer, ONNX GraphSurgeon, ONNX Converter Common, ONNX Script and MindStudio Probe. The ARM64 build compiles `onnxoptimizer` from source when a wheel is unavailable.
 
-The vendor entrypoint sets `PYTHONPATH` for CANN. Use `-E` to ignore it in your ONNX scripts, or unset it for an individual CLI command. Run these commands inside the container.
+The entrypoint loads the vendor CANN `PYTHONPATH`. Use `-E` to ignore it in your ONNX scripts, or unset it for an individual CLI command. Run these commands inside the container.
 
 ```bash
 /opt/onnx/bin/python -E -c 'import onnx; print(onnx.__version__)'
@@ -87,7 +104,7 @@ The [ATC requirements](atc-requirements.txt) pin the official `ais-bench` and `a
 On an ARM64 host with the Ascend Docker Runtime registered and a driver compatible with CANN 8.5.0, benchmark the model generated above from the repository root:
 
 ```bash
-docker run --pull=never --rm --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 \
+docker run --pull=never --rm --runtime=ascend -e ASCEND_VISIBLE_DEVICES=0 -e SSH_MODE=disabled \
   --mount "type=bind,source=$PWD/work,target=/work" "$IMAGE" \
   python3.11 -m ais_bench --model /work/output/model-int8.om --device 0
 ```

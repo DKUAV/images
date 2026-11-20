@@ -17,6 +17,18 @@ scipy
 sympy
 tornado
 
+# Data analysis, visualization, tabular I/O and interactive tooling.
+beautifulsoup4
+ipython
+matplotlib
+openpyxl
+pandas
+plottable
+polars
+python-calamine
+rich
+seaborn
+
 # Official inference-tool wheels for Linux ARM64 and the vendor Python 3.11.
 aclruntime @ https://aisbench.obs.myhuaweicloud.com/packet/ais_bench_infer/0.0.2/ait/aclruntime-0.0.2-cp311-cp311-linux_aarch64.whl#sha256=a219b54ac9cf46a2cd925f7250339268cab119859beb2cfd4d1fef123eee6378
 ais-bench @ https://aisbench.obs.myhuaweicloud.com/packet/ais_bench_infer/0.0.2/ait/ais_bench-0.0.2-py3-none-any.whl#sha256=1d533fc6e48ef0322a163a3294fb640f447a7d461ccb4c840623f9f93082f997

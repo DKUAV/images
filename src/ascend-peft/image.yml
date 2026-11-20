@@ -6,6 +6,7 @@ context: .
 platforms:
 - linux/arm64
 inputs:
+- src/_assets/ascend-vision-requirements.txt
 - src/ascend-peft/requirements.txt
 - vendor/image-kit/assets/python-dev-requirements.txt
 - vendor/image-kit/scripts/system/finalize-mirror.sh
@@ -21,6 +22,7 @@ variants:
     script: src/_tests/smoke-ascend.sh
     inputs:
     - src/_tests/_lib.sh
+    - src/_tests/ascend-python-tools.sh
     - src/_tests/npu-ascend.sh
     - src/_tests/onnx-tools.sh
     policy: required
