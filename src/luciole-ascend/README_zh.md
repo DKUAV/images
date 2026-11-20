@@ -4,7 +4,9 @@
 
 ## 内容与构建
 
-厂商基础镜像提供 Python 3.12、PyTorch 2.10.0、TorchNPU 2.10.0.post7 和 CANN 9.2.0。共享脚本安装系统工具、CMake 4.3.2、SSH 与开发 shell。镜像保留厂商 root 账号，HOME 为 `/root`，以读取仅 root 可访问的 CANN 脚本。两类镜像通过各自的 pip 安装脚本使用共用的 `vendor/image-kit/assets/python-dev-requirements.txt`，其中包括 uv、ty、Ruff、setuptools、setuptools-scm、Hatchling、hatch-vcs、editables、uv_build、wheel 和 packaging。昇腾脚本依据所有预装包生成的约束保留厂商 Python 环境，并在登录 shell 和入口脚本中恢复 CANN 环境。本镜像不安装 CUDA 专属视觉包、ROS 2 和网络库步骤。
+厂商基础镜像提供 Python 3.12、PyTorch 2.10.0、TorchNPU 2.10.0.post7 和 CANN 9.2.0。共享脚本安装系统工具、CMake 4.3.2、SSH 与开发 shell。镜像保留厂商 root 账号，HOME 为 `/root`，以读取仅 root 可访问的 CANN 脚本。默认 Python 使用共用的 `vendor/image-kit/assets/python-dev-requirements.txt`。昇腾安装脚本保留厂商预装包版本，登录 shell 和入口脚本会恢复 CANN 环境。镜像不包含 ROS 2 和 CUDA 网络库安装步骤。
+
+厂商 Python 3.12、`/opt/amct` 和 `/opt/onnx` 均安装 uv、ty、Ruff、pytest、setuptools、Hatchling、uv_build 等开发与打包工具，以及 `opencv-contrib-python`、`scikit-image` 和 `h5py`。每套环境按自己的版本约束解析依赖，必过烟测会检查三套环境中的这些工具。 [隔离环境开发依赖](../_assets/ascend-python-dev-requirements.txt) · [视觉依赖](../_assets/ascend-vision-requirements.txt)
 
 共享开发工具包含 Graphviz 系统命令。PEFT 依赖以及 `graphviz`、`torchview` Python 包安装在派生的 [ascend-peft 镜像](../ascend-peft/README_zh.md)中。
 

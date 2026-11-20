@@ -97,8 +97,9 @@ def test_real_repository_contracts() -> None:
     assert atc.platforms == ("linux/arm64",)
     assert atc.variants[0].base_digest is not None
     assert not atc.variants[0].dependencies
+    assert atc.variants[0].build_args["SSH_MODE"] == "key-only"
     assert atc.variants[0].tests[0].policy == "required"
-    assert atc.variants[0].tests[0].entrypoint == "image"
+    assert atc.variants[0].tests[0].entrypoint == "bash"
     plan = repo.make_plan(repo.variants)
     workers = plan["build_matrix"]["include"]
     assert len(workers) == 4

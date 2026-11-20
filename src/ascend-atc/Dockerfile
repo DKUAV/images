@@ -1,15 +1,22 @@
 # syntax=docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
 
 ARG BASE_IMAGE=quay.io/ascend/cann:8.5.0-910b-ubuntu22.04-py3.11@sha256:3faee0835b3900a2a77dbe02775fd34bc521d12e23eb8603f9c9f16013a9d015
-FROM ${BASE_IMAGE} AS amct-build
+FROM ${BASE_IMAGE} AS python-requirements
 
 USER root
+COPY src/_assets/ascend-python-dev-requirements.txt /tmp/ascend-python-dev-requirements.txt
+COPY src/_assets/ascend-vision-requirements.txt /tmp/ascend-vision-requirements.txt
+
+FROM python-requirements AS amct-build
+
 # Isolate AMCT's Python package versions from the vendor ATC interpreter.
 ENV PYTHONPATH=""
 COPY src/ascend-atc/requirements.txt /tmp/amct-requirements.txt
 RUN python3.11 -m venv /opt/amct \
     && /opt/amct/bin/python -m pip install --no-cache-dir --only-binary=:all: \
-        --requirement /tmp/amct-requirements.txt
+        --requirement /tmp/amct-requirements.txt \
+        --requirement /tmp/ascend-python-dev-requirements.txt \
+        --requirement /tmp/ascend-vision-requirements.txt
 
 ADD --checksum=sha256:aa93c0e093214cc3a5172f369d594ea67efb4cee8dcd7eb81416987ee453ab83 \
     https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/CANN/CANN%208.5.0/Ascend-cann-amct_8.5.0_linux-aarch64.tar.gz /tmp/amct.tar.gz
@@ -34,29 +41,33 @@ RUN --network=none tar -xzf /tmp/amct.tar.gz -C /tmp ./amct_acl ./amct_onnx \
     && /opt/amct/bin/python -m pip check \
     && sed -i '1s/$/ -E/' /opt/amct/bin/amct_onnx
 
-FROM ${BASE_IMAGE} AS onnx-build
+FROM python-requirements AS onnx-build
 
-USER root
 ENV PYTHONPATH=""
 COPY src/_assets/onnx-requirements.txt /tmp/onnx-requirements.txt
 # Limit parallel compilation when pip builds onnxoptimizer from source.
 RUN python3.11 -m venv /opt/onnx \
     && MAX_JOBS=2 /opt/onnx/bin/python -m pip install --no-cache-dir \
-        --requirement /tmp/onnx-requirements.txt
+        --requirement /tmp/onnx-requirements.txt \
+        --requirement /tmp/ascend-python-dev-requirements.txt \
+        --requirement /tmp/ascend-vision-requirements.txt
 
-FROM ${BASE_IMAGE}
+FROM python-requirements
 
-USER root
+ARG SSH_MODE=key-only
 ENV HOME=/root
 LABEL org.opencontainers.image.description="CANN 8.5.0 ATC, AMCT, ONNX tools, AIS Bench and developer tools for Ascend910B2"
 
-# Add offline compiler dependencies and AIS Bench to the vendor interpreter.
+# Install the compiler, benchmarking and development dependencies in the vendor Python.
 COPY src/ascend-atc/atc-requirements.txt /tmp/atc-requirements.txt
 RUN <<'BASH'
 set -euo pipefail
 python3.11 -m pip list --format=freeze > /tmp/atc-constraints.txt
 python3.11 -m pip install --no-cache-dir --only-binary=:all: \
-    --constraint /tmp/atc-constraints.txt --requirement /tmp/atc-requirements.txt
+    --constraint /tmp/atc-constraints.txt \
+    --requirement /tmp/atc-requirements.txt \
+    --requirement /tmp/ascend-python-dev-requirements.txt \
+    --requirement /tmp/ascend-vision-requirements.txt
 
 # CANN 8.5.0's op-compile-tool lists these standard library modules as distributions.
 python3.11 -c 'import getopt, inspect, multiprocessing'
@@ -83,10 +94,14 @@ COPY src/ascend-atc/calibration.cfg /opt/ascend-atc/calibration.cfg
 COPY --chmod=0755 vendor/image-kit/scripts/dev/dev-tools.sh /tmp/image-scripts/dev-tools.sh
 RUN /tmp/image-scripts/dev-tools.sh
 
-# Keep Python development tools separate from ATC's vendor packages.
+# Also expose the standalone environment's uv and ty through /usr/local/bin.
 RUN python3.11 -E -m venv /opt/dev-tools \
-    && /opt/dev-tools/bin/python -E -m pip install --no-cache-dir --only-binary=:all: uv ty \
-    && ln -s /opt/dev-tools/bin/uv /opt/dev-tools/bin/uvx /opt/dev-tools/bin/ty /usr/local/bin/
+    && /opt/dev-tools/bin/python -E -m pip install --no-cache-dir --only-binary=:all: \
+        --requirement /tmp/ascend-python-dev-requirements.txt \
+        --requirement /tmp/ascend-vision-requirements.txt \
+    && /opt/dev-tools/bin/python -E -m pip check \
+    && ln -s /opt/dev-tools/bin/uv /opt/dev-tools/bin/uvx /opt/dev-tools/bin/ty /usr/local/bin/ \
+    && rm /tmp/ascend-python-dev-requirements.txt /tmp/ascend-vision-requirements.txt
 
 ARG MICROMAMBA_VERSION=2.10.0-0
 ARG MICROMAMBA_SHA256_ARM64=3bb56786e21b9b24024f599fe9185b4a59dc3f9f59937a42311ee583adbbb23c
@@ -101,9 +116,18 @@ RUN /tmp/image-scripts/devshell.sh --enabled true
 COPY --chmod=0755 vendor/image-kit/scripts/integrations/ascend-environment.sh /tmp/image-scripts/ascend-environment.sh
 RUN /tmp/image-scripts/ascend-environment.sh
 
+COPY --chmod=0755 vendor/image-kit/scripts/system/ssh.sh /tmp/image-scripts/ssh.sh
+RUN /tmp/image-scripts/ssh.sh --default-user root --mode "${SSH_MODE}" \
+    && rm -f /etc/ssh/ssh_host_*_key /etc/ssh/ssh_host_*_key.pub
+
 COPY --chmod=0755 vendor/image-kit/scripts/system/finalize-mirror.sh /tmp/image-scripts/finalize-mirror.sh
 RUN /tmp/image-scripts/finalize-mirror.sh --mirror upstream && rm -rf /tmp/image-scripts
 
+COPY --chmod=0755 vendor/image-kit/assets/docker-entrypoint.sh /usr/local/bin/docker-entrypoint
+COPY --chmod=0755 src/ascend-atc/entrypoint.sh /usr/local/bin/ascend-atc-entrypoint
+
+ENV DEFAULT_USER=root SSH_MODE=${SSH_MODE}
 WORKDIR /work
-# The vendor entrypoint sets up CANN before executing the supplied command.
+EXPOSE 22
+ENTRYPOINT ["/usr/local/bin/ascend-atc-entrypoint"]
 CMD ["bash"]

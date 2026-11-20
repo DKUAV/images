@@ -27,8 +27,10 @@ RUN /tmp/image-scripts/python-install.sh --mode existing
 
 COPY --chmod=0755 vendor/image-kit/assets/ascend-pip-check.sh /usr/local/bin/ascend-pip-check
 COPY vendor/image-kit/assets/python-dev-requirements.txt /tmp/image-scripts/python-dev-requirements.txt
+COPY src/_assets/ascend-vision-requirements.txt /tmp/image-scripts/ascend-vision-requirements.txt
+COPY src/luciole-ascend/python-requirements.txt /tmp/image-scripts/python-requirements.txt
 COPY --chmod=0755 vendor/image-kit/scripts/python/ascend-pip-packages.sh /tmp/image-scripts/ascend-pip-packages.sh
-RUN /tmp/image-scripts/ascend-pip-packages.sh --requirements /tmp/image-scripts/python-dev-requirements.txt
+RUN /tmp/image-scripts/ascend-pip-packages.sh --requirements /tmp/image-scripts/python-requirements.txt
 
 COPY --chmod=0755 vendor/image-kit/scripts/dev/dev-tools.sh /tmp/image-scripts/dev-tools.sh
 RUN /tmp/image-scripts/dev-tools.sh
@@ -63,12 +65,15 @@ ADD --checksum=sha256:ed97befbc0c238f0fffbeecd60d23fdc1e7a0376442a27974eed6d0e61
     https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/CANN/CANN%209.2.0/Ascend-cann-amct_9.2.0_linux-aarch64.tar.gz /tmp/amct.tar.gz
 
 COPY src/luciole-ascend/amct-requirements.txt /tmp/amct-requirements.txt
+COPY src/_assets/ascend-python-dev-requirements.txt /tmp/image-scripts/ascend-python-dev-requirements.txt
 RUN --mount=type=cache,target=/tmp/uv-cache,mode=0777 \
     tar -xzf /tmp/amct.tar.gz -C /tmp ./amct_acl ./amct_onnx \
     && uv venv --no-python-downloads --python "$(command -v python3)" /opt/amct \
     && UV_CACHE_DIR=/tmp/uv-cache uv pip install \
         --python /opt/amct/bin/python --link-mode copy --only-binary :all: \
         --requirement /tmp/amct-requirements.txt \
+        --requirement /tmp/image-scripts/ascend-python-dev-requirements.txt \
+        --requirement /tmp/image-scripts/ascend-vision-requirements.txt \
         /tmp/amct_onnx/amct_onnx-0.24.1-py3-none-linux_aarch64.whl
 
 # Preload the exact ONNX Runtime headers for the offline custom operator build.
@@ -96,7 +101,9 @@ RUN --mount=type=cache,target=/tmp/uv-cache,mode=0777 \
     && UV_CACHE_DIR=/tmp/uv-cache MAX_JOBS=2 uv pip install \
         --python /opt/onnx/bin/python \
         --link-mode copy \
-        --requirement /tmp/image-scripts/onnx-requirements.txt
+        --requirement /tmp/image-scripts/onnx-requirements.txt \
+        --requirement /tmp/image-scripts/ascend-python-dev-requirements.txt \
+        --requirement /tmp/image-scripts/ascend-vision-requirements.txt
 
 FROM ascend-dev
 

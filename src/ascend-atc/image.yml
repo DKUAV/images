@@ -6,15 +6,20 @@ context: .
 platforms:
 - linux/arm64
 inputs:
+- src/_assets/ascend-python-dev-requirements.txt
+- src/_assets/ascend-vision-requirements.txt
 - src/_assets/onnx-requirements.txt
 - src/ascend-atc/atc-requirements.txt
 - src/ascend-atc/requirements.txt
 - src/ascend-atc/calibration.cfg
+- src/ascend-atc/entrypoint.sh
 - vendor/image-kit/scripts/dev/dev-tools.sh
 - vendor/image-kit/scripts/dev/micromamba.sh
 - vendor/image-kit/scripts/dev/devshell.sh
 - vendor/image-kit/scripts/integrations/ascend-environment.sh
+- vendor/image-kit/scripts/system/ssh.sh
 - vendor/image-kit/scripts/system/finalize-mirror.sh
+- vendor/image-kit/assets/docker-entrypoint.sh
 publish: true
 variants:
 - id: 8.5.0-910b-ubuntu22.04-py3.11
@@ -22,6 +27,7 @@ variants:
     image: quay.io/ascend/cann:8.5.0-910b-ubuntu22.04-py3.11
     digest: sha256:3faee0835b3900a2a77dbe02775fd34bc521d12e23eb8603f9c9f16013a9d015
   build_args:
+    SSH_MODE: key-only
     MICROMAMBA_VERSION: 2.10.0-0
     MICROMAMBA_SHA256_ARM64: 3bb56786e21b9b24024f599fe9185b4a59dc3f9f59937a42311ee583adbbb23c
   tests:
@@ -29,6 +35,7 @@ variants:
     script: src/_tests/smoke-ascend-atc.sh
     inputs:
     - src/_tests/_lib.sh
+    - src/_tests/ascend-python-tools.sh
     - src/_tests/onnx-tools.sh
     policy: required
-    entrypoint: image
+    entrypoint: bash

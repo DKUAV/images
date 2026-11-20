@@ -4,7 +4,7 @@ This ARM64 image derives from [luciole-ascend](../luciole-ascend/README.md) and 
 
 ## Packages
 
-The image adds `accelerate==1.15.0`, `huggingface-hub`, `peft==0.21.2`, `transformers==5.22.1`, `tokenizers==0.23.3`, `torchvision`, `openai>=1.0`, `graphviz>=0.20`, `torchview>=0.2.7`, `torchmetrics`, `pillow`, `opencv-python`, `pycocotools`, `tensorboard`, `einops`, `triton-ascend==3.6.0` and `flash-linear-attention[npu]>=0.5` through image-local [requirements.txt](requirements.txt). It inherits setuptools, setuptools-scm, Hatchling, hatch-vcs, editables, uv_build, wheel and packaging from the parent's shared Python development requirements.
+The image adds `accelerate==1.15.0`, `huggingface-hub`, `peft==0.21.2`, `transformers==5.22.1`, `tokenizers==0.23.3`, `torchvision`, `openai>=1.0`, `graphviz>=0.20`, `torchview>=0.2.7`, `torchmetrics`, `pillow`, `pycocotools`, `tensorboard`, `einops`, `triton-ascend==3.6.0` and `flash-linear-attention[npu]>=0.5` through image-local [requirements.txt](requirements.txt). It inherits the parent's Python development tools and resolves `opencv-contrib-python`, `scikit-image` and `h5py` together with the PEFT NumPy and SciPy pins. [Vision requirements](../_assets/ascend-vision-requirements.txt)
 
 TorchVision is pinned to `0.25.0+cpu`, matching the parent's Torch 2.10.0 and FLA's NPU extra. The requirements file adds `https://download.pytorch.org/whl/cpu` with `--extra-index-url`, keeping the default PyPI index available; the explicit `+cpu` version selects the CPU wheel. The extra index applies to the entire installation, while the parent's package constraints remain enforced. A CPU wheel is required for this CPU Torch/TorchNPU stack. The CPU NMS smoke check does not establish NPU NMS support.
 

@@ -1,0 +1,2 @@
+-r python-dev-requirements.txt
+-r ascend-vision-requirements.txt

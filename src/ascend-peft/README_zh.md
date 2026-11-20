@@ -4,7 +4,7 @@
 
 ## 软件包
 
-镜像通过本镜像的 [requirements.txt](requirements.txt) 添加 `accelerate==1.15.0`、`huggingface-hub`、`peft==0.21.2`、`transformers==5.22.1`、`tokenizers==0.23.3`、`torchvision`、`openai>=1.0`、`graphviz>=0.20`、`torchview>=0.2.7`、`torchmetrics`、`pillow`、`opencv-python`、`pycocotools`、`tensorboard`、`einops`、`triton-ascend==3.6.0` 和 `flash-linear-attention[npu]>=0.5`。setuptools、setuptools-scm、Hatchling、hatch-vcs、editables、uv_build、wheel 和 packaging 继承自父镜像的共享 Python 开发依赖。
+镜像通过本镜像的 [requirements.txt](requirements.txt) 添加 `accelerate==1.15.0`、`huggingface-hub`、`peft==0.21.2`、`transformers==5.22.1`、`tokenizers==0.23.3`、`torchvision`、`openai>=1.0`、`graphviz>=0.20`、`torchview>=0.2.7`、`torchmetrics`、`pillow`、`pycocotools`、`tensorboard`、`einops`、`triton-ascend==3.6.0` 和 `flash-linear-attention[npu]>=0.5`。镜像继承父镜像的 Python 开发工具，并按 PEFT 固定的 NumPy 和 SciPy 版本一起解析 `opencv-contrib-python`、`scikit-image` 和 `h5py`。 [视觉依赖](../_assets/ascend-vision-requirements.txt)
 
 TorchVision 固定为 `0.25.0+cpu`，与父镜像的 Torch 2.10.0 及 FLA 的 NPU extra 对齐。requirements 文件通过 `--extra-index-url` 添加 `https://download.pytorch.org/whl/cpu`，保留默认 PyPI 索引，并通过明确的 `+cpu` 版本选择 CPU wheel。附加索引作用于整次安装，父镜像的软件包约束仍然生效。此 CPU Torch/TorchNPU 栈需要使用 CPU wheel；CPU NMS 冒烟不代表已验证 NPU NMS 支持。
 

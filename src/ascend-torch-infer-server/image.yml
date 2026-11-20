@@ -20,6 +20,7 @@ variants:
     script: src/_tests/smoke-ascend.sh
     inputs:
     - src/_tests/_lib.sh
+    - src/_tests/ascend-python-tools.sh
     - src/_tests/npu-ascend.sh
     - src/_tests/onnx-tools.sh
     policy: required

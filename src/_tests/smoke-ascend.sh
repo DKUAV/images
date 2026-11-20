@@ -32,6 +32,11 @@ assert_cmd "Witr CLI" witr --version
 assert_cmd "fzf installed" test -x "${HOME}/.fzf/bin/fzf"
 assert_cmd "Python package check" ascend-pip-check
 assert_cmd "Python build tools import" python3 -c 'import build, packaging, wheel, hatchling.build, hatch_vcs, editables, setuptools_scm, uv_build'
+# shellcheck source=src/_tests/ascend-python-tools.sh
+source "$(dirname -- "${BASH_SOURCE[0]}")/ascend-python-tools.sh" || exit 1
+for interpreter in python3 /opt/amct/bin/python /opt/onnx/bin/python; do
+    assert_ascend_python_tools "$interpreter"
+done
 assert_cmd "uv-build executable" command -v uv-build
 assert_cmd "vendor Python and TorchNPU metadata" python3 -c '
 from importlib.metadata import version

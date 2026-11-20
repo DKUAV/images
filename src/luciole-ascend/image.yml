@@ -8,6 +8,9 @@ platforms:
 inputs:
 - src/luciole-ascend/ais-bench-requirements.txt
 - src/luciole-ascend/amct-requirements.txt
+- src/luciole-ascend/python-requirements.txt
+- src/_assets/ascend-python-dev-requirements.txt
+- src/_assets/ascend-vision-requirements.txt
 - src/_assets/onnx-requirements.txt
 - src/_scripts/dev/luciole-dev-tools.sh
 - vendor/image-kit/scripts/system/system.sh
@@ -50,6 +53,7 @@ variants:
     script: src/_tests/smoke-ascend.sh
     inputs:
     - src/_tests/_lib.sh
+    - src/_tests/ascend-python-tools.sh
     - src/_tests/npu-ascend.sh
     - src/_tests/onnx-tools.sh
     policy: required
