@@ -23,9 +23,9 @@ To move the image to an offline ARM64 host, export it with `docker save -o ascen
 
 ## Development tools
 
-The image uses the shared development tool and shell installers from `luciole-ascend`. It includes zsh with oh-my-zsh, Neovim with NvChad, tmux, ripgrep, clangd, fzf, eza, Starship, Sheldon, zoxide, Witr and micromamba. Use `/opt/dev-tools/bin/uv` or `/opt/dev-tools/bin/ty` to invoke the standalone tools explicitly.
+The image uses the shared development tool and shell installers from `luciole-ascend`. It includes zsh with oh-my-zsh, Neovim with NvChad, tmux, ripgrep, clangd, fzf, eza, Starship, Sheldon, zoxide, Witr and micromamba. The default vendor Python provides the `uv`, `uvx` and `ty` commands on `PATH`.
 
-The vendor Python 3.11 and the `/opt/amct`, `/opt/onnx` and `/opt/dev-tools` environments each include [Python development and packaging tools](../_assets/ascend-python-dev-requirements.txt), `opencv-contrib-python`, `scikit-image` and `h5py`. The vendor Python also provides data and interactive tools such as IPython, pandas, Polars, matplotlib, Seaborn and Excel readers. Each environment resolves its dependencies against its own version requirements. [Vendor Python requirements](atc-requirements.txt)
+The vendor Python 3.11 and the `/opt/amct` and `/opt/onnx` environments each include [Python development and packaging tools](../_assets/ascend-python-dev-requirements.txt), `opencv-contrib-python`, `scikit-image` and `h5py`. The vendor Python also provides data and interactive tools such as IPython, pandas, Polars, matplotlib, Seaborn and Excel readers. Each environment resolves its dependencies against its own version requirements. [Vendor Python requirements](atc-requirements.txt)
 
 The default command is Bash. Start an interactive zsh session with the vendor CANN environment and the same workspace mount.
 
@@ -34,7 +34,7 @@ docker run --pull=never --rm -it --network=none -e SSH_MODE=disabled \
   --mount "type=bind,source=$PWD/work,target=/work" "$IMAGE" zsh -l
 ```
 
-The required smoke test starts the developer tools, checks the Python tools in all four environments and verifies that a fresh zsh session locates ATC, AMCT ACL and the vendor Python 3.11.
+The required smoke test starts the developer tools, checks the Python tools in all three environments and verifies that a fresh zsh session locates ATC, AMCT ACL and the vendor Python 3.11.
 
 ## SSH access
 
