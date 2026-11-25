@@ -66,14 +66,19 @@ assert_cmd "AIS Bench CLI loads the ACL runtime" python3.11 -m ais_bench --help
 header "Development tools"
 # shellcheck source=src/_tests/ascend-python-tools.sh
 source "$(dirname -- "${BASH_SOURCE[0]}")/ascend-python-tools.sh" || exit 1
-for interpreter in python3.11 /opt/amct/bin/python /opt/onnx/bin/python /opt/dev-tools/bin/python; do
+for interpreter in python3.11 /opt/amct/bin/python /opt/onnx/bin/python; do
     assert_ascend_python_tools "$interpreter"
 done
 assert_cmd "Vendor Python data and interactive tools" python3.11 -E -c '
 import bs4, IPython, matplotlib, openpyxl, pandas, plottable
 import polars, python_calamine, rich, seaborn
 '
-for tool in zsh nvim git rg clangd eza starship uv ty micromamba witr; do
+vendor_scripts=$(python3.11 -E -c 'import sysconfig; print(sysconfig.get_path("scripts"))')
+for tool in uv uvx ty; do
+    assert_cmd "${tool} comes from vendor Python" \
+        test "$(command -v "$tool")" -ef "${vendor_scripts}/${tool}"
+done
+for tool in zsh nvim git rg clangd eza starship uv uvx ty micromamba witr; do
     assert_cmd "${tool} CLI" "$tool" --version
 done
 assert_cmd "tmux CLI" tmux -V

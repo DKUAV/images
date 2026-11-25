@@ -78,7 +78,8 @@ if ! atc_pip_check=$(python3.11 -m pip check); then
         exit 1
     fi
 fi
-rm /tmp/atc-constraints.txt /tmp/atc-requirements.txt
+rm /tmp/atc-constraints.txt /tmp/atc-requirements.txt \
+    /tmp/ascend-python-dev-requirements.txt /tmp/ascend-vision-requirements.txt
 BASH
 
 # Install the matching ACL component into the vendor Toolkit installation.
@@ -93,15 +94,6 @@ COPY src/ascend-atc/calibration.cfg /opt/ascend-atc/calibration.cfg
 
 COPY --chmod=0755 vendor/image-kit/scripts/dev/dev-tools.sh /tmp/image-scripts/dev-tools.sh
 RUN /tmp/image-scripts/dev-tools.sh
-
-# Also expose the standalone environment's uv and ty through /usr/local/bin.
-RUN python3.11 -E -m venv /opt/dev-tools \
-    && /opt/dev-tools/bin/python -E -m pip install --no-cache-dir --only-binary=:all: \
-        --requirement /tmp/ascend-python-dev-requirements.txt \
-        --requirement /tmp/ascend-vision-requirements.txt \
-    && /opt/dev-tools/bin/python -E -m pip check \
-    && ln -s /opt/dev-tools/bin/uv /opt/dev-tools/bin/uvx /opt/dev-tools/bin/ty /usr/local/bin/ \
-    && rm /tmp/ascend-python-dev-requirements.txt /tmp/ascend-vision-requirements.txt
 
 ARG MICROMAMBA_VERSION=2.10.0-0
 ARG MICROMAMBA_SHA256_ARM64=3bb56786e21b9b24024f599fe9185b4a59dc3f9f59937a42311ee583adbbb23c

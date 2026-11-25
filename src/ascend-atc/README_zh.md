@@ -23,9 +23,9 @@ docker run --pull=never --rm -it --network=none -e SSH_MODE=disabled \
 
 ## 开发工具
 
-镜像与 `luciole-ascend` 共用系统开发工具和交互 shell 安装脚本，包含 zsh 和 oh-my-zsh、Neovim 和 NvChad、tmux、ripgrep、clangd、fzf、eza、Starship、Sheldon、zoxide、Witr 和 micromamba。可通过 `/opt/dev-tools/bin/uv` 和 `/opt/dev-tools/bin/ty` 直接调用独立环境中的工具。
+镜像与 `luciole-ascend` 共用系统开发工具和交互 shell 安装脚本，包含 zsh 和 oh-my-zsh、Neovim 和 NvChad、tmux、ripgrep、clangd、fzf、eza、Starship、Sheldon、zoxide、Witr 和 micromamba。默认的厂商 Python 在 `PATH` 中提供 `uv`、`uvx` 和 `ty` 命令。
 
-厂商 Python 3.11 和 `/opt/amct`、`/opt/onnx`、`/opt/dev-tools` 均安装 [Python 开发和打包工具](../_assets/ascend-python-dev-requirements.txt)、`opencv-contrib-python`、`scikit-image` 和 `h5py`。厂商 Python 还提供 IPython、pandas、Polars、matplotlib、Seaborn 和 Excel 读取等数据与交互工具。每套环境按自己的版本约束解析依赖。 [厂商 Python 依赖](atc-requirements.txt)
+厂商 Python 3.11 和 `/opt/amct`、`/opt/onnx` 均安装 [Python 开发和打包工具](../_assets/ascend-python-dev-requirements.txt)、`opencv-contrib-python`、`scikit-image` 和 `h5py`。厂商 Python 还提供 IPython、pandas、Polars、matplotlib、Seaborn 和 Excel 读取等数据与交互工具。每套环境按自己的版本约束解析依赖。 [厂商 Python 依赖](atc-requirements.txt)
 
 默认命令是 Bash。要使用交互式 zsh，可以保留原厂 CANN 环境与相同的工作目录挂载。
 
@@ -34,7 +34,7 @@ docker run --pull=never --rm -it --network=none -e SSH_MODE=disabled \
   --mount "type=bind,source=$PWD/work,target=/work" "$IMAGE" zsh -l
 ```
 
-必过烟测会启动开发工具，检查四套环境的 Python 工具，并确认新开的 zsh 能找到 ATC、AMCT ACL 和厂商 Python 3.11。
+必过烟测会启动开发工具，检查三套环境的 Python 工具，并确认新开的 zsh 能找到 ATC、AMCT ACL 和厂商 Python 3.11。
 
 ## SSH 登录
 
