@@ -59,7 +59,7 @@ jobs:
           python -m pytest
           python -m image_kit validate
           python -m tools.check_repository
-          python -m pytest vendor/image-kit/tests
+          python -m pytest --basetemp=.pytest-temp/image-kit vendor/image-kit/tests
           bash vendor/image-kit/tests/install-arguments.sh
           bash vendor/image-kit/tests/ascend-pip-check.sh
       - name: Calculate affected images

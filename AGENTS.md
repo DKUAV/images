@@ -40,7 +40,7 @@
 
 - Keep `uv.lock` synchronized with project and local component dependencies. CI uses `uv sync --locked`; never use a moving component branch or bypass stale lockfiles.
 
-- Run `uv sync --locked --extra dev`, activate `.venv`, then run `python -m tools.check_repository`, `python -m tools.images validate`, `python -m ruff check tools`, `python -m ruff format --check tools`, `python -m pytest`, and `python -m pytest vendor/image-kit/tests` after changing build tooling or contracts.
+- Run `uv sync --locked --extra dev`, activate `.venv`, then run `python -m tools.check_repository`, `python -m tools.images validate`, `python -m ruff check tools`, `python -m ruff format --check tools`, `python -m pytest`, and `python -m pytest --basetemp=.pytest-temp/image-kit vendor/image-kit/tests` after changing build tooling or contracts. Run pytest from the repository root to keep each suite's temporary files under `.pytest-temp/`.
 - Build/test affected images on native amd64 and arm64. No QEMU. Use `plan --target <name>/<variant>` or `plan --all`, then `bake --platform <platform> --mode load`, `docker buildx bake`, and `test` as documented in the root README.
 - Component pin (`vendor/image-kit`) and `.gitmodules` changes rebuild all images; every checkout that validates manifests or builds images initializes submodules recursively.
 - Plan changes through actual copied inputs and smoke dependencies, then propagate to downstream consumers. README and Compose changes do not trigger image builds; tooling/schema/workflow changes do.
