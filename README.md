@@ -117,7 +117,7 @@ See [build architecture](docs/build-architecture.md), [manifest reference](docs/
 1. Add a lowercase, hyphenated image directory, Dockerfile, `image.yml`, Compose configuration and bilingual READMEs.
 2. Declare its base, platforms, build arguments, each copied shared file and smoke contract in the manifest. No workflow matrix edit is needed.
 3. Keep independent scripts in adjacent `COPY + RUN` pairs. Add the smoke script under `src/_tests` and declare the shared helper as an input.
-4. Run `python -m image_kit validate`, `python -m tools.check_repository`, `python -m pytest`, `python -m pytest vendor/image-kit/tests`, and native builds/tests for affected platforms.
+4. Run `python -m image_kit validate`, `python -m tools.check_repository`, `python -m pytest`, `python -m pytest --basetemp=.pytest-temp/image-kit vendor/image-kit/tests`, and native builds/tests for affected platforms. Run the pytest commands from the repository root. They keep temporary files under `.pytest-temp/`.
 
 Current OpenCV replacement is disabled. The CUDA base smoke test requires CMake to resolve an apt-owned OpenCV configuration, then compiles and runs a C++ probe to check matching CMake, header and runtime versions. It does not pin a historical Ubuntu OpenCV version. Historical [OpenCV analysis](docs/opencv-status.md) and [linker diagnostics](docs/ld-cache-notes.md) retain their original evidence; they do not certify current image behavior.
 

@@ -30,7 +30,7 @@ rebuild-inputs = [".gitmodules", "vendor/image-kit", "tools/**"]
 shell-inputs = ["vendor/image-kit/tests/*.sh"]
 
 [tool.pytest.ini_options]
-addopts = "-p no:cacheprovider --basetemp=.pytest-tmp-default"
+addopts = "-p no:cacheprovider --basetemp=.pytest-temp/repository"
 testpaths = ["tools/images/tests"]
 
 [tool.ruff]

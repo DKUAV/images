@@ -117,7 +117,7 @@ graph LR
 1. 创建小写、连字符命名的镜像目录、Dockerfile、`image.yml`、Compose 配置和中英文 README。
 2. 在清单中声明基础镜像、平台、构建参数、每个复制的共享文件和烟测契约，无需编辑工作流矩阵。
 3. 独立脚本使用相邻的 `COPY + RUN`。烟测脚本放在 `src/_tests`，将共享 helper 声明为输入。
-4. 运行 `python -m image_kit validate`、`python -m tools.check_repository`、`python -m pytest`、`python -m pytest vendor/image-kit/tests`，以及受影响平台的原生构建与烟测。
+4. 运行 `python -m image_kit validate`、`python -m tools.check_repository`、`python -m pytest`、`python -m pytest --basetemp=.pytest-temp/image-kit vendor/image-kit/tests`，以及受影响平台的原生构建与烟测。在仓库根目录运行 pytest 命令，临时文件会集中到 `.pytest-temp/` 下。
 
 当前 OpenCV 替换未启用。CUDA base 烟测要求 CMake 解析到 apt 包所属的 OpenCV 配置，再编译、运行 C++ 探针，检查 CMake、头文件与运行库版本一致；不固定历史 Ubuntu OpenCV 版本。历史 [OpenCV 分析](docs/opencv-status.md)与[链接器诊断](docs/ld-cache-notes.md)保留原始证据，不代表当前镜像行为已被验证。
 
