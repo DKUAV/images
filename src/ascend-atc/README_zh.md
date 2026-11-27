@@ -8,7 +8,7 @@ ATC 使用原厂 Python 3.11，依赖按 CANN 文档和软件包元数据安装�
 
 ## 构建和运行
 
-在联网的 ARM64 Docker 宿主机上，从仓库根目录构建。若要执行仓库的必过烟测，按[清单构建流程](../../README_zh.md#本地构建与烟测)操作，使用目标 `ascend-atc/8.5.0-910b-ubuntu22.04-py3.11` 和平台 `linux/arm64`。烟测会检查 AMCT ACL 库是否已安装，再用小型卷积模型在无 NPU 环境下验证 CPU 校准和 `Ascend910B2` 的两份 OM 产物。
+在联网的 ARM64 Docker 宿主机上，从仓库根目录构建。若要执行仓库的必过烟测，按[清单构建流程](../../README_zh.md#本地构建与烟测)操作，使用目标 `ascend-atc/8.5.0-910b-ubuntu22.04-py3.11` 和平台 `linux/arm64`。烟测会检查 AMCT ACL 库，并在同一个无 NPU 的容器中为 `Ascend910B2` 和 `Ascend310B4` 分别编译浮点与 INT8 OM。
 
 ```bash
 IMAGE=ascend-atc:8.5.0-910b-ubuntu22.04-py3.11
@@ -20,6 +20,17 @@ docker run --pull=never --rm -it --network=none -e SSH_MODE=disabled \
 ```
 
 如需转移到离线 ARM64 主机，使用 `docker save -o ascend-atc.tar "$IMAGE"` 导出，在离线端用 `docker load -i ascend-atc.tar` 导入，再执行同一个 `docker run` 命令。挂载可写工作目录以保存模型、校准样本、日志和产物。
+
+## 编译 Ascend310B4 模型
+
+镜像在 `/usr/local/Ascend` 保留原厂 910B2 Toolkit，在 `/opt/ascend-310b` 安装另一套 CANN 8.5.0 Toolkit 及 310B 算子包。编译 910B2 时直接运行 `atc`。编译 310B4 时使用 `ascend-atc-310b` 启动 ATC。它只切换所启动命令的环境，两套工具链可以在同一个容器里使用。[CANN 算子包安装](https://www.hiascend.com/doc_center/source/en/CANNCommunityEdition/850/softwareinst/instg/instg_0054.html)
+
+```bash
+ascend-atc-310b atc --model=model.onnx --framework=5 \
+  --output=output/model-310b4 --soc_version=Ascend310B4
+```
+
+两种目标共用 CPU AMCT ONNX 校准环境。要编译 310B4 INT8 OM，将上面命令中的 `--model` 换成校准生成的部署 ONNX。
 
 ## 开发工具
 
