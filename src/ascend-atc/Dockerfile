@@ -1,23 +1,9 @@
 # syntax=docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
 
 ARG BASE_IMAGE=quay.io/ascend/cann:8.5.0-910b-ubuntu22.04-py3.11@sha256:3faee0835b3900a2a77dbe02775fd34bc521d12e23eb8603f9c9f16013a9d015
-FROM scratch AS cann-310b-packages
-ADD --checksum=sha256:bd702440a2b3bf1e0a07d321ed5cb55c181e954a82d0b8edd4b13039b37ef929 \
-    https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/CANN/CANN%208.5.0/Ascend-cann-toolkit_8.5.0_linux-aarch64.run /toolkit.run
-ADD --checksum=sha256:16851a5b5bca9057239627db46e1f3bc9a26dfd3e05e5e7f72371c7aac1620bf \
-    https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/CANN/CANN%208.5.0/Ascend-cann-310b-ops_8.5.0_linux-aarch64.run /310b-ops.run
-
-FROM ${BASE_IMAGE} AS cann-310b
-USER root
-# Keep installer metadata changes in this stage and export only the new Toolkit tree.
-RUN --network=none --mount=type=bind,from=cann-310b-packages,source=/,target=/tmp/cann-packages \
-    mv /etc/Ascend/ascend_cann_install.info /tmp/ascend-cann-910b-install.info \
-    && install -d -m 0755 /opt/ascend-310b \
-    && env -u PYTHONPATH bash /tmp/cann-packages/toolkit.run --quiet --install --install-for-all \
-        --install-path=/opt/ascend-310b \
-    && env -u PYTHONPATH bash /tmp/cann-packages/310b-ops.run --quiet --install --install-for-all \
-        --install-path=/opt/ascend-310b \
-    && test -x /opt/ascend-310b/cann/bin/atc
+FROM scratch AS cann-310b-package
+ADD --checksum=sha256:cf82604d0cc1f6a26b3ef9c605f43c9d2ca0de19b41362ed44f8967d63b1e50e \
+    https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/CANN/CANN%208.5.T63/Ascend-cann-310b-ops_8.5.0_linux-aarch64.run /310b-ops.run
 
 FROM ${BASE_IMAGE} AS python-requirements
 
@@ -100,6 +86,10 @@ rm /tmp/atc-constraints.txt /tmp/atc-requirements.txt \
     /tmp/ascend-python-dev-requirements.txt /tmp/ascend-vision-requirements.txt
 BASH
 
+# Install the 310B operators in the vendor CANN tree.
+RUN --network=none --mount=type=bind,from=cann-310b-package,source=/310b-ops.run,target=/tmp/310b-ops.run \
+    bash /tmp/310b-ops.run --quiet --install --install-for-all --install-path=/usr/local/Ascend
+
 # Install the matching ACL component into the vendor Toolkit installation.
 RUN --mount=type=bind,from=amct-build,source=/tmp/amct_acl,target=/tmp/amct_acl \
     bash /tmp/amct_acl/cann-amct_acl_8.5.0_linux-aarch64.run --quiet --run \
@@ -108,8 +98,6 @@ RUN --mount=type=bind,from=amct-build,source=/tmp/amct_acl,target=/tmp/amct_acl 
 COPY --from=amct-build /opt/amct /opt/amct
 RUN ln -s /opt/amct/bin/amct_onnx /usr/local/bin/amct_onnx
 COPY --from=onnx-build /opt/onnx /opt/onnx
-COPY --from=cann-310b /opt/ascend-310b /opt/ascend-310b
-COPY --chmod=0755 src/ascend-atc/ascend-atc-310b.sh /usr/local/bin/ascend-atc-310b
 COPY src/ascend-atc/calibration.cfg /opt/ascend-atc/calibration.cfg
 
 COPY --chmod=0755 vendor/image-kit/scripts/dev/dev-tools.sh /tmp/image-scripts/dev-tools.sh

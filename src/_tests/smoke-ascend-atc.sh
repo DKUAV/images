@@ -7,11 +7,7 @@ source /etc/profile.d/ascend-dev.sh
 
 compile_onnx() {
     local soc=$1 model=$2 output=$3
-    local -a command=(atc)
-    if [[ $soc == Ascend310B4 ]]; then
-        command=(ascend-atc-310b atc)
-    fi
-    "${command[@]}" --model="$model" --framework=5 --output="$output" --soc_version="$soc" \
+    atc --model="$model" --framework=5 --output="$output" --soc_version="$soc" \
         --input_shape='x:1,16,8,8' && test -s "$output.om"
 }
 
@@ -52,7 +48,7 @@ PY
         for node in onnx.load("int8_deploy_model.onnx").graph.node
     ), "AMCT deploy graph has no AscendQuant node"' || exit 1
     for soc in Ascend910B2 Ascend310B4; do
-        printf 'Compiling baseline and INT8 OM for %s\n' "$soc"
+        printf 'Compiling floating-point and INT8 OM for %s\n' "$soc"
         compile_onnx "$soc" model.onnx "baseline-$soc" || exit 1
         compile_onnx "$soc" int8_deploy_model.onnx "int8-$soc" || exit 1
     done
@@ -61,14 +57,7 @@ PY
 header "CANN 8.5.0 conversion and CPU calibration"
 assert_cmd "AMCT ACL library is installed in the Toolkit" \
     test -s "${ASCEND_TOOLKIT_HOME}/lib64/libamctacl.so"
-assert_cmd "310B4 compiler uses its own Toolkit paths" \
-    ascend-atc-310b bash -c '
-        [[ $ASCEND_OPP_PATH == /opt/ascend-310b/* ]] &&
-        [[ $(command -v atc) == /opt/ascend-310b/* ]] &&
-        [[ ${LD_LIBRARY_PATH:-} != */usr/local/Ascend/* ]] &&
-        [[ ${PYTHONPATH:-} != */usr/local/Ascend/* ]]
-    '
-assert_cmd "Compile floating-point and INT8 OM for 910B2 and 310B4" ascend_atc_smoke
+assert_cmd "Compile floating-point and INT8 OM for 910B2 and 310B4 using the same ATC" ascend_atc_smoke
 
 header "ONNX tools and MindStudio Probe"
 assert_cmd "ONNX environment dependencies are consistent" /opt/onnx/bin/python -E -m pip check

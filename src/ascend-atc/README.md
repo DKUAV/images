@@ -8,7 +8,7 @@ ATC uses the vendor Python 3.11 with the compiler dependencies from the CANN gui
 
 ## Build and run
 
-Build from the repository root on an online ARM64 Docker host. For the repository's required smoke test, follow the [manifest build workflow](../../README.md#local-build-and-smoke-tests) with target `ascend-atc/8.5.0-910b-ubuntu22.04-py3.11` and platform `linux/arm64`. The smoke test checks the AMCT ACL library and compiles floating-point and INT8 OM files for both `Ascend910B2` and `Ascend310B4` in the same container without an NPU.
+Build from the repository root on an online ARM64 Docker host. For the repository's required smoke test, follow the [manifest build workflow](../../README.md#local-build-and-smoke-tests) with target `ascend-atc/8.5.0-910b-ubuntu22.04-py3.11` and platform `linux/arm64`. The smoke test checks the AMCT ACL library and uses the same ATC environment to compile floating-point and INT8 OM files for `Ascend910B2` and `Ascend310B4` without an NPU.
 
 ```bash
 IMAGE=ascend-atc:8.5.0-910b-ubuntu22.04-py3.11
@@ -23,14 +23,14 @@ To move the image to an offline ARM64 host, export it with `docker save -o ascen
 
 ## Compile for Ascend310B4
 
-The image retains the vendor's 910B2 Toolkit at `/usr/local/Ascend` and installs a second CANN 8.5.0 Toolkit and the 310B operator package at `/opt/ascend-310b`. Run `atc` directly for 910B2. Use `ascend-atc-310b` to run ATC with the 310B environment. The launcher changes the environment of its command, so both toolchains can run in the same container. [CANN ops installation](https://www.hiascend.com/doc_center/source/en/CANNCommunityEdition/850/softwareinst/instg/instg_0054.html)
+The build installs the checksum-pinned 310B operator package from the CANN 8.5.T63 distribution into the image's CANN 8.5.0 Toolkit. Select the target with ATC's `--soc_version` option.
 
 ```bash
-ascend-atc-310b atc --model=model.onnx --framework=5 \
+atc --model=model.onnx --framework=5 \
   --output=output/model-310b4 --soc_version=Ascend310B4
 ```
 
-The CPU AMCT ONNX environment is shared. Use the generated deployment ONNX as `--model` with the same 310B launcher to compile an INT8 OM.
+For INT8, set `--model` to the deployment ONNX produced by CPU AMCT calibration. The ARM64 smoke test validates both targets against the installed toolchain.
 
 ## Development tools
 
@@ -90,7 +90,7 @@ atc --framework=5 --model=output/model-int8_deploy_model.onnx \
   --output=output/model-int8 --soc_version="$SOC" --input_shape="$INPUT_SHAPE"
 ```
 
-AMCT also writes `output/model-int8_fake_quant_model.onnx` for CPU accuracy simulation with the AMCT operators. ATC consumes the deploy ONNX and writes `output/model-int8.om`. Keep the calibration configuration and compare the baseline and INT8 OM on the Ascend910B2 with a held-out dataset. For 310B4, use the 310B launcher above and test the OM on the board.
+AMCT also writes `output/model-int8_fake_quant_model.onnx` for CPU accuracy simulation with the AMCT operators. ATC consumes the deploy ONNX and writes `output/model-int8.om`. Keep the calibration configuration and compare the baseline and INT8 OM on the Ascend910B2 with a held-out dataset. For 310B4, set `SOC=Ascend310B4` and test the generated OM on the board.
 
 The image also installs AMCT ACL 8.5.0 into the Toolkit. ATC inline calibration via the `calibration` block in `--compression_optimize_conf` requires a compatible NPU exposed to the container and an ATC compression configuration file. [ATC compression configuration](https://www.hiascend.com/doc_center/source/en/canncommercial/850/devaids/atctool/atlasatcparam_16_0059.html)
 

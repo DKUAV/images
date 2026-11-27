@@ -13,7 +13,6 @@ inputs:
 - src/ascend-atc/requirements.txt
 - src/ascend-atc/calibration.cfg
 - src/ascend-atc/entrypoint.sh
-- src/ascend-atc/ascend-atc-310b.sh
 - vendor/image-kit/scripts/dev/dev-tools.sh
 - vendor/image-kit/scripts/dev/micromamba.sh
 - vendor/image-kit/scripts/dev/devshell.sh
