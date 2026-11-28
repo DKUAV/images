@@ -6,6 +6,8 @@
 
 ATC 使用原厂 Python 3.11，依赖按 CANN 文档和软件包元数据安装。`amct_onnx` 命令使用 `/opt/amct` 下的独立环境，并忽略 Toolkit 的 Python 模块搜索路径。 [CANN 编译依赖](https://www.hiascend.com/doc_center/source/en/CANNCommunityEdition/850/softwareinst/instg/instg_0054.html)
 
+应用环境 `/opt/onnx` 提供 FastAPI、Uvicorn 和支持 WAL 的 SQLite。
+
 ## 构建和运行
 
 在联网的 ARM64 Docker 宿主机上，从仓库根目录构建。若要执行仓库的必过烟测，按[清单构建流程](../../README_zh.md#本地构建与烟测)操作，使用目标 `ascend-atc/8.5.0-910b-ubuntu22.04-py3.11` 和平台 `linux/arm64`。烟测会检查 AMCT ACL 库，并在无 NPU 的环境下用同一个 ATC 为 `Ascend910B2` 和 `Ascend310B4` 分别编译浮点与 INT8 OM。

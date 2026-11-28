@@ -11,6 +11,7 @@ inputs:
 - src/_assets/onnx-requirements.txt
 - src/ascend-atc/atc-requirements.txt
 - src/ascend-atc/requirements.txt
+- src/ascend-atc/service-requirements.txt
 - src/ascend-atc/calibration.cfg
 - src/ascend-atc/entrypoint.sh
 - vendor/image-kit/scripts/dev/dev-tools.sh
