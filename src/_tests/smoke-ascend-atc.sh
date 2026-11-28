@@ -6,8 +6,9 @@
 source /etc/profile.d/ascend-dev.sh
 
 compile_onnx() {
-    atc --model="$1" --framework=5 --output="$2" --soc_version=Ascend910B2 \
-        --input_shape='x:1,16,8,8' && test -s "$2.om"
+    local soc=$1 model=$2 output=$3
+    atc --model="$model" --framework=5 --output="$output" --soc_version="$soc" \
+        --input_shape='x:1,16,8,8' && test -s "$output.om"
 }
 
 ascend_atc_smoke() (
@@ -38,7 +39,6 @@ onnx.save(model, "model.onnx")
 rng.normal(size=shape).astype("<f4").tofile("calibration/000.bin")
 PY
 
-    compile_onnx model.onnx baseline || exit 1
     amct_onnx calibration --model model.onnx --save_path int8 \
         --input_shape 'x:1,16,8,8' --data_dir calibration --data_types float32 \
         --calibration_config /opt/ascend-atc/calibration.cfg || exit 1
@@ -47,13 +47,17 @@ PY
         node.op_type == "AscendQuant"
         for node in onnx.load("int8_deploy_model.onnx").graph.node
     ), "AMCT deploy graph has no AscendQuant node"' || exit 1
-    compile_onnx int8_deploy_model.onnx int8
+    for soc in Ascend910B2 Ascend310B4; do
+        printf 'Compiling floating-point and INT8 OM for %s\n' "$soc"
+        compile_onnx "$soc" model.onnx "baseline-$soc" || exit 1
+        compile_onnx "$soc" int8_deploy_model.onnx "int8-$soc" || exit 1
+    done
 )
 
 header "CANN 8.5.0 conversion and CPU calibration"
 assert_cmd "AMCT ACL library is installed in the Toolkit" \
     test -s "${ASCEND_TOOLKIT_HOME}/lib64/libamctacl.so"
-assert_cmd "Compile baseline OM, calibrate with AMCT and compile INT8 OM" ascend_atc_smoke
+assert_cmd "Compile floating-point and INT8 OM for 910B2 and 310B4 using the same ATC" ascend_atc_smoke
 
 header "ONNX tools and MindStudio Probe"
 assert_cmd "ONNX environment dependencies are consistent" /opt/onnx/bin/python -E -m pip check

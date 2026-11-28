@@ -25,7 +25,7 @@ graph TD
 | [luciole-ascend](src/luciole-ascend/README.md) | Ascend 910B TorchNPU, CANN, ARM64 development tools, micromamba, AMCT, ONNX tools, MindStudio Probe and AIS Bench | arm64 | Required |
 | [ascend-peft](src/ascend-peft/README.md) | Ascend base + PEFT dependencies, Graphviz/torchview model visualization, pycocotools and TensorBoard | arm64 | Required |
 | [ascend-torch-infer-server](src/ascend-torch-infer-server/README.md) | Ascend PEFT + Flask, CORS support and the MinIO Python SDK | arm64 | Required |
-| [ascend-atc](src/ascend-atc/README.md) | CANN 8.5.0 ATC for Ascend910B2, AMCT ONNX CPU INT8 calibration, AMCT ACL inline calibration, ONNX tools, MindStudio Probe, AIS Bench and developer tools | arm64 | Required |
+| [ascend-atc](src/ascend-atc/README.md) | CANN 8.5.0 ATC for Ascend910B2 and Ascend310B4, AMCT ONNX CPU INT8 calibration, AMCT ACL inline calibration, ONNX tools, MindStudio Probe, AIS Bench and developer tools | arm64 | Required |
 
 The CUDA base and Ascend images keep upstream package sources. CUDA dev/runtime switch persisted apt and pip sources to Aliyun after all package installation. The runtime image inherits the base toolset; it is not a minimal CUDA runtime image. `luciole-ascend` uses a tagged external base without a pinned digest; run its separate NPU check on a compatible host. `ascend-atc` pins the CANN 8.5.0 base digest and uses the vendor entrypoint for its tool commands.
 

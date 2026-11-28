@@ -1,6 +1,10 @@
 # syntax=docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
 
 ARG BASE_IMAGE=quay.io/ascend/cann:8.5.0-910b-ubuntu22.04-py3.11@sha256:3faee0835b3900a2a77dbe02775fd34bc521d12e23eb8603f9c9f16013a9d015
+FROM scratch AS cann-310b-package
+ADD --checksum=sha256:cf82604d0cc1f6a26b3ef9c605f43c9d2ca0de19b41362ed44f8967d63b1e50e \
+    https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/CANN/CANN%208.5.T63/Ascend-cann-310b-ops_8.5.0_linux-aarch64.run /310b-ops.run
+
 FROM ${BASE_IMAGE} AS python-requirements
 
 USER root
@@ -56,7 +60,7 @@ FROM python-requirements
 
 ARG SSH_MODE=key-only
 ENV HOME=/root
-LABEL org.opencontainers.image.description="CANN 8.5.0 ATC, AMCT, ONNX tools, AIS Bench and developer tools for Ascend910B2"
+LABEL org.opencontainers.image.description="CANN 8.5.0 ATC, AMCT, ONNX tools, AIS Bench and developer tools for Ascend910B2 and Ascend310B4"
 
 # Install the compiler, benchmarking and development dependencies in the vendor Python.
 COPY src/ascend-atc/atc-requirements.txt /tmp/atc-requirements.txt
@@ -81,6 +85,10 @@ fi
 rm /tmp/atc-constraints.txt /tmp/atc-requirements.txt \
     /tmp/ascend-python-dev-requirements.txt /tmp/ascend-vision-requirements.txt
 BASH
+
+# Install the 310B operators in the vendor CANN tree.
+RUN --network=none --mount=type=bind,from=cann-310b-package,source=/310b-ops.run,target=/tmp/310b-ops.run \
+    bash /tmp/310b-ops.run --quiet --install --install-for-all --install-path=/usr/local/Ascend
 
 # Install the matching ACL component into the vendor Toolkit installation.
 RUN --mount=type=bind,from=amct-build,source=/tmp/amct_acl,target=/tmp/amct_acl \
