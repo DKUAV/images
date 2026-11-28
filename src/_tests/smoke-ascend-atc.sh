@@ -59,6 +59,17 @@ assert_cmd "AMCT ACL library is installed in the Toolkit" \
     test -s "${ASCEND_TOOLKIT_HOME}/lib64/libamctacl.so"
 assert_cmd "Compile floating-point and INT8 OM for 910B2 and 310B4 using the same ATC" ascend_atc_smoke
 
+header "ATC service runtime"
+assert_cmd "API and SQLite transactions in the ONNX environment" /opt/onnx/bin/python -I -c '
+import sqlite3, tempfile
+import fastapi, uvicorn
+with tempfile.TemporaryDirectory() as directory:
+    with sqlite3.connect(directory + "/test.db") as db:
+        assert db.execute("pragma journal_mode=wal").fetchone() == ("wal",)
+        db.execute("create table jobs(id integer primary key)")
+        assert db.execute("insert into jobs default values returning id").fetchone() == (1,)
+'
+
 header "ONNX tools and MindStudio Probe"
 assert_cmd "ONNX environment dependencies are consistent" /opt/onnx/bin/python -E -m pip check
 # shellcheck source=src/_tests/onnx-tools.sh

@@ -6,6 +6,8 @@
 
 ATC uses the vendor Python 3.11 with the compiler dependencies from the CANN guide and package metadata. The `amct_onnx` command uses its own environment at `/opt/amct` and ignores the Toolkit's Python module path. [CANN compiler dependencies](https://www.hiascend.com/doc_center/source/en/CANNCommunityEdition/850/softwareinst/instg/instg_0054.html)
 
+The application Python environment at `/opt/onnx` includes FastAPI, Uvicorn and SQLite with WAL support.
+
 ## Build and run
 
 Build from the repository root on an online ARM64 Docker host. For the repository's required smoke test, follow the [manifest build workflow](../../README.md#local-build-and-smoke-tests) with target `ascend-atc/8.5.0-910b-ubuntu22.04-py3.11` and platform `linux/arm64`. The smoke test checks the AMCT ACL library and uses the same ATC environment to compile floating-point and INT8 OM files for `Ascend910B2` and `Ascend310B4` without an NPU.

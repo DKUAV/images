@@ -48,10 +48,12 @@ RUN --network=none tar -xzf /tmp/amct.tar.gz -C /tmp ./amct_acl ./amct_onnx \
 FROM python-requirements AS onnx-build
 
 ENV PYTHONPATH=""
+COPY src/ascend-atc/service-requirements.txt /tmp/service-requirements.txt
 COPY src/_assets/onnx-requirements.txt /tmp/onnx-requirements.txt
 # Limit parallel compilation when pip builds onnxoptimizer from source.
 RUN python3.11 -m venv /opt/onnx \
     && MAX_JOBS=2 /opt/onnx/bin/python -m pip install --no-cache-dir \
+        --requirement /tmp/service-requirements.txt \
         --requirement /tmp/onnx-requirements.txt \
         --requirement /tmp/ascend-python-dev-requirements.txt \
         --requirement /tmp/ascend-vision-requirements.txt
